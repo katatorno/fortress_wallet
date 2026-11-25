@@ -1,0 +1,20 @@
+/* styles/ui/qr.css */
+
+@layer components {
+  .qr {
+    display: inline-block;
+    padding: var(--space-md);
+    background: #fff;
+    border-radius: var(--radius);
+  }
+  .qr svg { display: block; }
+
+  .qr-scan {
+    display: block;
+    width: 100%;
+    max-height: 60dvh;
+    object-fit: cover;
+    background: #000;
+    border-radius: var(--radius);
+  }
+}

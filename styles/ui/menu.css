@@ -1,0 +1,20 @@
+/* styles/ui/menu.css */
+
+@layer components {
+  .menu {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: var(--z-overlay);
+    max-width: 320px;
+    max-height: 80dvh;
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    transform: translateY(calc(-1 * var(--space-xs)));
+    transition: opacity var(--dur) var(--ease-out), transform var(--dur) var(--ease-out);
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .menu.show { opacity: 1; transform: none; pointer-events: auto; }
+  .menu-body { padding: var(--space-sm); overflow-y: auto; min-height: 0; }
+}

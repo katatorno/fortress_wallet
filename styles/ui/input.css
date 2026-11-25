@@ -1,0 +1,79 @@
+/* styles/ui/input.css */
+
+@layer components {
+  .input-group {
+    --input-pad: calc(var(--ctrl-pad) - 2px);
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: 0 var(--ctrl-pad) 0 var(--input-pad);
+    min-width: 0;
+    flex: 0 0 auto;
+  }
+  row > .input-group, .panel-toolbar > .input-group { flex: 1 1 200px; }
+  .input-group .icon { color: var(--text4); flex-shrink: 0; }
+  .input-group:focus-within .icon { color: var(--text3); }
+  .input-group:not(.input-group-ghost) > .icon:first-child {
+    margin-left: calc(var(--ctrl-pad) / 2 - var(--input-pad));
+    margin-right: calc(var(--ctrl-pad) / 2 - var(--space-xs));
+  }
+
+  .input-group input, .input-group textarea {
+    width: 100%;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    padding: 0;
+    outline: none;
+    font: inherit;
+    color: var(--text);
+  }
+  .input-group input::placeholder, .input-group textarea::placeholder { color: var(--text4); }
+  .input-group:focus-within input::placeholder,
+  .input-group:focus-within textarea::placeholder { color: var(--border); }
+
+  .input-group input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+  .input-group input[type="number"]::-webkit-inner-spin-button,
+  .input-group input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  .input-group input.masked { -webkit-text-security: disc; }
+
+  .input-group-ghost {
+    border-color: transparent;
+    background: transparent;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .input-group-btn {
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: color var(--dur) var(--ease-out);
+  }
+  .input-group-btn:hover { color: var(--text2); }
+  .input-group-btn[inert] { visibility: hidden; }
+
+  .input-group-date { padding-right: var(--space-sm); }
+  .input-group-date input::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.5;
+    margin-left: var(--space-xs);
+    transition: opacity var(--dur) var(--ease-out);
+  }
+  .input-group-date input::-webkit-calendar-picker-indicator:hover { opacity: 0.9; }
+  .input-group-date:focus-within input::-webkit-calendar-picker-indicator { opacity: 0.8; }
+
+  .input-group-textarea {
+    height: auto;
+    align-items: stretch;
+    padding: var(--space-sm) var(--ctrl-pad) var(--space-sm) var(--input-pad);
+  }
+  .input-group-textarea textarea { line-height: var(--leading); resize: none; }
+  .input-group-auto textarea { overflow: hidden; }
+  .input-group-capped textarea { overflow: auto; }
+  .input-group-textarea textarea::-webkit-scrollbar,
+  .input-group-textarea textarea::-webkit-scrollbar-thumb { cursor: default; }
+}

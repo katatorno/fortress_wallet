@@ -1,0 +1,305 @@
+{
+  "transactions": [],
+  "cash_log": [],
+  "strategy_notes": "## My plan (5–10 years)\n\n**Year 1 – emergency fund**\n- Build an emergency fund of 6 months of expenses, in EUR and easy to access. No investing until it's full.\n- Keep a separate home fund for furniture and repairs.\n\n**Years 2–5 – building**\n- A fixed monthly contribution through the calculator: ~70% to the Fortress ETFs, ~30% to the prepayment pot.\n- Prepay the mortgage whenever the pot passes the threshold.\n- Sandbox capped at 10% of equities, picked by hand.\n\n**Years 5–10 – staying the course**\n- At least half of every pay rise goes into a higher contribution.\n- Review targets once a year: shorten the term or lower the payment?\n",
+  "settings": {
+    "emergency_target": 11000,
+    "monthly_expenses": 1800,
+    "net_income": 3000,
+    "salaries_per_year": 14,
+    "prepay_share_pct": 30,
+    "min_prepayment": 1000,
+    "alt_safe_yield_pct": 2.5,
+    "drift_alert_pp": 2.0,
+    "stale_days": 14,
+    "language": "en",
+    "fx": {
+      "USD": 1.0943,
+      "PLN": 4.48
+    },
+    "fx_yahoo": {
+      "USD": "EURUSD=X",
+      "PLN": "EURPLN=X"
+    }
+  },
+  "categories": {
+    "equities": {
+      "target_pct": 75,
+      "buy": true
+    },
+    "metals": {
+      "target_pct": 15,
+      "buy": false
+    },
+    "bonds": {
+      "target_pct": 10,
+      "buy": false
+    }
+  },
+  "buckets": {
+    "fortress": {
+      "category": "equities",
+      "auto": true,
+      "target_pct_in_category": 100
+    },
+    "sandbox": {
+      "category": "equities",
+      "auto": false,
+      "max_pct_in_category": 10
+    },
+    "metals": {
+      "category": "metals",
+      "auto": false
+    },
+    "bonds": {
+      "category": "bonds",
+      "auto": false
+    }
+  },
+  "house": {
+    "purchase_price": 300000,
+    "value": 300000,
+    "deposit_paid": 30000,
+    "deed_date": null
+  },
+  "mortgage": {
+    "amount": 270000,
+    "rate_pct": 3.5,
+    "term_months": 420,
+    "first_payment_date": "2027-03-01",
+    "prepayment_fee_pct": 1.0,
+    "default_mode": "reduce_term",
+    "events": [],
+    "bank_payment": null
+  },
+  "assets": [
+    {
+      "id": "webg",
+      "name": "Prime All Country World",
+      "ticker": "SWX:WEBG",
+      "yahoo": "",
+      "category": "equities",
+      "bucket": "fortress",
+      "currency": "EUR",
+      "opening_quantity": 600,
+      "price": 13.082,
+      "target_in_bucket": 70,
+      "fractional": true,
+      "price_updated": "2026-11-25",
+      "unit": "pcs",
+      "alert_price": null
+    },
+    {
+      "id": "emxc",
+      "name": "MSCI Emerging Ex China",
+      "ticker": "EMXC",
+      "yahoo": "",
+      "category": "equities",
+      "bucket": "fortress",
+      "currency": "EUR",
+      "opening_quantity": 30,
+      "price": 41.91,
+      "target_in_bucket": 10,
+      "fractional": true,
+      "price_updated": "2026-11-25",
+      "unit": "pcs",
+      "alert_price": null
+    },
+    {
+      "id": "wosc",
+      "name": "MSCI World Small Cap",
+      "ticker": "SWX:WOSC",
+      "yahoo": "",
+      "category": "equities",
+      "bucket": "fortress",
+      "currency": "EUR",
+      "opening_quantity": 8,
+      "price": 127.0,
+      "target_in_bucket": 10,
+      "fractional": true,
+      "price_updated": "2026-11-25",
+      "unit": "pcs",
+      "alert_price": null
+    },
+    {
+      "id": "vwcg",
+      "name": "Developed Europe",
+      "ticker": "AMS:VWCG",
+      "yahoo": "",
+      "category": "equities",
+      "bucket": "fortress",
+      "currency": "EUR",
+      "opening_quantity": 10,
+      "price": 59.4,
+      "target_in_bucket": 5,
+      "fractional": true,
+      "price_updated": "2026-11-25",
+      "unit": "pcs",
+      "alert_price": null
+    },
+    {
+      "id": "cnya",
+      "name": "MSCI China A",
+      "ticker": "AMS:CNYA",
+      "yahoo": "",
+      "category": "equities",
+      "bucket": "fortress",
+      "currency": "EUR",
+      "opening_quantity": 120,
+      "price": 4.54,
+      "target_in_bucket": 5,
+      "fractional": true,
+      "price_updated": "2026-11-25",
+      "unit": "pcs",
+      "alert_price": null
+    },
+    {
+      "id": "gpc",
+      "name": "Genuine Parts",
+      "ticker": "NYSE:GPC",
+      "yahoo": "GPC",
+      "category": "equities",
+      "bucket": "sandbox",
+      "currency": "USD",
+      "opening_quantity": 3,
+      "price": 121.27,
+      "target_in_bucket": 0,
+      "fractional": false,
+      "price_updated": "2026-11-25",
+      "unit": "pcs",
+      "alert_price": null
+    },
+    {
+      "id": "nke",
+      "name": "Nike",
+      "ticker": "NYSE:NKE",
+      "yahoo": "NKE",
+      "category": "equities",
+      "bucket": "sandbox",
+      "currency": "USD",
+      "opening_quantity": 5,
+      "price": 35.75,
+      "target_in_bucket": 0,
+      "fractional": false,
+      "price_updated": "2026-11-25",
+      "unit": "pcs",
+      "alert_price": null
+    },
+    {
+      "id": "aging",
+      "name": "Aging Population",
+      "ticker": "",
+      "yahoo": "",
+      "category": "equities",
+      "bucket": "sandbox",
+      "currency": "EUR",
+      "opening_quantity": 40,
+      "price": 9.33,
+      "target_in_bucket": 0,
+      "fractional": true,
+      "price_updated": "2026-11-25",
+      "unit": "pcs",
+      "alert_price": null
+    },
+    {
+      "id": "galp",
+      "name": "GALP",
+      "ticker": "ELI:GALP",
+      "yahoo": "GALP.LS",
+      "category": "equities",
+      "bucket": "sandbox",
+      "currency": "EUR",
+      "opening_quantity": 10,
+      "price": 21.53,
+      "target_in_bucket": 0,
+      "fractional": false,
+      "price_updated": "2026-11-25",
+      "unit": "pcs",
+      "alert_price": null
+    },
+    {
+      "id": "silver",
+      "name": "Silver",
+      "ticker": "XAG",
+      "yahoo": "SI=F",
+      "category": "metals",
+      "bucket": "metals",
+      "currency": "USD",
+      "opening_quantity": 20,
+      "price": 66.0,
+      "target_in_bucket": 0,
+      "fractional": true,
+      "price_updated": "2026-11-25",
+      "unit": "oz",
+      "alert_price": null
+    },
+    {
+      "id": "gold",
+      "name": "Gold",
+      "ticker": "XAU",
+      "yahoo": "GC=F",
+      "category": "metals",
+      "bucket": "metals",
+      "currency": "USD",
+      "opening_quantity": 1,
+      "price": 3789.0,
+      "target_in_bucket": 0,
+      "fractional": true,
+      "price_updated": "2026-11-25",
+      "unit": "oz",
+      "alert_price": null
+    },
+    {
+      "id": "edo0134",
+      "name": "EDO0134",
+      "ticker": "EDO0134",
+      "yahoo": "",
+      "category": "bonds",
+      "bucket": "bonds",
+      "currency": "PLN",
+      "opening_quantity": 50,
+      "price": 110.0,
+      "target_in_bucket": 0,
+      "fractional": true,
+      "price_updated": "2026-11-25",
+      "unit": "pcs",
+      "alert_price": null
+    }
+  ],
+  "cash": [
+    {
+      "id": "emergency",
+      "name": "Emergency fund",
+      "role": "emergency",
+      "currency": "EUR",
+      "amount": 6000.0
+    },
+    {
+      "id": "prepay",
+      "name": "Mortgage prepayment pot",
+      "role": "prepay",
+      "currency": "EUR",
+      "amount": 500.0
+    },
+    {
+      "id": "home",
+      "name": "Home fund (furniture, repairs)",
+      "role": "home",
+      "currency": "EUR",
+      "amount": 1000.0
+    }
+  ],
+  "history": [
+    {
+      "date": "2026-11-25",
+      "investments": 18242.02,
+      "cash": 7500.0,
+      "house_equity": 30000.0,
+      "mortgage": 0.0,
+      "net_worth": 55742.02,
+      "cat_equities": 12345.61,
+      "cat_metals": 4668.74,
+      "cat_bonds": 1227.68
+    }
+  ]
+}

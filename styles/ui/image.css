@@ -1,0 +1,74 @@
+/* styles/ui/image.css */
+
+@layer components {
+  .image {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--image-w);
+    height: var(--image-h);
+    overflow: hidden;
+    background: var(--surface);
+    color: var(--text4);
+    vertical-align: middle;
+    flex-shrink: 0;
+  }
+  .image[width="sm"]  { --image-w: 40px; }
+  .image[width="md"]  { --image-w: 80px; }
+  .image[width="lg"]  { --image-w: 160px; }
+  .image[height="sm"] { --image-h: 40px; }
+  .image[height="md"] { --image-h: 80px; }
+  .image[height="lg"] { --image-h: 160px; }
+  .image-square { min-width: var(--image-h); min-height: var(--image-w); }
+  .image-bounded { max-width: var(--image-max-w); }
+  .image-rounded { border-radius: var(--radius); }
+  .image-circle  { border-radius: 50%; }
+  .image-border  { border: var(--bw) solid var(--border); }
+  .image-click { cursor: pointer; transition: transform var(--dur) var(--ease-out); }
+  .image-click:hover { transform: scale(1.02); }
+
+  .image-inner {
+    display: block;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity var(--dur) var(--ease-out);
+  }
+  .image-fit-cover   .image-inner { object-fit: cover; }
+  .image-fit-contain .image-inner { object-fit: contain; }
+  .image-fit-fill    .image-inner { object-fit: fill; }
+  .image-ok .image-inner { opacity: 1; }
+  .image-auto-width .image-inner { width: auto; }
+  .image-bounded .image-inner {
+    width: auto;
+    height: auto;
+    max-width: var(--image-max-w);
+    max-height: var(--image-h);
+  }
+
+  .image-fallback {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    color: var(--text4);
+    pointer-events: none;
+  }
+  .image-fallback .icon { font-size: var(--text-xl); opacity: 0.5; }
+  .image-fallback-text { font-size: var(--text-xs); }
+  .image-error .image-fallback, .image-empty .image-fallback { display: flex; }
+
+  .image-overlay {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--surface) 70%, transparent);
+  }
+  .image-loading .image-overlay { display: flex; }
+}

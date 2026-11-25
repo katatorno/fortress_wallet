@@ -1,0 +1,14 @@
+/* styles/ui/lightbox.css */
+
+@layer components {
+  .modal.lightbox { padding: var(--space-lg); cursor: zoom-out; }
+  .lightbox-img {
+    max-width: 92vw;
+    max-height: 92dvh;
+    border-radius: var(--radius);
+    cursor: default;
+    display: block;
+    object-fit: contain;
+  }
+  .lightbox > .btn { position: absolute; top: var(--space-md); right: var(--space-md); }
+}

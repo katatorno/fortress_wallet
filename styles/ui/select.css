@@ -1,0 +1,21 @@
+/* styles/ui/select.css */
+
+@layer components {
+  .select {
+    appearance: none;
+    cursor: pointer;
+    background-image:
+      linear-gradient(45deg, transparent 50%, var(--text4) 50%),
+      linear-gradient(-45deg, transparent 50%, var(--text4) 50%);
+    background-position:
+      right calc(var(--ctrl-pad) + 6px) center,
+      right calc(var(--ctrl-pad) + 2px) center;
+    background-size: 4px 4px;
+    background-repeat: no-repeat;
+    background-clip: padding-box;
+    padding-right: calc(var(--ctrl-pad) + 1.25rem);
+  }
+  .select:hover:not(:disabled) { border-color: var(--border2); }
+  .select option { background: var(--surface); color: var(--text); padding: var(--space-sm); }
+  .select option:checked { background: var(--accent); color: var(--bg2); }
+}

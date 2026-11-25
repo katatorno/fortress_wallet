@@ -1,0 +1,23 @@
+/* styles/face/icons.css */
+
+@font-face {
+  font-display: swap;
+  font-family: "Material Symbols Outlined";
+  font-style: normal;
+  font-weight: 100 700;
+  src: url("https://font.tonkajsx.com/material-symbols-outlined.woff2") format("woff2");
+}
+
+@layer base {
+  .icon {
+    font-family: "Material Symbols Outlined";
+    font-size: 1.125rem;
+    font-weight: 400;
+    line-height: 1;
+    font-variation-settings:
+      "FILL" var(--icon-fill, 0), "wght" var(--icon-wght, 400),
+      "GRAD" var(--icon-grad, 0), "opsz" var(--icon-opsz, 24);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+}

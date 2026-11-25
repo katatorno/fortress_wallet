@@ -1,0 +1,19 @@
+# built page (tonka build) and its compressed copies
+index.html
+index.html.gz
+index.html.br
+
+# your own wallet files – never commit them
+*.wallet.json
+my-wallet*.json
+wallet.json
+data/wallet.mine.json
+
+# tests
+.tests/.run/
+
+# editors / OS
+.vscode/
+.idea/
+.DS_Store
+.env

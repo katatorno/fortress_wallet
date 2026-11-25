@@ -1,0 +1,22 @@
+/* styles/ui/color-picker.css */
+
+@layer components {
+  .color-picker {
+    display: inline-flex;
+    gap: var(--space-xsm);
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .color-dot {
+    width: var(--ctrl-h);
+    height: var(--ctrl-h);
+    padding: 0;
+    border: 2px solid var(--c);
+    border-radius: var(--radius-full);
+    background: transparent;
+    cursor: pointer;
+    transition: background var(--dur) var(--ease-out);
+  }
+  .color-dot:hover { background: color-mix(in srgb, var(--c) 30%, transparent); }
+  .color-dot.active { background: var(--c); }
+}

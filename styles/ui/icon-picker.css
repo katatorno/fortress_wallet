@@ -1,0 +1,25 @@
+/* styles/ui/icon-picker.css */
+
+@layer components {
+  .icon-picker { display: flex; flex-wrap: wrap; gap: var(--space-xsm); align-items: center; }
+  .icon-tile {
+    width: var(--ctrl-h);
+    height: var(--ctrl-h);
+    padding: 0;
+    border: var(--bw) solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text3);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out);
+  }
+  .icon-tile:hover { border-color: var(--border2); color: var(--text); }
+  .icon-tile.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+}

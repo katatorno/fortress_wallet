@@ -1,0 +1,73 @@
+// scripts/ui/Modal.jsx
+
+/**
+ * Dialog with a backdrop and a focus trap.
+ * Escape, the backdrop and the close button dismiss it unless `noClose` is set.
+ * `noClickAway` keeps the backdrop out of it and leaves the other two,
+ * for a dialog holding work that a stray click beside it must not throw away.
+ * A click away lands on the backdrop itself, never on a toast or a menu standing above it.
+ * `once` takes it out of the page when it closes, for a dialog built for one answer.
+ *
+ * Mutators: .open(), .close(), .toggle(), .opened
+ *
+ * @param {object} props
+ * @param {string} [props.title]
+ * @param {"sm"|"lg"|"xl"} [props.size]
+ * @param {boolean} [props.noClose]
+ * @param {boolean} [props.noClickAway]  a click outside leaves it open
+ * @param {boolean} [props.once]  removed from the page once closed
+ * @param {Element|Element[]} [props.actions]  head buttons, left of the close button
+ * @param {Element|Element[]} [props.footer]
+ * @param {(opened:boolean) => void} [props.onChange]
+ */
+const Modal = ({ title, size, noClose, noClickAway, once, actions, footer, onChange,
+  class: className, children, ...rest }) => {
+  const closeBtn = noClose ? null
+    : <IconBtn icon="close" title="Close" onClick={() => root.close()} />;
+  const dialog = (
+    <div class={["modal-dialog", size]} role="dialog" aria-modal="true" tabIndex="-1">
+      {title || actions || closeBtn ? (
+        <div class="modal-head">
+          {title ? <h3 class="modal-title">{title}</h3> : null}
+          {actions ? <div class="modal-actions">{actions}</div> : null}
+          {closeBtn}
+        </div>
+      ) : null}
+      <div class="modal-body">{children}</div>
+      {footer ? <div class="modal-foot">{footer}</div> : null}
+    </div>
+  );
+  const root = <div {...rest} class={["modal", className]} hidden>{dialog}</div>;
+
+  // Tab cycles inside the dialog; one taken out of the page without its close traps nothing
+  const focusable = () => UI.focusable(dialog);
+  function trap(e) {
+    if(e.key !== "Tab" || !root.isConnected) return;
+    const list = focusable();
+    if(!list.length) { e.preventDefault(); return; }
+    const first = list[0], last = list[list.length - 1];
+    const active = document.activeElement;
+    if(e.shiftKey && active === first) { e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && active === last) { e.preventDefault(); first.focus(); }
+  }
+  root.addEventListener("click", (e) => {
+    if(e.target === root && !noClose && !noClickAway) root.close();
+  });
+
+  UI.overlay(root, {
+    // A predicate still listens for Escape, and answers no to every pointer outside:
+    // the backdrop covers the page, so what lies outside lies above it.
+    dismiss: noClose ? false : () => false,
+    onOpen: () => {
+      document.addEventListener("keydown", trap);
+      requestAnimationFrame(() => (focusable()[0] || dialog).focus());
+      onChange?.(true);
+    },
+    onClose: () => {
+      document.removeEventListener("keydown", trap);
+      if(once) _unmount(root);
+      onChange?.(false);
+    },
+  });
+  return root;
+};
