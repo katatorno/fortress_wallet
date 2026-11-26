@@ -1,10 +1,10 @@
 // scripts/Charts.jsx
 //
-// Small SVG charts, no library: horizontal bars with targets, grouped and stacked
-// bars, lines with a hover read-out, and a treemap. Colours come from CSS classes
-// (`c1` `c2` `c3` for series, `cat-<id>` for categories), so light and dark themes
-// both work. Every mark has a native tooltip (<title>); line charts also follow the
-// pointer.
+// Small charts, no library: horizontal bars with targets (HTML), and in SVG grouped
+// and stacked bars, lines with a hover read-out, and a treemap. Colours come from CSS
+// classes (`c1` `c2` `c3` for series, `cat-<id>` for categories), so light and dark
+// themes both work. Every SVG mark has a native tooltip (<title>); line charts also
+// follow the pointer.
 
 const _SVG_W = 640;
 const _SVG_NS = "http://www.w3.org/2000/svg";
@@ -77,35 +77,52 @@ const ChartLegend = ({ items }) => (
 );
 
 /**
- * Horizontal bars (current share) with a diamond for the target.
- * @param {{rows: Array<{label:string, value:number, target:number, cls:string}>, lang:string,
- *   currentName:string, targetName:string}} props
+ * Horizontal bars: the current share drawn over a taller, paler bar for the target,
+ * with the numbers written above: share, target, difference and its worth.
+ * Plain HTML, so the numbers wrap on a narrow screen.
+ * @param {{rows: Array<{label:string, value:number, target:number, cls:string}>, total:number,
+ *   lang:string, currentName:string, targetName:string}} props
+ *   `value` and `target` are percentages of `total` (EUR)
  */
-const TargetBars = (props) => responsiveChart((W) => _TargetBars(props, W));
-const _TargetBars = ({ rows, lang, currentName, targetName }, W) => {
-  const labelW = Math.min(190, Math.round(W * 0.36)), rowH = 34, top = 6, right = 56;
-  const h = top + rows.length * rowH + 4;
-  const max = Math.max(10, ...rows.map(r => Math.max(r.value, r.target))) * 1.08;
-  const x = (v) => labelW + (v / max) * (W - labelW - right);
+const TargetBars = ({ rows, total, lang, currentName, targetName }) => {
+  const max = Math.max(10, ...rows.map(r => Math.max(r.value, r.target)));
+  const width = (v) => ({ width: v / max * 100 + "%" });
+  // one decimal, dropped for whole numbers: 75% but 67.7%
+  const share = (v) => I18N.percent(lang, v, Math.round(v * 10) % 10 ? 1 : 0);
+
+  function gap(r) {
+    const diff = Math.round((r.value - r.target) * 10) / 10;
+    if(!diff) return <span>{I18N.t(lang, "bar_on_target")}</span>;
+    const pp = (diff > 0 ? "+" : "−") + I18N.number(lang, Math.abs(diff), 1);
+    const eur = (r.value - r.target) / 100 * total;
+    const amount = I18N.money(lang, Math.abs(eur));
+    return [
+      <span>{I18N.t(lang, "bar_diff", { diff: pp })}</span>,
+      Math.abs(eur) >= 0.5
+        ? <span>{eur > 0 ? I18N.t(lang, "bar_surplus", { amount }) : I18N.t(lang, "bar_missing", { amount })}</span>
+        : null,
+    ];
+  }
+
   return (
     <stack gap="sm">
-      <ChartLegend items={[{ name: currentName, cls: rows[0]?.cls || "c1" }, { name: targetName, shape: "diamond" }]} />
-      <svg viewBox={`0 0 ${W} ${h}`} class="chart" role="img">
-        {rows.map((r, i) => {
-          const y = top + i * rowH;
-          const tip = `${r.label}: ${I18N.percent(lang, r.value)} · ${targetName} ${I18N.percent(lang, r.target)}`;
-          return (
-            <g>
-              {svgTip(tip)}
-              <text x={labelW - 10} y={y + rowH / 2 + 4} text-anchor="end" class="chart-label">{_fit(r.label, labelW - 14)}</text>
-              <line x1={labelW} x2={W - right} y1={y + rowH / 2} y2={y + rowH / 2} class="chart-track" />
-              <rect x={labelW} y={y + rowH / 2 - 8} width={Math.max(2, x(r.value) - labelW)} height="16" rx="4" class={r.cls} />
-              <text x={x(Math.max(r.value, r.target)) + 10} y={y + rowH / 2 + 4} class="chart-value">{I18N.percent(lang, r.value)}</text>
-              <path d={`M${x(r.target)} ${y + rowH / 2 - 9} l7 9 l-7 9 l-7 -9 Z`} class="chart-target" />
-            </g>
-          );
-        })}
-      </svg>
+      <ChartLegend items={[{ name: currentName, cls: rows[0]?.cls || "c1" },
+        { name: targetName, cls: [rows[0]?.cls || "c1", "pale"] }]} />
+      {rows.map(r => (
+        <div class="tbar">
+          <div class="tbar-head">
+            <span class="tbar-label">{r.label}</span>
+            <span class="tbar-nums">
+              <span><strong>{share(r.value)}</strong> {I18N.t(lang, "bar_of_target", { target: share(r.target) })}</span>
+              {gap(r)}
+            </span>
+          </div>
+          <div class={["tbar-plot", r.cls]}>
+            <div class="tbar-target" style={width(r.target)}></div>
+            {r.value > 0 ? <div class="tbar-current" style={width(r.value)}></div> : null}
+          </div>
+        </div>
+      ))}
     </stack>
   );
 };

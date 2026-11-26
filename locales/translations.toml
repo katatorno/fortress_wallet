@@ -320,6 +320,31 @@ en = "Target"
 pl = "Cel"
 pt = "Objetivo"
 
+[bar_of_target]
+en = "of {target}"
+pl = "z {target}"
+pt = "de {target}"
+
+[bar_diff]
+en = "{diff} pp"
+pl = "{diff} pp"
+pt = "{diff} p.p."
+
+[bar_missing]
+en = "{amount} short"
+pl = "brakuje {amount}"
+pt = "faltam {amount}"
+
+[bar_surplus]
+en = "{amount} over"
+pl = "nadwyżka {amount}"
+pt = "excedente de {amount}"
+
+[bar_on_target]
+en = "on target"
+pl = "zgodnie z planem"
+pt = "no objetivo"
+
 [legend_before]
 en = "Before"
 pl = "Przed"

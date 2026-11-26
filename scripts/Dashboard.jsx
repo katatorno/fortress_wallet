@@ -29,7 +29,7 @@ const DashboardView = (app) => {
   const allocation = (
     <Panel title={T("chart_allocation")} icon="donut_large" flex="1">
       <TargetBars lang={app.L} currentName={T("legend_current")} targetName={T("legend_target")}
-        rows={cats.map(c => ({
+        total={summ.investments} rows={cats.map(c => ({
           label: Core.categoryLabel(data, c) + (data.categories[c].buy ? "" : " 🔒"),
           value: cur[c] || 0,
           target: Number(data.categories[c].target_pct || 0) / tsum * 100,
@@ -68,7 +68,7 @@ const DashboardView = (app) => {
     return (
       <Panel title={T("chart_bucket", { bucket: b })} icon="balance">
         <TargetBars lang={app.L} currentName={T("legend_current")} targetName={T("legend_target")}
-          rows={members.map(p => ({
+          total={total} rows={members.map(p => ({
             label: p.name, value: p.value_eur / total * 100,
             target: Number(p.target_in_bucket) / tsumB * 100, cls: catCls(cfg.category),
           }))} />
