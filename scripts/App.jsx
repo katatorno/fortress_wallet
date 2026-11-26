@@ -170,17 +170,26 @@ const App = () => {
   // ---------------------------------------------------------- language
   const langs = I18N.languages();
   const langSelect = (
-    <Select fold size="sm" value={L} title="Language · Język · Idioma" onChange={(v) => {
+    <Select size="sm" value={L} title="Language · Język · Idioma" onChange={(v) => {
       data.settings.language = v;
       commit(null, { rebuild: true });
     }}>{options(Object.entries(langs))}</Select>
   );
 
+  // ---------------------------------------------------------- theme
+  // the icon names what is showing, the tooltip what a click brings
+  const themeBtn = <IconBtn icon="light_mode" title={T("theme_dark")} onClick={() => Theme.toggle()} />;
+  function showTheme() {
+    const dark = Theme.isDark();
+    themeBtn.icon = dark ? "dark_mode" : "light_mode";
+    themeBtn.title = dark ? T("theme_light") : T("theme_dark");
+  }
+
   const footerWorth = <span></span>;
   const footerSource = <span></span>;
   const shell = (
     <Shell
-      sidebar={<Sidebar>{views.map(v => v.nav)}<spacer /><ThemeBtn light={T("theme_light")} dark={T("theme_dark")} /></Sidebar>}
+      sidebar={<Sidebar>{views.map(v => v.nav)}</Sidebar>}
       topbar={
         <Topbar>
           <TopbarLogo img="fortress.svg" alt="">Fortress Wallet</TopbarLogo>
@@ -188,7 +197,7 @@ const App = () => {
           {statusBadge}
           {saveBtn}
           <Button icon="folder_open" onClick={() => openFileDialog(app)}>{T("btn_file")}</Button>
-          {langSelect}
+          <inline fold gap="xs">{langSelect}{themeBtn}</inline>
         </Topbar>
       }
       footer={<Footer left={<inline><Icon name="savings" size="sm" />{footerWorth}</inline>}
@@ -198,7 +207,10 @@ const App = () => {
     </Shell>
   );
 
-  _appUnsub = Store.onChange(updateStatus);
+  const offStore = Store.onChange(updateStatus);
+  const offTheme = Theme.onChange(showTheme);
+  _appUnsub = () => { offStore(); offTheme(); };
+  showTheme();
   show(current);
   updateStatus(Store.state());
   return shell;
