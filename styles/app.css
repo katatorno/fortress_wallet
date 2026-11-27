@@ -37,6 +37,12 @@
 .expander[open] > summary::after { transform: rotate(-135deg); margin-top: 0.55rem; }
 .expander-body { padding: 0 var(--space-md) var(--space-md); }
 
+/* ---------------------------------------------------------------- tables: ruled columns, centred values */
+.table th, .table td { text-align: center; vertical-align: middle; border-left: var(--bw) solid var(--border); }
+.table th:first-child, .table td:first-child { border-left: none; }
+.table .cell-input { text-align: center; }
+.table select.cell-input { text-align-last: center; }
+
 /* ---------------------------------------------------------------- editable table */
 .edit-grid { max-height: 70vh; }
 .edit-grid td { padding: 2px 4px; vertical-align: middle; }
