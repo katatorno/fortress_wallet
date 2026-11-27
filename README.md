@@ -157,7 +157,7 @@ The main keys:
 
 | Key | Contents |
 |---|---|
-| `version` | the version of this format (now 3; a file without it is 1) |
+| `version` | the version of this format (now 4; a file without it is 1) |
 | `settings.price_api_key` | your own [Alpha Vantage](https://www.alphavantage.co/support/#api-key) key. It is private: keep it in your file only, never in the example |
 | `settings` | language, exchange rates (`fx`: units per 1 EUR), emergency fund target, income, % for prepayment, thresholds |
 | `categories` | `equities`, `metals`, `bonds`: target % and `buy` (false = frozen: never bought, never sold) |
@@ -167,6 +167,7 @@ The main keys:
 | `cash`, `cash_log` | cash accounts with a role (`emergency`, `prepay`, `home`, `other`) and their movements |
 | `house`, `mortgage` | the home (price, value, deposit, deed date) and the loan (amount, rate, payments, fee, events) |
 | `history` | daily net-worth snapshots |
+| `prices`, `fx_history` | stored prices (instrument → date → [opening or null, close], in its currency) and exchange rates by date |
 
 Older files, including those of the earlier Python version (with Polish category ids), are migrated automatically when opened. A file of a newer version than the app knows is refused rather than guessed at.
 
@@ -176,6 +177,18 @@ Older files, including those of the earlier Python version (with Polish category
 2. Add a step to `MIGRATIONS` that turns the previous version into the new one.
 3. Update `SHAPE` and `VERSION` in `.tests/format.test.cjs`, and `version` in `data/wallet.example.json`.
 
+## Broker history and prices
+
+Two scripts fill a wallet file with your history. They run on your computer with Node, keep a copy of the previous file beside it, and can be run again:
+
+```bash
+node tools/import-xtb.cjs data/export.xlsx data/my-wallet.json --dry-run   # XTB export: show, then run without --dry-run
+node tools/fetch-prices.cjs data/my-wallet.json                            # weekly history + metals + exchange rates
+node tools/fetch-prices.cjs data/my-wallet.json --daily                    # also openings and closes of the last 100 sessions
+```
+
+`fetch-prices` uses your [Alpha Vantage](https://www.alphavantage.co/support/#api-key) key from `settings.price_api_key` (free: 25 requests a day; answers are cached for the day) and the ECB rates, then rebuilds the net-worth history. Anything without a history, such as a home deposit or an instrument without a price symbol, counts as it is today. Close the wallet in the app before running them.
+
 ## How it calculates
 
 - **Base currency: EUR.** Every position is converted with `settings.fx`.
@@ -184,7 +197,7 @@ Older files, including those of the earlier Python version (with Polish category
 - **Net prepayment gain** = interest saved compared with no prepayments, minus fees.
 - **Net worth** = investments + cash + (before the deed: deposit | after the deed: home value − mortgage balance).
 
-Prices of stocks, ETFs and metals are entered by hand: there is no free price source a browser may call directly. Exchange rates come from the ECB via the free [Frankfurter API](https://frankfurter.dev).
+In the app, prices of stocks, ETFs and metals are entered by hand; `tools/fetch-prices.cjs` fills them in from your computer (see above). Exchange rates come from the ECB via the free [Frankfurter API](https://frankfurter.dev).
 
 ## Tests
 

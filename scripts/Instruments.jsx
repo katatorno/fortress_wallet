@@ -16,7 +16,7 @@ function instrumentPanels(app, categories) {
   const currencies = ["EUR", ...Object.keys(data.settings.fx)];
   const bucketNames = categories.flatMap(c => bucketsOf(data, c));
   // listed bucket by bucket, in the buckets' order
-  const pos = Core.positions(data).filter(p => categories.includes(p.category))
+  const pos = Core.positions(data).filter(p => categories.includes(p.category) && !Core.soldOut(data, p))
     .sort((a, b) => bucketNames.indexOf(a.bucket) - bucketNames.indexOf(b.bucket));
   const catOptions = categories.map(c => [c, Core.categoryLabel(data, c)]);
   const bucketOptions = bucketNames.map(b => [b, b]);

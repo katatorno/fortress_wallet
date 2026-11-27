@@ -25,15 +25,16 @@ function ok(name, cond, detail = "") {
 }
 
 // ---------------------------------------------------------------- the current format
-const VERSION = 3;
+const VERSION = 4;
 const words = (s) => s.split(" ");
 const SHAPE = {
-  file: words("version settings categories buckets assets transactions cash cash_log house mortgage history strategy_notes"),
+  file: words("version settings categories buckets assets transactions cash cash_log house mortgage history strategy_notes "
+    + "prices fx_history"),
   settings: words("language price_api_key fx fx_yahoo emergency_target monthly_expenses net_income salaries_per_year "
     + "prepay_share_pct min_prepayment alt_safe_yield_pct drift_alert_pp stale_days"),
   category: words("target_pct buy"),
   bucket: words("category target_pct_in_category max_pct_in_category"),
-  asset: words("id name ticker yahoo category bucket currency opening_quantity price target_in_bucket price_updated unit "
+  asset: words("id name ticker price_symbol yahoo category bucket currency opening_quantity price target_in_bucket price_updated unit "
     + "alert_price maturity"),
   transaction: words("id date asset_id type quantity price fee note"),
   cash: words("id name role currency amount"),

@@ -78,7 +78,7 @@ const BucketPanel = ({ app, positions, bucket, footer }) => {
  */
 function targetEditor(app, bucket) {
   const { data, T, money } = app;
-  const members = Core.positions(data).filter(p => p.bucket === bucket);
+  const members = Core.positions(data).filter(p => p.bucket === bucket && !Core.soldOut(data, p));
   if(!members.length) return null;
   const grid = (
     <EditGrid rows={members.map(p => ({
@@ -126,7 +126,7 @@ function bucketEditor(app, category) {
   const { data, T, money } = app;
   const pos = Core.positions(data);
   const rows = () => bucketsOf(data, category).map(b => {
-    const members = pos.filter(p => p.bucket === b);
+    const members = pos.filter(p => p.bucket === b && !Core.soldOut(data, p));
     return {
       old: b, name: b, share: Number(data.buckets[b].target_pct_in_category || 0),
       count: members.length,

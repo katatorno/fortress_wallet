@@ -82,7 +82,7 @@ const Core = (() => {
    * Whenever the format changes: raise it, add the step to MIGRATIONS and update
    * .tests/format.test.cjs. A file without a version is version 1.
    */
-  const FORMAT = 3;
+  const FORMAT = 4;
 
   /** MIGRATIONS[n] turns a file of version n into version n + 1. */
   const MIGRATIONS = {
@@ -97,6 +97,12 @@ const Core = (() => {
     // 3: the wallet carries the key of the price service (Alpha Vantage)
     2(data) {
       setDefault(setDefault(data, "settings", {}), "price_api_key", "");
+    },
+    // 4: price and exchange rate history, and each instrument's symbol at the price service
+    3(data) {
+      setDefault(data, "prices", {});
+      setDefault(data, "fx_history", {});
+      for(const a of data.assets || []) setDefault(a, "price_symbol", "");
     },
   };
 
@@ -151,10 +157,13 @@ const Core = (() => {
     setDefault(m, "default_mode", "reduce_term");
     setDefault(m, "events", []);
     setDefault(data, "history", []);
+    setDefault(data, "prices", {});     // asset id → date → [open or null, close]
+    setDefault(data, "fx_history", {}); // date → units per 1 EUR, like settings.fx
     setDefault(data, "strategy_notes", "");
     for(const a of data.assets) {
       setDefault(a, "id", newId());
       setDefault(a, "ticker", "");
+      setDefault(a, "price_symbol", "");
       setDefault(a, "yahoo", "");
       setDefault(a, "opening_quantity", 0);
       setDefault(a, "price", 0);
@@ -786,6 +795,59 @@ const Core = (() => {
     data.history = [...data.history.filter(h => h.date !== d), snap].sort((a, b) => a.date.localeCompare(b.date));
   }
 
+  /**
+   * Keeps one day's price of an instrument, in its own currency. A price with an
+   * opening is never replaced by one without; `fill` writes only where there is none.
+   */
+  function addPrice(data, assetId, date, open, close, fill = false) {
+    const days = setDefault(data.prices, assetId, {});
+    const old = days[date];
+    if(old && (fill || (old[0] != null && open == null))) return;
+    days[date] = [open ?? null, close];
+  }
+
+  /** The entry of a date-keyed record on that day or the last one before it; else the first after. */
+  function _asOf(record, dates, date) {
+    let found = null;
+    for(const d of dates) { if(d > date) break; found = d; }
+    return record[found ?? dates[0]];
+  }
+
+  /**
+   * Writes a snapshot for every day from `from` that has a stored price: quantities
+   * and cash as they were then (by the transactions and the cash log), prices and
+   * rates of that day or the last one known. What has no history (a home deposit,
+   * an account without a log, a price never stored) counts as it is today.
+   * @returns {number} days written
+   */
+  function rebuildHistory(data, from, to = today()) {
+    const known = Object.fromEntries(Object.entries(data.prices).map(([id, p]) => [id, Object.keys(p).sort()]));
+    const fxDates = Object.keys(data.fx_history).sort();
+    const dates = [...new Set(Object.values(known).flat())].filter(d => d >= from && d <= to).sort();
+    for(const date of dates) {
+      const view = {
+        ...data,
+        settings: { ...data.settings, fx: { ...data.settings.fx, ...(fxDates.length ? _asOf(data.fx_history, fxDates, date) : {}) } },
+        transactions: data.transactions.filter(t => t.date <= date),
+        assets: data.assets.map(a => {
+          if(!known[a.id]?.length) return a;
+          const [open, close] = _asOf(data.prices[a.id], known[a.id], date);
+          return { ...a, price: close ?? open };
+        }),
+        cash: data.cash.map(c => ({ ...c, amount: round2(Number(c.amount)
+          - data.cash_log.filter(l => l.account_id === c.id && l.date > date).reduce((s, l) => s + Number(l.amount), 0)) })),
+        history: data.history,
+      };
+      upsertSnapshot(view, date);
+      data.history = view.history;
+    }
+    return dates.length;
+  }
+
+  /** Nothing is held any more, and no percentage points at it. */
+  const soldOut = (data, asset) => !Number(asset.target_in_bucket || 0)
+    && data.transactions.some(t => t.asset_id === asset.id) && Math.abs(quantities(data)[asset.id]) < 1e-6;
+
   // ---------------------------------------------------------------- recommendations
 
   function bondMaturity(asset) {
@@ -929,6 +991,6 @@ const Core = (() => {
     annuity, impliedRate, firstPaymentDate, initialPayment, runMortgage, mortgageState,
     mortgageReport, yearlyPrepayments, prepaymentBreakEvenMonths, nextPaymentEvent,
     waterfill, contributionPlan, applyPlan, addCash, addTransaction,
-    upsertSnapshot, bondMaturity, recommendations,
+    upsertSnapshot, addPrice, rebuildHistory, soldOut, bondMaturity, recommendations,
   };
 })();
