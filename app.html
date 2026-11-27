@@ -2,13 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <!-- data may be requested from this server and the exchange rate service only; the
+       outside script and font hosts serve `tonka serve`, a build carries them inside -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://unpkg.com https://lib.tonkajsx.com; style-src 'self' 'unsafe-inline'; font-src 'self' data: https://font.tonkajsx.com; img-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; base-uri 'none'; form-action 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="color-scheme" content="light dark">
   <meta name="referrer" content="no-referrer">
   <meta name="theme-color" content="#1a1a1e">
   <title>{{title}}</title>
   <link rel="icon" type="image/svg+xml" href="fortress.svg">
-  <script src="//unpkg.com/@babel/standalone@8/babel.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@8/babel.min.js"></script>
   <script src="https://lib.tonkajsx.com/jsx.js"></script>
 </head>
 <body>

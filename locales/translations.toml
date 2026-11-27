@@ -2036,6 +2036,11 @@ en = "If you allow access on every visit, the page reads and changes the file wi
 pl = "Jeśli zezwolisz na dostęp przy każdej wizycie, strona czyta i zmienia plik bez pytania. Wystarczy wtedy samo wejście na stronę."
 pt = "Se permitir o acesso em todas as visitas, a página lê e altera o ficheiro sem perguntar. Basta então abrir a página."
 
+[privacy_beware_policy]
+en = "The page forbids itself, through a rule the browser enforces (CSP), to request data from anywhere but this server and api.frankfurter.dev. That makes leaking harder; it does not stop someone who has taken over the server."
+pl = "Strona sama sobie zabrania (reguła CSP, pilnowana przez przeglądarkę) wysyłać zapytania o dane gdzie indziej niż do tego serwera i api.frankfurter.dev. To utrudnia wyciek, ale nie zatrzyma kogoś, kto przejął serwer."
+pt = "A página proíbe-se, por uma regra que o navegador aplica (CSP), de pedir dados a outro lado que não este servidor e api.frankfurter.dev. Isso dificulta uma fuga; não trava quem tiver tomado o servidor."
+
 [privacy_net_when_open]
 en = "On opening the page"
 pl = "Przy wejściu na stronę"

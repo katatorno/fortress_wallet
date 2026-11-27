@@ -60,6 +60,23 @@ One thing can be switched on in **Data & privacy**: remembering the open file. W
 
 All of this is in `scripts/core/remember.js`; `privacy.test.cjs` keeps browser storage out of every other file.
 
+## Security
+
+- The page requests data from its own server only, and from the exchange rate service (`api.frankfurter.dev`) after a click. The Content Security Policy in `app.html` says so and the browser enforces it. It makes leaking harder; it cannot protect against someone who controls the server, because they control the page and its policy.
+- **Give the app an address of its own** (`wallet.example.com`, not `example.com/wallet`). Browser storage and file permissions belong to the whole address, so every page of a shared one has them.
+- Build with `-i -f`, so that no code or font is fetched from elsewhere. A file over the size limit stays linked: **Data & privacy** lists every server the page has fetched from, and the strict header below refuses all but its own and the rate service.
+- Upload the built files only, never the project folder: `data/` may hold your own wallet.
+- Keep your wallet outside the project folder. `tonka serve` hands out the folder's files and may be reachable from your network.
+- Send these headers from the server (the policy in the page stays in force beside them):
+
+  ```
+  Content-Security-Policy: default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; font-src data:; img-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Strict-Transport-Security: max-age=31536000
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  ```
+
 ## Quick start
 
 You need [Node.js](https://nodejs.org) and TonkaJSX:
@@ -94,7 +111,7 @@ locales/translations.toml
 data/wallet.example.json
 ```
 
-Any static hosting works: your own server, Cloudflare, GitHub Pages. Serve it over **HTTPS**, because opening and saving the file in place requires it.
+Any static hosting works: your own server, Cloudflare, GitHub Pages. Serve it over **HTTPS**, because opening and saving the file in place requires it. See [Security](#security) before publishing.
 
 ## Project structure
 

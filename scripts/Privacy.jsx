@@ -125,7 +125,7 @@ const PrivacyView = (app) => {
   const beware = (
     <Panel title={T("privacy_beware_title")} icon="warning">
       {_list([T("privacy_beware_plain"), T("privacy_beware_server"), T("privacy_beware_permission"),
-        T("privacy_beware_origin", { address: location.origin }),
+        T("privacy_beware_origin", { address: location.origin }), T("privacy_beware_policy"),
         T("privacy_beware_cookies"), T("privacy_beware_lost")])}
     </Panel>
   );

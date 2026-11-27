@@ -3,6 +3,7 @@
 // No cookies and no service worker. The browser's storage is touched in one place
 // only, scripts/core/remember.js, which remembers nothing but a link to the wallet
 // file when asked (see remember.test.cjs), and removes what older versions left.
+// The page may send requests to its own server and the exchange rate service only.
 // Run: tonka test fortress_wallet   (or: node .tests/privacy.test.cjs)
 
 const { readFileSync, readdirSync } = require("node:fs");
@@ -49,6 +50,26 @@ for(const [what, pattern] of Object.entries(KEEPER_ONLY)) {
   const found = using(pattern).filter(f => f !== KEEPER);
   ok(`${what} only in ${KEEPER}`, !found.length, found.join(", "));
 }
+
+// every address the sources name: the exchange rate service, and a namespace that is no request
+const ALLOWED = ["https://api.frankfurter.dev", "http://www.w3.org"];
+const SERVED = ["https://unpkg.com", "https://lib.tonkajsx.com", "https://font.tonkajsx.com"]; // named by the policy
+const addresses = files.flatMap(f => [...readFileSync(f, "utf8").matchAll(/(?:https?|wss?):\/\/[a-z0-9.-]+/gi)]
+  .map(m => m[0]).filter(a => !ALLOWED.includes(a) && !(f.endsWith("app.html") && SERVED.includes(a)))
+  .map(a => `${path.relative(APP, f)}: ${a}`));
+ok("no other address in the sources", !addresses.length, addresses.join(", "));
+
+// the policy the browser enforces
+const html = readFileSync(path.join(APP, "app.html"), "utf8");
+const policy = html.match(/http-equiv="Content-Security-Policy" content="([^"]+)"/)?.[1] || "";
+const rule = Object.fromEntries(policy.split(";").map(p => p.trim().split(/\s+/)).map(([name, ...v]) => [name, v.join(" ")]));
+ok("the page has a content security policy", !!policy);
+ok("nothing is allowed unless named", rule["default-src"] === "'none'" && !/\*|unsafe-eval/.test(policy), policy);
+ok("data may be requested from this server and the rate service only",
+  rule["connect-src"] === "'self' https://api.frankfurter.dev", rule["connect-src"]);
+ok("no forms and no outside pictures", rule["form-action"] === "'none'" && !/http/.test(rule["img-src"]), policy);
+// a "//host" address follows the page onto plain http, which the policy refuses
+ok("outside scripts come over https", !/(src|href)="\/\//.test(html));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
