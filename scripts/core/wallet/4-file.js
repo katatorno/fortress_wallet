@@ -144,14 +144,17 @@ Object.assign(Core, (() => {
     }
   }
 
-  // ---------------------------------------------------------------- checking a file
+  // ---------------------------------------------------------------- checking a wallet
 
   const _isObj = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 
-  /** The refusal of a file: the places to correct, the first ten of them. */
+  /** The places to correct as one text: the first ten of them. */
+  const problemList = (found) => found.slice(0, 10).join("; ")
+    + (found.length > 10 ? ` … (+${found.length - 10})` : "");
+
+  /** The refusal of a file, naming the places to correct. */
   function _fileError(data, found) {
-    const shown = found.slice(0, 10).join("; ") + (found.length > 10 ? ` … (+${found.length - 10})` : "");
-    return tr(data, "err_file_invalid", { problems: shown });
+    return tr(data, "err_file_invalid", { problems: problemList(found) });
   }
 
   /**
@@ -311,6 +314,23 @@ Object.assign(Core, (() => {
     return out;
   }
 
+  /** The places `problems` names; a wallet with none has to add up too, or this throws. */
+  function _inspect(data) {
+    const found = problems(data);
+    if(!found.length) summary(data); // throws on what the values cannot give, e.g. a currency without a rate
+    return found;
+  }
+
+  /**
+   * Why a wallet, as it stands, would not open: the places of `problems`, else what
+   * `summary` cannot work out. `parse` holds a file to this, `Store.changed` a change.
+   * @returns {string[]} empty for a wallet that is fine
+   */
+  function check(data) {
+    try { return _inspect(data); }
+    catch(e) { return [e.message]; }
+  }
+
   /** The text written to a data file: pretty JSON, stable order, the version first. */
   const serialize = ({ version = FORMAT, ...rest }) => JSON.stringify({ version, ...rest }, null, 2) + "\n";
 
@@ -321,13 +341,12 @@ Object.assign(Core, (() => {
     catch(e) { throw new Error(`Not a valid wallet file (JSON): ${e.message}`); }
     if(!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error("Not a valid wallet file");
     const data = normalize(raw);
-    const found = problems(data);
+    const found = _inspect(data);
     if(found.length) throw new Error(_fileError(data, found));
-    summary(data); // throws on what the values cannot give, e.g. a currency without a rate
     return data;
   }
 
   return {
-    FORMAT, normalize, problems, serialize, parse,
+    FORMAT, normalize, problems, check, problemList, serialize, parse,
   };
 })());

@@ -5,12 +5,20 @@
 // of the app context; after every change the current one is drawn again.
 
 let _appUnsub = null;
+let _appRoot = null;        // the app standing on the page
 let _appView = "dashboard"; // the open view, kept over a rebuild
 
-/** Builds the whole app again (after opening another wallet or changing language). */
+/**
+ * Builds the whole app again (after opening another wallet, changing language or a
+ * refused change). Only the app is replaced: the messages and tooltips, which the
+ * kit adds to the page once and goes on using, stay on it.
+ */
 function mountApp() {
   _appUnsub?.();
-  document.body.replaceChildren(<App />);
+  const root = <App />;
+  if(_appRoot) _appRoot.replaceWith(root);
+  else document.body.replaceChildren(root);
+  _appRoot = root;
 }
 
 const App = () => {
@@ -70,10 +78,23 @@ const App = () => {
     recBadge.hidden = !warns;
   }
 
-  /** After a change: snapshot, save (where possible), message, redraw. */
+  /**
+   * Hands a change to `Store.changed`. A refused one is undone there: here it is
+   * named, and the app built again around the wallet put back.
+   * @returns {boolean} accepted
+   */
+  function accept() {
+    const found = Store.changed();
+    if(!found.length) return true;
+    Store.get().settings.theme = Theme.choice(); // a theme click that asked for no save stays
+    mountApp();
+    Alert.err(T("err_change_refused", { problems: Core.problemList(found) }));
+    return false;
+  }
+
+  /** After a change: snapshot and save (where possible), message, redraw. */
   function commit(msg, opts = {}) {
-    Core.upsertSnapshot(data);
-    Store.changed();
+    if(!accept()) return;
     if(msg) Alert.ok(msg);
     if(opts.rebuild) mountApp();
     else refresh();
@@ -180,7 +201,7 @@ const App = () => {
   function chooseTheme() {
     Theme.toggle();
     data.settings.theme = Theme.choice();
-    if(Store.state().canSaveInPlace) Store.changed();
+    if(Store.state().canSaveInPlace) accept();
   }
   // the icon names what is showing, the tooltip what a click brings
   const themeBtn = <IconBtn icon="light_mode" title={T("theme_dark")} onClick={() => chooseTheme()} />;

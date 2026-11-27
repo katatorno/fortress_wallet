@@ -135,7 +135,7 @@ fortress_wallet/
 │   │   │   ├── 8-history.js  #   snapshots, stored prices, chart ranges
 │   │   │   └── 9-advice.js   #   recommendations
 │   │   ├── i18n.js           # translations + number formats
-│   │   ├── store.js          # the open wallet: source, saving, a file changed elsewhere
+│   │   ├── store.js          # the open wallet: source, checked changes, saving, a file changed elsewhere
 │   │   ├── files.js          # local files (File System Access API / download)
 │   │   ├── remember.js       # the only place that keeps anything in the browser
 │   │   ├── links.js          # where a link in the wallet's notes may lead
@@ -180,6 +180,8 @@ pt = "Amortização antecipada de {amount} registada."
 Plain JSON that you can read, diff and back up. Keep your own file outside the project folder (see [Security](#security)).
 
 A file whose values the app cannot use (text where a number belongs, a negative price, an exchange rate of 0, an id such as `__proto__`) is refused, with the places to correct named; nothing in it is repaired without you.
+
+A change made in the app passes the same check of its values: one after which the wallet would not open is undone, with the places to correct named, and nothing of it is saved.
 
 The main keys:
 
@@ -246,7 +248,7 @@ tonka test fortress_wallet          # or one suite: node .tests/<name>.test.cjs
 | `rules` | the saves of the settings, cash, mortgage and transactions views: everything checked first, a refusal changes nothing |
 | `format` | the file's version and keys, migrations, files refused for values the app cannot use |
 | `history` | stored prices, the history built from them, the XTB import |
-| `store` | saving: the autosave, changes during a save, a file changed elsewhere, downloads |
+| `store` | saving: the autosave, changes during a save, a file changed elsewhere, downloads; a change the wallet would not open with is refused and undone |
 | `online` | the exchange rates: what is sent and what of the answer is taken |
 | `links` | which links in the notes keep their address |
 | `remember` | what the app keeps in the browser |

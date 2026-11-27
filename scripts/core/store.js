@@ -6,6 +6,10 @@
 // into the file (Chrome / Edge on a computer); otherwise the app asks you to
 // download the updated file.
 //
+// Every change passes through `changed`, which holds it to the check an opened
+// file gets (`Core.check`). One after which the wallet would not open is undone:
+// the wallet goes back to how it was last accepted, on opening or by `changed`.
+//
 // Each change raises a counter, and the file holds the counter of its last save:
 // whatever changed while a save was running is still unsaved. Saves run one after
 // another. Before writing, the file's stamp is compared with the one read or
@@ -19,6 +23,7 @@ const Store = (() => {
   const AUTOSAVE_MS = 800;
 
   let data = null;
+  let accepted = "";          // the wallet as last accepted, in the text of a file
   let source = { kind: "example", name: "" };
   let handle = null;          // local file handle (File System Access API)
   let stamp = null;           // the file as it was read or written last
@@ -53,6 +58,7 @@ const Store = (() => {
   function _open(newData, newSource, newHandle = null, newStamp = null) {
     clearTimeout(timer);
     data = newData;
+    accepted = Core.serialize(data);
     source = newSource;
     handle = newHandle;
     stamp = newStamp;
@@ -95,15 +101,40 @@ const Store = (() => {
   /** The open file's handle, where the browser gave one. */
   const fileHandle = () => handle;
 
-  // ------------------------------------------------------------ save
+  // ------------------------------------------------------------ change
 
-  /** Call after every change of the data. */
+  /**
+   * Why the change cannot be taken. With nothing against it the day's snapshot is
+   * made, and the wallet has to pass with that too: numbers out of all proportion
+   * add up to no number.
+   */
+  function _against() {
+    const found = Core.check(data); // first: a broken wallet may have no snapshot to make
+    if(found.length) return found;
+    Core.upsertSnapshot(data);
+    return Core.check(data);
+  }
+
+  /**
+   * The one way in for a change: call after every change of the data. A refused
+   * change is undone and nothing is saved; `get()` then gives a new object.
+   * @returns {string[]} why it was refused (see `Core.check`); empty: accepted
+   */
   function changed() {
+    const found = _against();
+    if(found.length) {
+      data = JSON.parse(accepted);
+      return found;
+    }
+    accepted = Core.serialize(data);
     rev += 1;
     if(status !== "conflict") status = "dirty";
     emit();
     _schedule();
+    return found;
   }
+
+  // ------------------------------------------------------------ save
 
   /**
    * Saves into the file the wallet came from, after any save still running.

@@ -2182,6 +2182,11 @@ pt = "esperado [abertura ou null, fecho]"
 #  Saves refused by a rule
 # -----------------------------------------------------------------------------
 
+[err_change_refused]
+en = "The change was undone and nothing of it was saved: with it the app could not open the wallet. To correct: {problems}"
+pl = "Zmianę cofnięto i niczego z niej nie zapisano: z nią aplikacja nie otworzyłaby portfela. Do poprawienia: {problems}"
+pt = "A alteração foi anulada e nada dela foi guardado: com ela a aplicação não conseguiria abrir a carteira. A corrigir: {problems}"
+
 [err_name_reserved]
 en = "“{name}” cannot be used as a name: the app reserves it."
 pl = "„{name}” nie może być nazwą: aplikacja ją rezerwuje."
