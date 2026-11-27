@@ -19,12 +19,11 @@ const CashView = (app) => {
       <stack gap="sm">
         {cashGrid}
         <row><Button variant="primary" icon="save" onClick={() => {
-          const byId = Object.fromEntries(data.cash.map(c => [c.id, c]));
-          for(const r of cashGrid.rows) {
-            const c = byId[r.id];
-            const diff = Number(r.amount || 0) - Number(c.amount);
-            Object.assign(c, { name: r.name, role: r.role, currency: r.currency });
-            if(Math.abs(diff) > 0.001) Core.addCash(data, c.id, diff, T("note_manual_correction"));
+          try { Core.saveCash(data, cashGrid.rows, T("note_manual_correction")); }
+          catch(e) {
+            if(!(e instanceof Core.RuleError)) throw e;
+            Alert.err(T(e.key, e.vars));
+            return;
           }
           app.commit(T("flash_cash_saved"));
         }}>{T("btn_save_cash")}</Button></row>

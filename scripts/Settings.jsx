@@ -1,6 +1,8 @@
 // scripts/Settings.jsx
 //
-// Budget and emergency fund, allocation targets, buckets and language.
+// Budget and emergency fund, allocation targets, buckets and language. The rules
+// of a save are in Core.saveSettings: everything is checked first, and a refused
+// save changes nothing.
 
 const SettingsView = (app) => {
   const { data, T } = app;
@@ -27,10 +29,13 @@ const SettingsView = (app) => {
     ]} />
   );
 
+  // a bucket is renamed here (its instruments follow), added, or removed when empty;
+  // one that holds instruments keeps its category
   const buckets = (
-    <EditGrid addLabel={T("btn_add_bucket")} newRow={() => ({ bucket: "", category: Object.keys(data.categories)[0], delete: false })}
+    <EditGrid addLabel={T("btn_add_bucket")}
+      newRow={() => ({ old: null, bucket: "", category: Object.keys(data.categories)[0], target: null, limit: null, delete: false })}
       rows={Object.entries(data.buckets).map(([b, cfg]) => ({
-        bucket: b, category: cfg.category,
+        old: b, bucket: b, category: cfg.category,
         target: cfg.target_pct_in_category ?? null, limit: cfg.max_pct_in_category ?? null, delete: false,
       }))} columns={[
         { key: "bucket", label: T("col_bucket"), width: "9rem" },
@@ -47,6 +52,28 @@ const SettingsView = (app) => {
       {options(Object.entries(langs))}
     </Select>
   );
+
+  function save() {
+    const value = (input, fallback) => input.value ?? fallback;
+    try {
+      Core.saveSettings(data, {
+        settings: {
+          emergency_target: value(f.emergency, s.emergency_target), monthly_expenses: value(f.expenses, s.monthly_expenses),
+          net_income: value(f.income, s.net_income), prepay_share_pct: value(f.share, s.prepay_share_pct),
+          min_prepayment: value(f.minPrepay, s.min_prepayment), alt_safe_yield_pct: value(f.alt, s.alt_safe_yield_pct),
+          drift_alert_pp: value(f.drift, s.drift_alert_pp), stale_days: value(f.stale, s.stale_days),
+        },
+        categories: targets.rows,
+        buckets: buckets.rows.map(r => ({ old: r.old, name: r.bucket, category: r.category, share: r.target, limit: r.limit, delete: r.delete })),
+      });
+    }
+    catch(e) {
+      if(!(e instanceof Core.RuleError)) throw e;
+      Alert.err(T(e.key, e.vars));
+      return;
+    }
+    app.commit(T("flash_settings_saved"));
+  }
 
   return (
     <stack gap="md">
@@ -78,44 +105,10 @@ const SettingsView = (app) => {
         <stack gap="sm">
           {buckets}
           <small tone="note">{T("settings_buckets_help")}</small>
+          <small tone="note">{T("settings_buckets_rename_help")}</small>
         </stack>
       </Panel>
-      <row><Button variant="primary" icon="save" onClick={() => {
-        const num = (input, fallback) => input.value ?? fallback;
-        // everything is checked first: a refused save changes nothing
-        const next = {};
-        for(const r of buckets.rows) {
-          const name = String(r.bucket || "").trim();
-          if(!name || r.delete) continue;
-          const cfg = { category: r.category };
-          if(r.target != null && r.target !== "") cfg.target_pct_in_category = Number(r.target);
-          if(r.limit != null && r.limit !== "") cfg.max_pct_in_category = Number(r.limit);
-          next[name] = cfg;
-        }
-        const missing = [...new Set(data.assets.map(a => a.bucket))].filter(b => !(b in next));
-        if(missing.length) { Alert.err(T("err_bucket_in_use", { buckets: missing.sort().join(", ") })); return; }
-        const total = targets.rows.reduce((a, r) => a + Number(r.target_pct || 0), 0);
-        if(Math.abs(total - 100) > 0.001 || targets.rows.some(r => Number(r.target_pct || 0) < 0)) {
-          Alert.err(T("err_category_sum", { sum: I18N.number(app.L, total, total % 1 ? 2 : 0) }));
-          return;
-        }
-        const shares = Core.badShares(next);
-        if(shares.length) {
-          Alert.err(T("err_share_sum", { categories: Core.sumList(data,
-            shares.map(x => ({ name: Core.categoryLabel(data, x.name), sum: x.sum }))) }));
-          return;
-        }
-        Object.assign(s, {
-          emergency_target: num(f.emergency, s.emergency_target), monthly_expenses: num(f.expenses, s.monthly_expenses),
-          net_income: num(f.income, s.net_income),
-          prepay_share_pct: num(f.share, s.prepay_share_pct), min_prepayment: num(f.minPrepay, s.min_prepayment),
-          alt_safe_yield_pct: num(f.alt, s.alt_safe_yield_pct), drift_alert_pp: num(f.drift, s.drift_alert_pp),
-          stale_days: Math.round(num(f.stale, s.stale_days)),
-        });
-        for(const r of targets.rows) Object.assign(data.categories[r.category], { target_pct: Number(r.target_pct || 0), buy: !!r.buy });
-        data.buckets = next;
-        app.commit(T("flash_settings_saved"));
-      }}>{T("btn_save_settings")}</Button></row>
+      <row><Button variant="primary" icon="save" onClick={() => save()}>{T("btn_save_settings")}</Button></row>
     </stack>
   );
 };

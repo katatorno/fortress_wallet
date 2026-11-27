@@ -78,15 +78,21 @@ const MortgageView = (app) => {
         {formRow(T("field_prepayment_fee"), p.fee)}
         {formRow(T("field_default_mode"), p.mode)}
         <row><Button variant="primary" icon="save" onClick={() => {
-          Object.assign(h, {
-            purchase_price: p.purchase.value || 0, value: p.value.value || 0, deposit_paid: p.deposit.value || 0,
-            deed_date: p.signed.checked ? (p.deedDate.value || Core.today()) : null,
-          });
-          Object.assign(m, {
-            amount: p.amount.value || 0, rate_pct: p.rate.value || 0, term_months: Math.round(p.term.value || 1),
-            first_payment_date: p.first.value || null, bank_payment: p.bank.value || null,
-            prepayment_fee_pct: p.fee.value || 0, default_mode: p.mode.value,
-          });
+          try {
+            Core.saveMortgage(data, {
+              purchase_price: p.purchase.value, value: p.value.value, deposit_paid: p.deposit.value,
+              deed_date: p.signed.checked ? (p.deedDate.value || Core.today()) : null,
+            }, {
+              amount: p.amount.value, rate_pct: p.rate.value, term_months: p.term.value,
+              first_payment_date: p.first.value || null, bank_payment: p.bank.value,
+              prepayment_fee_pct: p.fee.value, default_mode: p.mode.value,
+            });
+          }
+          catch(e) {
+            if(!(e instanceof Core.RuleError)) throw e;
+            Alert.err(T(e.key, e.vars));
+            return;
+          }
           app.commit(T("flash_params_saved"));
         }}>{T("btn_save_params")}</Button></row>
       </stack>

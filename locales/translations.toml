@@ -2177,3 +2177,62 @@ pt = "não é um dos valores que a aplicação conhece"
 en = "[opening or null, close] expected"
 pl = "oczekiwano [otwarcie lub null, zamknięcie]"
 pt = "esperado [abertura ou null, fecho]"
+
+# -----------------------------------------------------------------------------
+#  Saves refused by a rule
+# -----------------------------------------------------------------------------
+
+[err_name_reserved]
+en = "“{name}” cannot be used as a name: the app reserves it."
+pl = "„{name}” nie może być nazwą: aplikacja ją rezerwuje."
+pt = "“{name}” não pode ser usado como nome: a aplicação reserva-o."
+
+[err_bucket_category_used]
+en = "A bucket that holds instruments keeps its category: {buckets}. Move the instruments out first, or add a bucket in the other category."
+pl = "Koszyk z instrumentami zachowuje swoją kategorię: {buckets}. Najpierw przenieś z niego instrumenty albo dodaj koszyk w drugiej kategorii."
+pt = "Um grupo com instrumentos mantém a sua categoria: {buckets}. Retire primeiro os instrumentos, ou adicione um grupo na outra categoria."
+
+[err_value_range]
+en = "{field}: enter a number from {min} to {max}."
+pl = "{field}: wpisz liczbę od {min} do {max}."
+pt = "{field}: indique um número de {min} a {max}."
+
+[err_value_min]
+en = "{field}: enter a number of at least {min}."
+pl = "{field}: wpisz liczbę nie mniejszą niż {min}."
+pt = "{field}: indique um número de pelo menos {min}."
+
+[err_value_number]
+en = "{field}: enter a number."
+pl = "{field}: wpisz liczbę."
+pt = "{field}: indique um número."
+
+[err_value_choice]
+en = "{field}: choose one of the values offered."
+pl = "{field}: wybierz jedną z podanych wartości."
+pt = "{field}: escolha um dos valores propostos."
+
+[warn_sell_more]
+en = "{name}: only {held} held on that day or later, so no more can be sold."
+pl = "{name}: tego dnia lub później w portfelu jest tylko {held}, więc więcej nie da się sprzedać."
+pt = "{name}: nesse dia ou depois só existem {held}, por isso não se pode vender mais."
+
+[rec_category_mismatch_t]
+en = "{name} is in a bucket of another category"
+pl = "{name} jest w koszyku innej kategorii"
+pt = "{name} está num grupo de outra categoria"
+
+[rec_category_mismatch_x]
+en = "The instrument is marked {category}, its bucket {bucket} belongs to {bucket_category}. An instrument takes the category of its bucket: move it to a bucket of {category}, or save the instrument table to make it {bucket_category}."
+pl = "Instrument ma kategorię {category}, a jego koszyk {bucket} należy do kategorii {bucket_category}. Instrument przyjmuje kategorię koszyka: przenieś go do koszyka kategorii {category} albo zapisz tabelę instrumentów, żeby stał się {bucket_category}."
+pt = "O instrumento está marcado como {category}, o seu grupo {bucket} pertence a {bucket_category}. Um instrumento toma a categoria do seu grupo: mova-o para um grupo de {category}, ou guarde a tabela de instrumentos para o tornar {bucket_category}."
+
+[warn_bucket_required]
+en = "Choose the instrument's bucket; add a bucket first if there is none (Settings → Buckets)."
+pl = "Wybierz koszyk instrumentu; jeśli żadnego nie ma, najpierw go dodaj (Ustawienia → Koszyki)."
+pt = "Escolha o grupo do instrumento; se não houver nenhum, adicione-o primeiro (Definições → Grupos)."
+
+[settings_buckets_rename_help]
+en = "A changed name takes the bucket's instruments along. A bucket holding instruments keeps its category; an empty one can be removed. An instrument always belongs to the category of its bucket."
+pl = "Zmieniona nazwa zabiera ze sobą instrumenty koszyka. Koszyk z instrumentami zachowuje kategorię; pusty można usunąć. Instrument zawsze należy do kategorii swojego koszyka."
+pt = "Um nome alterado leva consigo os instrumentos do grupo. Um grupo com instrumentos mantém a categoria; um vazio pode ser removido. Um instrumento pertence sempre à categoria do seu grupo."

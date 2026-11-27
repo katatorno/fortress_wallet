@@ -4,7 +4,8 @@
 // by the view of everything else (metals, bonds). Prices are edited here, and an
 // instrument is moved to another bucket here; quantities change through
 // transactions. Targets are set in the bucket itself and recalculated to 100% when
-// its instruments change.
+// its instruments change. An instrument's category is its bucket's: choosing the
+// bucket chooses the category.
 
 /**
  * @param {object} app
@@ -18,9 +19,9 @@ function instrumentPanels(app, categories) {
   // listed bucket by bucket, in the buckets' order
   const pos = Core.positions(data).filter(p => categories.includes(p.category) && !Core.soldOut(data, p))
     .sort((a, b) => bucketNames.indexOf(a.bucket) - bucketNames.indexOf(b.bucket));
-  const catOptions = categories.map(c => [c, Core.categoryLabel(data, c)]);
-  const bucketOptions = bucketNames.map(b => [b, b]);
-  const choose = categories.length > 1; // a category is asked only when there is a choice
+  // with buckets of several categories each one says its category
+  const several = categories.length > 1;
+  const bucketOptions = bucketNames.map(b => [b, several ? `${b} (${Core.categoryLabel(data, data.buckets[b].category)})` : b]);
   const alerts = !categories.includes("equities"); // equities are only bought: no sell alerts
 
   /** Saves and says in which buckets the percentages were recalculated. */
@@ -33,7 +34,6 @@ function instrumentPanels(app, categories) {
     <EditGrid rows={pos.map(p => ({ ...p, delete: false }))} columns={[
       { key: "name", label: T("col_name"), width: "11rem" },
       { key: "bucket", label: T("col_bucket"), type: "select", options: bucketOptions },
-      ...(choose ? [{ key: "category", label: T("col_category"), type: "select", options: catOptions }] : []),
       { key: "ticker", label: T("col_ticker"), width: "7rem" },
       { key: "currency", label: T("col_currency"), type: "select", options: currencies.map(c => [c, c]) },
       { key: "quantity", label: T("col_quantity"), type: "readonly", align: "right", fmt: (v) => I18N.number(app.L, v, 4) },
@@ -65,7 +65,6 @@ function instrumentPanels(app, categories) {
   // ---------------------------------------------------------- add instrument
   const f = {
     name: <Input />, ticker: <Input />,
-    category: <Select>{options(catOptions)}</Select>,
     bucket: <Select>{options(bucketOptions)}</Select>,
     currency: <Select>{options(currencies.map(c => [c, c]))}</Select>,
     qty: <NumberInput value={0} min="0" step="any" />,
@@ -77,17 +76,17 @@ function instrumentPanels(app, categories) {
       <stack gap="sm">
         {formRow(T("col_name"), f.name)}
         {formRow(T("field_ticker_descr"), f.ticker)}
-        {choose
-          ? formRow(T("col_category"), f.category, f.bucket, f.currency)
-          : formRow(T("col_bucket"), f.bucket, f.currency)}
+        {formRow(T("col_bucket"), f.bucket, f.currency)}
         {formRow(T("field_opening_quantity"), f.qty, f.unit)}
         {formRow(T("field_unit_price"), f.price)}
         <row><Button variant="primary" icon="add" onClick={() => {
           const name = f.name.value.trim();
           if(!name) { Alert.wrn(T("warn_name_required")); return; }
+          const bucket = data.buckets[f.bucket.value];
+          if(!bucket) { Alert.wrn(T("warn_bucket_required")); return; }
           const asset = Core.normalize({ assets: [{
             id: Core.newId(), name, ticker: f.ticker.value,
-            category: choose ? f.category.value : categories[0], bucket: f.bucket.value,
+            category: bucket.category, bucket: f.bucket.value,
             currency: f.currency.value, opening_quantity: f.qty.value || 0, price: f.price.value || 0,
             unit: f.unit.value || "pcs",
             price_updated: Core.today(),

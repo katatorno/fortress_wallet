@@ -43,7 +43,7 @@ const src = [...walk(path.join(APP, "scripts")), path.join(APP, "app.jsx")]
   .filter(f => /\.jsx?$/.test(f)).map(f => readFileSync(f, "utf8")).join("\n");
 const used = new Set();
 for(const re of [/\bT\(\s*"([a-z0-9_]+)"/g, /\btr\(data,\s*"([a-z0-9_]+)"/g, /I18N\.t\([^,()]+,\s*"([a-z0-9_]+)"/g,
-  /\badd\("\w+",\s*"([a-z0-9_]+)",\s*"([a-z0-9_]+)"/g, /"((?:rec|err|flash|note|plan)_[a-z0-9_]+)"/g]) {
+  /\badd\("\w+",\s*"([a-z0-9_]+)",\s*"([a-z0-9_]+)"/g, /"((?:rec|err|flash|note|plan|warn)_[a-z0-9_]+)"/g]) {
   for(const m of src.matchAll(re)) for(const k of m.slice(1)) if(k && !k.endsWith("_")) used.add(k); // "cat_" + id is built
 }
 // built from variables in the code

@@ -45,11 +45,15 @@ const TransactionsView = (app) => {
         <row><Button variant="primary" icon="add" onClick={() => {
           const aid = instrument.value;
           const q = qty.value;
-          if(!aid) { Alert.wrn(T("warn_add_instrument_first")); return; }
-          if(!q) { Alert.wrn(T("warn_quantity_zero")); return; }
-          if(type.value !== "adjust" && q < 0) { Alert.wrn(T("warn_quantity_positive")); return; }
-          Core.addTransaction(data, aid, type.value, q, price.value || 0, fee.value || 0,
-            date.value, note.value, updatePrice.checked);
+          try {
+            Core.recordTransaction(data, { assetId: aid, type: type.value, quantity: q, price: price.value, fee: fee.value,
+              date: date.value, note: note.value, updatePrice: updatePrice.checked });
+          }
+          catch(e) {
+            if(!(e instanceof Core.RuleError)) throw e;
+            Alert.wrn(T(e.key, e.vars));
+            return;
+          }
           app.commit(T("flash_transaction", { type: Core.txLabel(data, type.value), name: byId[aid].name, quantity: String(q) }));
         }}>{T("btn_add_transaction")}</Button></row>
       </stack>
@@ -69,7 +73,7 @@ const TransactionsView = (app) => {
         {formRow(T("field_date"), cDate)}
         {formRow(T("field_note"), cNote)}
         <row><Button variant="primary" icon="save" onClick={() => {
-          if(!amount.value) { Alert.wrn(T("warn_amount_zero")); return; }
+          if(!amount.value || !Number.isFinite(Number(amount.value))) { Alert.wrn(T("warn_amount_zero")); return; }
           Core.addCash(data, account.value, amount.value, cNote.value, cDate.value);
           app.commit(T("flash_cash_op", { amount: money(amount.value, 2) }));
         }}>{T("btn_save")}</Button></row>
