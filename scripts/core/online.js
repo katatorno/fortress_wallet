@@ -3,7 +3,7 @@
 // Exchange rates from the European Central Bank through the Frankfurter API:
 // free, no key, CORS open, so the browser can ask it directly.
 // (Stock and metal prices have no such free source a browser may call; they are
-// entered by hand in Holdings & prices.)
+// entered by hand in the market view.)
 
 const Online = (() => {
   const FX_URL = "https://api.frankfurter.dev/v1/latest";

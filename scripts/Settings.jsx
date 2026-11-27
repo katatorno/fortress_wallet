@@ -24,22 +24,21 @@ const SettingsView = (app) => {
       category: c, label: Core.categoryLabel(data, c), target_pct: Number(cfg.target_pct), buy: !!cfg.buy,
     }))} columns={[
       { key: "label", label: T("col_category"), type: "readonly" },
-      { key: "target_pct", label: T("col_target_pct"), type: "number", width: "5rem" },
+      { key: "target_pct", label: T("col_target_pct"), type: "number", min: 0, max: 100, width: "5rem" },
       { key: "buy", label: T("col_buy"), type: "check" },
     ]} />
   );
 
   const buckets = (
-    <EditGrid addLabel={T("btn_add_bucket")} newRow={() => ({ bucket: "", category: Object.keys(data.categories)[0], auto: false, delete: false })}
+    <EditGrid addLabel={T("btn_add_bucket")} newRow={() => ({ bucket: "", category: Object.keys(data.categories)[0], delete: false })}
       rows={Object.entries(data.buckets).map(([b, cfg]) => ({
-        bucket: b, category: cfg.category, auto: !!cfg.auto,
+        bucket: b, category: cfg.category,
         target: cfg.target_pct_in_category ?? null, limit: cfg.max_pct_in_category ?? null, delete: false,
       }))} columns={[
         { key: "bucket", label: T("col_bucket"), width: "9rem" },
         { key: "category", label: T("col_category"), type: "select", options: Object.keys(data.categories).map(c => [c, Core.categoryLabel(data, c)]) },
-        { key: "auto", label: T("col_auto"), type: "check" },
-        { key: "target", label: T("col_target_in_category"), type: "number", width: "5rem" },
-        { key: "limit", label: T("col_limit_in_category"), type: "number", width: "5rem" },
+        { key: "target", label: T("col_target_in_category"), type: "number", min: 0, max: 100, width: "5rem" },
+        { key: "limit", label: T("col_limit_in_category"), type: "number", min: 0, max: 100, width: "5rem" },
         { key: "delete", label: T("col_delete"), type: "check" },
       ]} />
   );
@@ -50,6 +49,7 @@ const SettingsView = (app) => {
       {options(Object.entries(langs))}
     </Select>
   );
+
   const cache = (
     <Checkbox checked={Store.cacheEnabled()} label={T("set_cache")}
       onChange={(on) => { Store.setCache(on); Alert.ok(T(on ? "flash_cache_on" : "flash_cache_off")); }} />
@@ -92,6 +92,29 @@ const SettingsView = (app) => {
       </Panel>
       <row><Button variant="primary" icon="save" onClick={() => {
         const num = (input, fallback) => input.value ?? fallback;
+        // everything is checked first: a refused save changes nothing
+        const next = {};
+        for(const r of buckets.rows) {
+          const name = String(r.bucket || "").trim();
+          if(!name || r.delete) continue;
+          const cfg = { category: r.category };
+          if(r.target != null && r.target !== "") cfg.target_pct_in_category = Number(r.target);
+          if(r.limit != null && r.limit !== "") cfg.max_pct_in_category = Number(r.limit);
+          next[name] = cfg;
+        }
+        const missing = [...new Set(data.assets.map(a => a.bucket))].filter(b => !(b in next));
+        if(missing.length) { Alert.err(T("err_bucket_in_use", { buckets: missing.sort().join(", ") })); return; }
+        const total = targets.rows.reduce((a, r) => a + Number(r.target_pct || 0), 0);
+        if(Math.abs(total - 100) > 0.001 || targets.rows.some(r => Number(r.target_pct || 0) < 0)) {
+          Alert.err(T("err_category_sum", { sum: I18N.number(app.L, total, total % 1 ? 2 : 0) }));
+          return;
+        }
+        const shares = Core.badShares(next);
+        if(shares.length) {
+          Alert.err(T("err_share_sum", { categories: Core.sumList(data,
+            shares.map(x => ({ name: Core.categoryLabel(data, x.name), sum: x.sum }))) }));
+          return;
+        }
         Object.assign(s, {
           emergency_target: num(f.emergency, s.emergency_target), monthly_expenses: num(f.expenses, s.monthly_expenses),
           net_income: num(f.income, s.net_income), salaries_per_year: Math.round(num(f.salaries, s.salaries_per_year)),
@@ -100,17 +123,6 @@ const SettingsView = (app) => {
           stale_days: Math.round(num(f.stale, s.stale_days)),
         });
         for(const r of targets.rows) Object.assign(data.categories[r.category], { target_pct: Number(r.target_pct || 0), buy: !!r.buy });
-        const next = {};
-        for(const r of buckets.rows) {
-          const name = String(r.bucket || "").trim();
-          if(!name || r.delete) continue;
-          const cfg = { category: r.category, auto: !!r.auto };
-          if(r.target != null && r.target !== "") cfg.target_pct_in_category = Number(r.target);
-          if(r.limit != null && r.limit !== "") cfg.max_pct_in_category = Number(r.limit);
-          next[name] = cfg;
-        }
-        const missing = [...new Set(data.assets.map(a => a.bucket))].filter(b => !(b in next));
-        if(missing.length) { Alert.err(T("err_bucket_in_use", { buckets: missing.sort().join(", ") })); return; }
         data.buckets = next;
         app.commit(T("flash_settings_saved"));
       }}>{T("btn_save_settings")}</Button></row>

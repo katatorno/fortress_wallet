@@ -30,7 +30,9 @@ A spreadsheet stopped being enough once a mortgage joined the portfolio. Fortres
 | View | What it does |
 |---|---|
 | **Dashboard** | Net worth, allocation vs target, portfolio treemap, net worth history, drift of each ETF from its target |
-| **Holdings & prices** | Prices edited in a table, exchange rates (one click for today's ECB rates), sell alerts, new instruments, cash accounts |
+| **Market** | Equities: buckets vs their planned shares (editable, add your own), each bucket's instruments and their percentages, what to buy for an amount, instruments moved between buckets, prices edited in a table, exchange rates (one click for today's ECB rates), new instruments |
+| **Metals & bonds** | The same instrument table and add form for everything that is not equities |
+| **Cash** | Cash accounts: roles, currencies and balances |
 | **Transactions** | Buy / sell / adjust, cash deposits and withdrawals; deleting a transaction undoes it |
 | **Contribution calculator** | Amount → emergency fund → prepayment pot → purchases by target; record the whole plan with one click |
 | **Mortgage & home** | Payments (from the schedule or a bank statement), prepayments with a preview of their effect, balance and interest charts, yearly prepayment simulator |
@@ -154,7 +156,7 @@ Plain JSON that you can read, diff and back up. The main keys:
 |---|---|
 | `settings` | language, exchange rates (`fx`: units per 1 EUR), emergency fund target, income, % for prepayment, thresholds |
 | `categories` | `equities`, `metals`, `bonds`: target % and `buy` (false = frozen: never bought, never sold) |
-| `buckets` | groups inside a category: `auto` (the calculator splits money by instrument targets) or manual with a `max_pct_in_category` limit |
+| `buckets` | groups inside a category, each with its share (`target_pct_in_category`) and an optional `max_pct_in_category` limit. Shares in a category and instrument targets in a bucket must add up to 100%, or be all 0 (you pick the instrument yourself); the calculator splits money by both |
 | `assets` | instruments: currency, opening quantity, price, target within bucket, sell alert |
 | `transactions` | buy / sell / adjust; quantity = opening quantity + transactions |
 | `cash`, `cash_log` | cash accounts with a role (`emergency`, `prepay`, `home`, `other`) and their movements |
@@ -176,8 +178,10 @@ Prices of stocks, ETFs and metals are entered by hand: there is no free price so
 ## Tests
 
 ```bash
-tonka test fortress-wallet          # or: node .tests/core.test.cjs && node .tests/translations.test.cjs
+tonka test fortress-wallet          # or: node .tests/core.test.cjs && node .tests/market.test.cjs && node .tests/translations.test.cjs
 ```
+
+`market.test.cjs` holds the market view's rules: percentages in a bucket are 100% or all 0%, bucket shares are 100%, moves and deletions keep that, the "what to buy" calculator and no sell alerts for equities.
 
 ## Disclaimer
 

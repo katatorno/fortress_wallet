@@ -54,8 +54,10 @@ const near = (a, b, tol = 0.01) => Math.abs(a - b) <= tol;
   const cash = p2.lines.filter(l => l.kind === "cash");
   const buys = p2.lines.filter(l => l.kind === "buy");
   ok("30% of the rest goes to the prepayment pot", cash.length === 1 && near(cash[0].eur, 300));
-  ok("purchases only in the automatic bucket", buys.every(l => d.assets.find(a => a.id === l.asset_id).bucket === "fortress"));
-  ok("purchases add up to the rest", near(buys.reduce((s, l) => s + l.eur, 0), 700, 0.02));
+  ok("the bucket at 0% is left to pick by hand, the rest is bought", buys.every(l => d.assets.find(a => a.id === l.asset_id).bucket === "fortress"));
+  const open = p2.lines.filter(l => l.kind === "unassigned");
+  ok("purchases and the hand-picked amount add up to the rest",
+    near([...buys, ...open].reduce((s, l) => s + l.eur, 0), 700, 0.02));
   const before = Core.quantities(d).cnya;
   Core.applyPlan(d, p2, "2026-11-25");
   ok("recording the plan adds transactions", Core.quantities(d).cnya >= before && d.transactions.length === buys.length);

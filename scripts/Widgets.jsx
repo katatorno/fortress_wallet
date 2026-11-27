@@ -49,7 +49,8 @@ const Note = ({ level = "info", title, children }) => {
  *
  * @param {object} props
  * @param {Array<{key:string, label:string, type?:string, options?:Array<[string,string]>,
- *   step?:string, fmt?:(v:any, row:object)=>string, width?:string, help?:string}>} props.columns
+ *   step?:string, min?:number, max?:number, fmt?:(v:any, row:object)=>string,
+ *   width?:string, help?:string}>} props.columns
  * @param {object[]} props.rows
  * @param {() => object} [props.newRow]  when given, an "add row" button appends one
  * @param {string} [props.addLabel]
@@ -80,8 +81,16 @@ const EditGrid = ({ columns, rows, newRow, addLabel = "+" }) => {
       type={type === "number" ? "number" : "text"} step={col.step || "any"} />;
     input.value = v ?? "";
     if(col.width) input.style.width = col.width;
+    if(col.min !== undefined) input.min = col.min;
+    if(col.max !== undefined) input.max = col.max;
     input.addEventListener("input", () => {
-      draft[col.key] = type === "number" ? (input.value === "" ? null : Number(input.value)) : input.value;
+      if(type !== "number") { draft[col.key] = input.value; return; }
+      if(input.value === "") { draft[col.key] = null; return; }
+      // a value outside the column's limits is pulled back as it is typed
+      const typed = Number(input.value);
+      const kept = Core.clamp(typed, col.min, col.max);
+      if(kept !== typed) input.value = kept;
+      draft[col.key] = kept;
     });
     return <td>{input}</td>;
   }
@@ -105,6 +114,20 @@ const EditGrid = ({ columns, rows, newRow, addLabel = "+" }) => {
   el.rows = drafts;
   return el;
 };
+
+/**
+ * A note under an `EditGrid` that follows its drafts as they are typed.
+ * @param {Element} grid
+ * @param {(rows:object[]) => string} text
+ */
+function liveNote(grid, text) {
+  const note = <small tone="note"></small>;
+  const show = () => { note.textContent = text(grid.rows); };
+  grid.addEventListener("input", show);
+  grid.addEventListener("change", show);
+  show();
+  return note;
+}
 
 /** `<option>`s from [value, label] pairs. */
 const options = (pairs) => pairs.map(([value, label]) => <option value={value}>{label}</option>);

@@ -80,12 +80,14 @@ const ChartLegend = ({ items }) => (
  * Horizontal bars: the current share drawn over a taller, paler bar for the target,
  * with the numbers written above: share, target, difference and its worth.
  * Plain HTML, so the numbers wrap on a narrow screen.
- * @param {{rows: Array<{label:string, value:number, target:number, cls:string}>, total:number,
+ * @param {{rows: Array<{label:string, value:number, target:number|null, cls:string}>, total:number,
  *   lang:string, currentName:string, targetName:string}} props
- *   `value` and `target` are percentages of `total` (EUR)
+ *   `value` and `target` are percentages of `total` (EUR); a row whose target is
+ *   null shows its share and worth only
  */
 const TargetBars = ({ rows, total, lang, currentName, targetName }) => {
-  const max = Math.max(10, ...rows.map(r => Math.max(r.value, r.target)));
+  const max = Math.max(10, ...rows.map(r => Math.max(r.value, r.target || 0)));
+  const planned = rows.some(r => r.target != null);
   const width = (v) => ({ width: v / max * 100 + "%" });
   // one decimal, dropped for whole numbers: 75% but 67.7%
   const share = (v) => I18N.percent(lang, v, Math.round(v * 10) % 10 ? 1 : 0);
@@ -107,18 +109,19 @@ const TargetBars = ({ rows, total, lang, currentName, targetName }) => {
   return (
     <stack gap="sm">
       <ChartLegend items={[{ name: currentName, cls: rows[0]?.cls || "c1" },
-        { name: targetName, cls: [rows[0]?.cls || "c1", "pale"] }]} />
+        ...(planned ? [{ name: targetName, cls: [rows[0]?.cls || "c1", "pale"] }] : [])]} />
       {rows.map(r => (
         <div class="tbar">
           <div class="tbar-head">
             <span class="tbar-label">{r.label}</span>
             <span class="tbar-nums">
-              <span><strong>{share(r.value)}</strong> {I18N.t(lang, "bar_of_target", { target: share(r.target) })}</span>
-              {gap(r)}
+              {r.target == null
+                ? [<strong>{share(r.value)}</strong>, <span>{I18N.money(lang, r.value / 100 * total)}</span>]
+                : [<span><strong>{share(r.value)}</strong> {I18N.t(lang, "bar_of_target", { target: share(r.target) })}</span>, gap(r)]}
             </span>
           </div>
           <div class={["tbar-plot", r.cls]}>
-            <div class="tbar-target" style={width(r.target)}></div>
+            {r.target == null ? null : <div class="tbar-target" style={width(r.target)}></div>}
             {r.value > 0 ? <div class="tbar-current" style={width(r.value)}></div> : null}
           </div>
         </div>

@@ -35,6 +35,8 @@ const Core = (() => {
   const clone = (x) => JSON.parse(JSON.stringify(x));
   const setDefault = (obj, key, value) => { if(obj[key] === undefined) obj[key] = value; return obj[key]; };
   const isBlank = (v) => v === null || v === undefined || v === "";
+  /** `x` held between the limits that are given. */
+  const clamp = (x, min = -Infinity, max = Infinity) => Math.min(max, Math.max(min, x));
 
   // ---------------------------------------------------------------- dates
 
@@ -124,7 +126,6 @@ const Core = (() => {
       setDefault(a, "price", 0);
       setDefault(a, "currency", "EUR");
       setDefault(a, "target_in_bucket", 0);
-      setDefault(a, "fractional", true);
       setDefault(a, "alert_price", null);
       setDefault(a, "price_updated", null);
       setDefault(a, "unit", "pcs");
@@ -421,6 +422,154 @@ const Core = (() => {
     };
   }
 
+  // ---------------------------------------------------------------- buckets
+
+  class BucketError extends Error {
+    constructor(key, vars = {}) { super(key); this.key = key; this.vars = vars; }
+  }
+
+  const isWhole = (sum) => Math.abs(sum - 100) < 0.001;
+  const percentText = (data, x) => num(data, x, Math.abs(x - Math.round(x)) < 0.001 ? 0 : 2) + "%";
+
+  /** The instrument targets of a bucket, added up. */
+  const targetSum = (assets, bucket) => assets.filter(a => a.bucket === bucket)
+    .reduce((s, a) => s + Number(a.target_in_bucket || 0), 0);
+
+  /**
+   * Buckets whose instrument targets neither add up to 100 nor are all 0 (a bucket
+   * where the instrument is picked by hand).
+   * @returns {Array<{name:string, sum:number}>}
+   */
+  function badTargets(buckets, assets, names = Object.keys(buckets)) {
+    return names.flatMap(name => {
+      const targets = assets.filter(a => a.bucket === name).map(a => Number(a.target_in_bucket || 0));
+      const sum = targetSum(assets, name);
+      const none = targets.every(x => x === 0);
+      const whole = isWhole(sum) && targets.every(x => x >= 0);
+      return none || whole ? [] : [{ name, sum }];
+    });
+  }
+
+  /**
+   * Categories whose bucket shares do not add up to 100. A category with a single
+   * bucket may have no share at all.
+   * @returns {Array<{name:string, sum:number}>}
+   */
+  function badShares(buckets) {
+    const categories = [...new Set(Object.values(buckets).map(b => b.category))];
+    return categories.flatMap(name => {
+      const own = Object.values(buckets).filter(b => b.category === name);
+      const shares = own.map(b => Number(b.target_pct_in_category || 0));
+      const sum = shares.reduce((a, b) => a + b, 0);
+      const none = own.length === 1 && !shares[0];
+      const whole = isWhole(sum) && shares.every(x => x >= 0);
+      return none || whole ? [] : [{ name, sum }];
+    });
+  }
+
+  /**
+   * Brings a bucket's targets back to 100 after its instruments changed, scaled in
+   * proportion. A bucket that adds up, or has no targets at all, stays as it is.
+   * @returns {boolean} whether any target changed
+   */
+  function rebalance(data, bucket) {
+    if(!data.buckets[bucket] || !badTargets(data.buckets, data.assets, [bucket]).length) return false;
+    const members = data.assets.filter(a => a.bucket === bucket);
+    const given = members.map(a => Math.max(0, Number(a.target_in_bucket || 0)));
+    const sum = given.reduce((a, b) => a + b, 0);
+    const next = given.map(x => sum > 0 ? round2(x / sum * 100) : 0);
+    if(sum > 0) { // the rounding leftover goes to the largest
+      const top = next.indexOf(Math.max(...next));
+      next[top] = round2(next[top] + 100 - next.reduce((a, b) => a + b, 0));
+    }
+    members.forEach((a, i) => { a.target_in_bucket = next[i]; });
+    return true;
+  }
+
+  /**
+   * Saves the targets of one bucket, only when they add up to 100 or are all 0.
+   * @param {Object<string, number>} targets  instrument id → percentage, every instrument of the bucket
+   * @returns {boolean} saved; false leaves the data as it was
+   */
+  function saveTargets(data, bucket, targets) {
+    const next = data.assets.map(a => a.bucket === bucket && a.id in targets
+      ? { ...a, target_in_bucket: Number(targets[a.id] || 0) } : a);
+    if(badTargets(data.buckets, next, [bucket]).length) return false;
+    for(const a of data.assets) if(a.bucket === bucket && a.id in targets) a.target_in_bucket = Number(targets[a.id] || 0);
+    return true;
+  }
+
+  /**
+   * Saves the rows of an instrument table: edits, moves and deletions. A moved
+   * instrument starts at 0 in its new bucket, and the buckets that lost or gained
+   * one are brought back to 100.
+   * @param {object[]} rows  an instrument each: id, delete and the editable fields
+   * @returns {string[]} the buckets whose targets were recalculated
+   */
+  function saveInstruments(data, rows, on = null) {
+    const date = parseDate(on) || today();
+    const byId = Object.fromEntries(data.assets.map(a => [a.id, a]));
+    const gone = new Set(), changed = new Set();
+    for(const r of rows) {
+      const a = byId[r.id];
+      if(r.delete) { gone.add(r.id); changed.add(a.bucket); continue; }
+      const moved = r.bucket !== a.bucket;
+      if(moved) changed.add(a.bucket).add(r.bucket);
+      const price = Number(r.price || 0);
+      if(Math.abs(price - Number(a.price)) > 1e-9) a.price_updated = date;
+      Object.assign(a, {
+        name: r.name, ticker: r.ticker || "", category: r.category, bucket: r.bucket,
+        currency: r.currency, unit: r.unit || "pcs", price,
+        target_in_bucket: moved ? 0 : a.target_in_bucket, alert_price: r.alert_price || null,
+      });
+    }
+    data.assets = data.assets.filter(a => !gone.has(a.id));
+    data.transactions = data.transactions.filter(t => !gone.has(t.asset_id));
+    return [...changed].filter(b => rebalance(data, b));
+  }
+
+  /** "fortress 95%, sandbox 5%" for the messages and the running totals. */
+  const sumList = (data, items) => items.map(i => `${i.name} ${percentText(data, i.sum)}`).join(", ");
+
+  /**
+   * Replaces one category's buckets with the edited rows. A changed name takes its
+   * instruments along. Throws BucketError and leaves the data as it was.
+   * @param {Array<{old:string|null, name:string, share:number, delete?:boolean}>} rows
+   *   `old` is the current name, null for a new bucket; the shares must add up to 100
+   */
+  function saveBuckets(data, category, rows) {
+    const keep = [], gone = [];
+    for(const r of rows) {
+      const name = String(r.name || "").trim();
+      if(r.delete) { if(r.old) gone.push(r.old); }
+      else if(name) keep.push({ ...r, name });
+      else if(r.old) throw new BucketError("err_bucket_name");
+    }
+    const others = Object.keys(data.buckets).filter(b => data.buckets[b].category !== category);
+    const names = keep.map(r => r.name);
+    const twice = names.find((n, i) => names.indexOf(n) !== i || others.includes(n));
+    if(twice) throw new BucketError("err_bucket_duplicate", { bucket: twice });
+    const used = gone.filter(b => data.assets.some(a => a.bucket === b));
+    if(used.length) throw new BucketError("err_bucket_in_use", { buckets: used.sort().join(", ") });
+    const sum = keep.reduce((a, r) => a + Number(r.share || 0), 0);
+    if(keep.length && (Math.abs(sum - 100) > 0.001 || keep.some(r => Number(r.share || 0) < 0))) {
+      throw new BucketError("err_bucket_sum", { sum: num(data, sum, sum % 1 ? 1 : 0) });
+    }
+
+    const config = (r) => ({ ...(r.old ? data.buckets[r.old] : {}), category,
+      target_pct_in_category: Number(r.share || 0) });
+    const next = [];
+    for(const [b, cfg] of Object.entries(data.buckets)) {
+      if(cfg.category !== category) { next.push([b, cfg]); continue; }
+      const r = keep.find(x => x.old === b);
+      if(r) next.push([r.name, config(r)]);
+    }
+    for(const r of keep) if(!r.old) next.push([r.name, config(r)]);
+    const renamed = new Map(keep.filter(r => r.old).map(r => [r.old, r.name]));
+    for(const a of data.assets) if(renamed.has(a.bucket)) a.bucket = renamed.get(a.bucket);
+    data.buckets = Object.fromEntries(next);
+  }
+
   // ---------------------------------------------------------------- calculator
 
   /**
@@ -445,6 +594,20 @@ const Core = (() => {
     const s = keys.reduce((acc, k) => acc + alloc[k], 0);
     for(const k of keys) result[k] = s ? alloc[k] * amount / s : 0;
     return result;
+  }
+
+  /** Why a bucket gets nothing of `eur`, and from which amount it would. */
+  function _bucketWaits(data, values, shares, bucket, eur) {
+    const keys = Object.keys(shares);
+    const weight = keys.reduce((s, k) => s + shares[k], 0);
+    const total = keys.reduce((s, k) => s + (values[k] || 0), 0);
+    // waterfill reaches the bucket once the common level passes what it holds per share
+    const level = (values[bucket] || 0) / (shares[bucket] / weight);
+    const from = keys.reduce((s, k) => s + Math.max(0, shares[k] / weight * level - (values[k] || 0)), 0);
+    return tr(data, "note_bucket_waits", {
+      bucket, current: num(data, total ? (values[bucket] || 0) / total * 100 : 0, 1),
+      target: num(data, shares[bucket] / weight * 100), amount: money(data, eur), from: money(data, from),
+    });
   }
 
   /** What to do with an amount: emergency fund → prepayment pot → purchases by target. */
@@ -485,42 +648,45 @@ const Core = (() => {
     if(left > 0.005 && !Object.keys(buyTargets).length) notes.push(tr(data, "note_no_buy_categories"));
     const catAlloc = left > 0.005 ? waterfill(cats, buyTargets, left) : {};
 
-    let rest = 0;
     for(const [cat, eur] of Object.entries(catAlloc)) {
       if(eur <= 0.005) continue;
-      const auto = Object.fromEntries(Object.entries(data.buckets)
-        .filter(([, cfg]) => cfg.category === cat && cfg.auto)
-        .map(([b, cfg]) => [b, Number(cfg.target_pct_in_category || 0)]));
-      if(!Object.keys(auto).length) {
+      const shares = Object.fromEntries(Object.entries(data.buckets)
+        .filter(([, cfg]) => cfg.category === cat && Number(cfg.target_pct_in_category || 0) > 0)
+        .map(([b, cfg]) => [b, Number(cfg.target_pct_in_category)]));
+      if(!Object.keys(shares).length) {
         lines.push({ kind: "unassigned", label: tr(data, "plan_choose_instrument", { category: categoryLabel(data, cat) }), eur });
         continue;
       }
-      for(const [b, beur] of Object.entries(waterfill(buckets, auto, eur))) {
-        if(beur <= 0.005) continue;
+      for(const [b, beur] of Object.entries(waterfill(buckets, shares, eur))) {
+        const waits = beur <= 0.005; // the whole amount is catching up in other buckets
+        if(waits) notes.push(_bucketWaits(data, buckets, shares, b, eur));
         const members = pos.filter(p => p.bucket === b && Number(p.target_in_bucket || 0) > 0);
         if(!members.length) {
-          lines.push({ kind: "unassigned", label: tr(data, "plan_no_targets", { bucket: b }), eur: beur });
+          if(beur > 0.005) {
+            lines.push({ kind: "unassigned", bucket: b, label: tr(data, "plan_no_targets", { bucket: b }), eur: beur });
+          }
           continue;
         }
         const aAlloc = waterfill(
           Object.fromEntries(members.map(p => [p.id, p.value_eur])),
           Object.fromEntries(members.map(p => [p.id, Number(p.target_in_bucket)])), beur);
-        for(const [aid, aeur] of Object.entries(aAlloc)) {
-          if(aeur <= 0.005) continue;
-          const p = byId[aid];
+        // every instrument with a percentage gets a line: a purchase (units may be
+        // fractional), or why there is none
+        for(const p of members) {
+          const aeur = aAlloc[p.id] || 0;
           const unit = p.unit_eur;
-          let units = unit > 0 ? aeur / unit : 0;
-          if(p.fractional === false) units = Math.floor(units);
-          const spent = units * unit;
-          rest += aeur - spent;
-          if(units > 0) {
-            lines.push({ kind: "buy", asset_id: aid, label: p.name, ticker: p.ticker || "",
-              eur: spent, units, price: Number(p.price), currency: p.currency });
+          if(aeur > 0.005 && unit > 0) {
+            lines.push({ kind: "buy", asset_id: p.id, label: p.name, ticker: p.ticker || "",
+              eur: aeur, units: aeur / unit, price: Number(p.price), currency: p.currency });
+          }
+          else {
+            const why = unit <= 0 ? "plan_skip_price" : waits ? "plan_skip_bucket" : "plan_skip_target";
+            lines.push({ kind: "skip", asset_id: p.id, ticker: p.ticker || "", eur: aeur,
+              label: tr(data, why, { name: p.name, bucket: b }) });
           }
         }
       }
     }
-    if(rest > 0.01) lines.push({ kind: "rest", label: tr(data, "plan_rest"), eur: rest });
 
     const catsAfter = { ...cats };
     for(const ln of lines) {
@@ -530,7 +696,7 @@ const Core = (() => {
       }
     }
     for(const [b, cfg] of Object.entries(data.buckets)) {
-      if(cfg.max_pct_in_category && !cfg.auto) {
+      if(cfg.max_pct_in_category) {
         const catTotal = catsAfter[cfg.category] || 0;
         const room = Math.max(0, Number(cfg.max_pct_in_category) / 100 * catTotal - (buckets[b] || 0));
         notes.push(tr(data, "note_bucket_room", { bucket: b, room: money(data, room), limit: num(data, cfg.max_pct_in_category) }));
@@ -652,9 +818,9 @@ const Core = (() => {
       }
     }
 
-    // 4. Drift inside automatic buckets
+    // 4. Drift inside the buckets that are being bought
     for(const [b, cfg] of Object.entries(data.buckets)) {
-      if(!cfg.auto) continue;
+      if(!data.categories[cfg.category]?.buy) continue;
       const members = pos.filter(p => p.bucket === b && Number(p.target_in_bucket || 0) > 0);
       const total = members.reduce((a, p) => a + p.value_eur, 0);
       const tsumB = members.reduce((a, p) => a + Number(p.target_in_bucket), 0);
@@ -668,8 +834,9 @@ const Core = (() => {
       }
     }
 
-    // 5. Sell thresholds (e.g. precious metals)
+    // 5. Sell thresholds (e.g. precious metals); equities are only bought
     for(const p of pos) {
+      if(p.category === "equities") continue;
       const alert = p.alert_price;
       if(!isBlank(alert) && Number(alert) !== 0 && Number(p.price) >= Number(alert)) {
         add("warn", "rec_alert_t", "rec_alert_x",
@@ -718,7 +885,8 @@ const Core = (() => {
   }
 
   return {
-    ROLES, MODES, TX_TYPES, MortgageError,
+    ROLES, MODES, TX_TYPES, MortgageError, BucketError, saveBuckets,
+    targetSum, badTargets, badShares, rebalance, saveTargets, saveInstruments, sumList, clamp,
     lang, tr, money, num, categoryLabel, roleLabel, modeLabel, txLabel,
     round2, newId, clone, today, parseDate, addMonths, daysBetween, monthYear, dayMonthYear,
     normalize, serialize, parse,

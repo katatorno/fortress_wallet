@@ -39,21 +39,17 @@
   "buckets": {
     "fortress": {
       "category": "equities",
-      "auto": true,
-      "target_pct_in_category": 100
+      "target_pct_in_category": 90
     },
     "sandbox": {
       "category": "equities",
-      "auto": false,
-      "max_pct_in_category": 10
+      "target_pct_in_category": 10
     },
     "metals": {
-      "category": "metals",
-      "auto": false
+      "category": "metals"
     },
     "bonds": {
-      "category": "bonds",
-      "auto": false
+      "category": "bonds"
     }
   },
   "house": {
@@ -84,7 +80,6 @@
       "opening_quantity": 115.15,
       "price": 13.082,
       "target_in_bucket": 70,
-      "fractional": true,
       "price_updated": "2026-11-25",
       "unit": "pcs",
       "alert_price": null
@@ -100,7 +95,6 @@
       "opening_quantity": 5.7,
       "price": 41.91,
       "target_in_bucket": 10,
-      "fractional": true,
       "price_updated": "2026-11-25",
       "unit": "pcs",
       "alert_price": null
@@ -116,7 +110,6 @@
       "opening_quantity": 1.5,
       "price": 127.0,
       "target_in_bucket": 10,
-      "fractional": true,
       "price_updated": "2026-11-25",
       "unit": "pcs",
       "alert_price": null
@@ -132,7 +125,6 @@
       "opening_quantity": 1.9,
       "price": 59.4,
       "target_in_bucket": 5,
-      "fractional": true,
       "price_updated": "2026-11-25",
       "unit": "pcs",
       "alert_price": null
@@ -148,7 +140,6 @@
       "opening_quantity": 23,
       "price": 4.54,
       "target_in_bucket": 5,
-      "fractional": true,
       "price_updated": "2026-11-25",
       "unit": "pcs",
       "alert_price": null
@@ -164,7 +155,6 @@
       "opening_quantity": 1,
       "price": 121.27,
       "target_in_bucket": 0,
-      "fractional": false,
       "price_updated": "2026-11-25",
       "unit": "pcs",
       "alert_price": null
@@ -180,7 +170,6 @@
       "opening_quantity": 1,
       "price": 35.75,
       "target_in_bucket": 0,
-      "fractional": false,
       "price_updated": "2026-11-25",
       "unit": "pcs",
       "alert_price": null
@@ -196,7 +185,6 @@
       "opening_quantity": 4,
       "price": 9.33,
       "target_in_bucket": 0,
-      "fractional": true,
       "price_updated": "2026-11-25",
       "unit": "pcs",
       "alert_price": null
@@ -212,7 +200,6 @@
       "opening_quantity": 1,
       "price": 21.53,
       "target_in_bucket": 0,
-      "fractional": false,
       "price_updated": "2026-11-25",
       "unit": "pcs",
       "alert_price": null
@@ -227,8 +214,7 @@
       "currency": "USD",
       "opening_quantity": 4,
       "price": 66.0,
-      "target_in_bucket": 0,
-      "fractional": true,
+      "target_in_bucket": 25,
       "price_updated": "2026-11-25",
       "unit": "oz",
       "alert_price": null
@@ -243,8 +229,7 @@
       "currency": "USD",
       "opening_quantity": 0.19,
       "price": 3789.0,
-      "target_in_bucket": 0,
-      "fractional": true,
+      "target_in_bucket": 75,
       "price_updated": "2026-11-25",
       "unit": "oz",
       "alert_price": null
@@ -259,8 +244,7 @@
       "currency": "PLN",
       "opening_quantity": 10,
       "price": 110.0,
-      "target_in_bucket": 0,
-      "fractional": true,
+      "target_in_bucket": 100,
       "price_updated": "2026-11-25",
       "unit": "pcs",
       "alert_price": null

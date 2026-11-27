@@ -22,10 +22,20 @@ en = "Dashboard"
 pl = "Pulpit"
 pt = "Painel"
 
-[tab_holdings]
-en = "Holdings & prices"
-pl = "Pozycje i ceny"
-pt = "Posições e preços"
+[tab_market]
+en = "Market"
+pl = "Giełda"
+pt = "Bolsa"
+
+[tab_other]
+en = "Metals & bonds"
+pl = "Kruszce i obligacje"
+pt = "Metais e obrigações"
+
+[tab_cash]
+en = "Cash"
+pl = "Gotówka"
+pt = "Dinheiro"
 
 [tab_transactions]
 en = "Transactions"
@@ -345,6 +355,151 @@ en = "on target"
 pl = "zgodnie z planem"
 pt = "no objetivo"
 
+[market_buy_help]
+en = "The whole amount goes into equities: first between the buckets, then between their instruments, towards your percentages. Nothing is sold."
+pl = "Cała kwota idzie na akcje i ETF-y: najpierw dzieli się między koszyki, potem między instrumenty, tak by zbliżyć je do Twoich procentów. Nic nie jest sprzedawane."
+pt = "O montante vai todo para ações e ETFs: primeiro entre os grupos, depois entre os instrumentos, para os aproximar das suas percentagens. Nada é vendido."
+
+[market_record_help]
+en = "Once you have bought, record the purchases – it adds transactions at the current prices for the “Buy” lines; add the ones you chose yourself in Transactions. Cash balances stay as they are."
+pl = "Po zakupach zapisz je – aplikacja doda transakcje po bieżących cenach dla pozycji „Kup”; wybrane samodzielnie dodaj w Transakcjach. Salda kont gotówkowych się nie zmienią."
+pt = "Depois de comprar, registe as compras – são adicionadas transações aos preços atuais para as linhas “Comprar”; as que escolheu adicione em Transações. Os saldos em dinheiro não mudam."
+
+[bucket_shares_title]
+en = "Buckets vs plan"
+pl = "Koszyki vs plan"
+pt = "Grupos vs plano"
+
+[chart_bucket_composition]
+en = "Bucket “{bucket}” – composition"
+pl = "Koszyk „{bucket}” – skład"
+pt = "Grupo “{bucket}” – composição"
+
+[bucket_empty]
+en = "Nothing here yet."
+pl = "Na razie nic tu nie ma."
+pt = "Ainda não há nada aqui."
+
+[buckets_title]
+en = "Buckets"
+pl = "Koszyki"
+pt = "Grupos"
+
+[add_bucket_title]
+en = "Add a bucket"
+pl = "Dodaj koszyk"
+pt = "Adicionar grupo"
+
+[col_instrument_count]
+en = "Instruments"
+pl = "Instrumenty"
+pt = "Instrumentos"
+
+[targets_title]
+en = "Share of each instrument in the bucket"
+pl = "Procent każdego instrumentu w koszyku"
+pt = "Peso de cada instrumento no grupo"
+
+[btn_save_targets]
+en = "Save percentages"
+pl = "Zapisz procenty"
+pt = "Guardar percentagens"
+
+[sum_ok]
+en = "✓ Total: {sum}"
+pl = "✓ Suma: {sum}"
+pt = "✓ Soma: {sum}"
+
+[sum_wrong]
+en = "⚠ Total: {sum} – it must be exactly 100% to save."
+pl = "⚠ Suma: {sum} – aby zapisać, musi być równo 100%."
+pt = "⚠ Soma: {sum} – para guardar tem de ser exatamente 100%."
+
+[move_help]
+en = "Choose each instrument's bucket in the “Bucket” column; percentages are set in the bucket itself. After a move, an addition or a removal they are recalculated to 100% (a bucket at 0% stays at 0%)."
+pl = "Koszyk instrumentu wybierasz w kolumnie „Koszyk”, a procenty ustawiasz w samym koszyku. Po przeniesieniu, dodaniu lub usunięciu instrumentu są przeliczane do 100% (koszyk z 0% zostaje przy 0%)."
+pt = "Escolha o grupo de cada instrumento na coluna “Grupo”; as percentagens definem-se no próprio grupo. Após mover, adicionar ou remover são recalculadas para 100% (um grupo a 0% fica a 0%)."
+
+[targets_wrong]
+en = "⚠ Total: {sum} – to save it must be exactly 100%, or every field 0%."
+pl = "⚠ Suma: {sum} – aby zapisać, musi być równo 100% albo wszędzie 0%."
+pt = "⚠ Soma: {sum} – para guardar tem de ser exatamente 100% ou tudo a 0%."
+
+[targets_none]
+en = "✓ All at 0% – you pick the instrument in this bucket yourself."
+pl = "✓ Wszędzie 0% – instrument w tym koszyku wybierasz samodzielnie."
+pt = "✓ Tudo a 0% – é você que escolhe o instrumento neste grupo."
+
+[btn_clear_targets]
+en = "Set all to 0%"
+pl = "Wyzeruj wszystkie"
+pt = "Pôr tudo a 0%"
+
+[flash_targets_saved]
+en = "Percentages in {bucket} saved."
+pl = "Zapisano procenty w koszyku {bucket}."
+pt = "Percentagens de {bucket} guardadas."
+
+[flash_rebalanced]
+en = "Percentages recalculated in: {buckets}."
+pl = "Przeliczono procenty w: {buckets}."
+pt = "Percentagens recalculadas em: {buckets}."
+
+[flash_bucket_added]
+en = "Bucket {name} added with a 0% share – set its share in the table."
+pl = "Dodano koszyk {name} z udziałem 0% – ustaw udział w tabeli."
+pt = "Grupo {name} adicionado com peso 0% – defina o peso na tabela."
+
+[err_share_sum]
+en = "The bucket shares in a category must add up to 100%: {categories}."
+pl = "Udziały koszyków w kategorii muszą razem dawać 100%: {categories}."
+pt = "Os pesos dos grupos de uma categoria têm de somar 100%: {categories}."
+
+[err_category_sum]
+en = "The category targets must add up to 100% – now they give {sum}%."
+pl = "Cele kategorii muszą razem dawać 100% – teraz dają {sum}%."
+pt = "Os objetivos das categorias têm de somar 100% – agora somam {sum}%."
+
+[col_share_pct]
+en = "Share (%)"
+pl = "Udział (%)"
+pt = "Peso (%)"
+
+[btn_save_buckets]
+en = "Save buckets"
+pl = "Zapisz koszyki"
+pt = "Guardar grupos"
+
+[flash_buckets_saved]
+en = "Buckets saved."
+pl = "Zapisano koszyki."
+pt = "Grupos guardados."
+
+[err_bucket_name]
+en = "Every bucket needs a name."
+pl = "Każdy koszyk musi mieć nazwę."
+pt = "Cada grupo precisa de um nome."
+
+[err_bucket_duplicate]
+en = "There is already a bucket named {bucket}."
+pl = "Koszyk o nazwie {bucket} już istnieje."
+pt = "Já existe um grupo chamado {bucket}."
+
+[err_bucket_sum]
+en = "The shares must add up to 100% – now they give {sum}%."
+pl = "Udziały muszą dawać razem 100% – teraz dają {sum}%."
+pt = "Os pesos têm de somar 100% – agora somam {sum}%."
+
+[btn_record_purchases]
+en = "Record the purchases"
+pl = "Zapisz zakupy"
+pt = "Registar as compras"
+
+[flash_purchases_recorded]
+en = "Purchases for {amount} recorded."
+pl = "Zapisano zakupy za {amount}."
+pt = "Compras de {amount} registadas."
+
 [legend_before]
 en = "Before"
 pl = "Przed"
@@ -377,7 +532,7 @@ pt = "Juros"
 
 
 # -----------------------------------------------------------------------------
-#  Holdings & prices
+#  Market and cash
 # -----------------------------------------------------------------------------
 
 [fx_title]
@@ -396,9 +551,39 @@ pl = "Instrumenty"
 pt = "Instrumentos"
 
 [instruments_help]
-en = "Edit prices directly in the table (in the instrument's currency). Change quantities with transactions. “Sell alert” reminds you when the price reaches it (e.g. for precious metals)."
-pl = "Edytuj ceny bezpośrednio w tabeli (w walucie instrumentu). Ilość zmieniasz transakcjami. „Próg sprzedaży” – aplikacja przypomni, gdy cena go osiągnie (np. dla kruszców)."
-pt = "Edite os preços diretamente na tabela (na moeda do instrumento). As quantidades mudam através de transações. O “Alerta de venda” avisa quando o preço o atingir (p. ex. metais preciosos)."
+en = "Edit prices directly in the table (in the instrument's currency). Change quantities with transactions."
+pl = "Edytuj ceny bezpośrednio w tabeli (w walucie instrumentu). Ilość zmieniasz transakcjami."
+pt = "Edite os preços diretamente na tabela (na moeda do instrumento). As quantidades mudam através de transações."
+
+[alert_help]
+en = "“Sell alert” reminds you when the price reaches it (e.g. for precious metals)."
+pl = "„Próg sprzedaży” – aplikacja przypomni, gdy cena go osiągnie (np. dla kruszców)."
+pt = "O “Alerta de venda” avisa quando o preço o atingir (p. ex. metais preciosos)."
+
+[plan_skip_bucket]
+en = "{name} – bucket “{bucket}” gets nothing this time"
+pl = "{name} – tym razem koszyk „{bucket}” nic nie dostaje"
+pt = "{name} – desta vez o grupo “{bucket}” não recebe nada"
+
+[note_bucket_waits]
+en = "Bucket “{bucket}” is at {current}% with a target of {target}%, so the whole {amount} goes where there is too little. “{bucket}” gets money again from about {from}."
+pl = "Koszyk „{bucket}” ma {current}% przy celu {target}%, więc całe {amount} idzie tam, gdzie jest za mało. „{bucket}” znów dostanie pieniądze od około {from}."
+pt = "O grupo “{bucket}” está em {current}% com objetivo de {target}%, por isso os {amount} vão para onde falta. “{bucket}” volta a receber a partir de cerca de {from}."
+
+[plan_kind_skip]
+en = "Not now"
+pl = "Nie teraz"
+pt = "Agora não"
+
+[plan_skip_target]
+en = "{name} – already has its share"
+pl = "{name} – ma już swój udział"
+pt = "{name} – já tem o seu peso"
+
+[plan_skip_price]
+en = "{name} – enter its price first"
+pl = "{name} – najpierw wpisz cenę"
+pt = "{name} – introduza primeiro o preço"
 
 [col_name]
 en = "Name"
@@ -450,16 +635,6 @@ pt = "Valor €"
 en = "Target in bucket %"
 pl = "Cel w koszyku %"
 pt = "Objetivo no grupo %"
-
-[col_fractional]
-en = "Fractions"
-pl = "Ułamki"
-pt = "Frações"
-
-[col_fractional_help]
-en = "Whether your broker lets you buy fractional units"
-pl = "Czy broker pozwala kupować ułamki"
-pt = "Se a corretora permite comprar frações"
 
 [col_alert]
 en = "Sell alert"
@@ -604,9 +779,9 @@ pl = "Dodaj transakcję"
 pt = "Adicionar transação"
 
 [warn_add_instrument_first]
-en = "Add an instrument first in Holdings & prices."
-pl = "Najpierw dodaj instrument w zakładce Pozycje i ceny."
-pt = "Adicione primeiro um instrumento em Posições e preços."
+en = "Add an instrument first in the Market tab."
+pl = "Najpierw dodaj instrument w zakładce Giełda."
+pt = "Adicione primeiro um instrumento no separador Bolsa."
 
 [warn_quantity_zero]
 en = "Quantity cannot be zero."
@@ -698,11 +873,6 @@ en = "To decide"
 pl = "Do decyzji"
 pt = "A decidir"
 
-[plan_kind_rest]
-en = "Left over"
-pl = "Zostaje"
-pt = "Sobra"
-
 [col_action]
 en = "Action"
 pl = "Akcja"
@@ -744,9 +914,9 @@ pl = "Żadna kategoria nie jest oznaczona do kupowania (Ustawienia → cele)."
 pt = "Nenhuma categoria está marcada para compra (Definições → objetivos)."
 
 [note_bucket_room]
-en = "“{bucket}” limit: you can add about {room} more without exceeding {limit}% of the category (manual choice)."
-pl = "Limit „{bucket}”: możesz tam dołożyć jeszcze ok. {room} bez przekroczenia {limit}% kategorii (wybór ręczny)."
-pt = "Limite de “{bucket}”: pode adicionar cerca de {room} sem ultrapassar {limit}% da categoria (escolha manual)."
+en = "“{bucket}” limit: you can add about {room} more without exceeding {limit}% of the category."
+pl = "Limit „{bucket}”: możesz tam dołożyć jeszcze ok. {room} bez przekroczenia {limit}% kategorii."
+pt = "Limite de “{bucket}”: pode adicionar cerca de {room} sem ultrapassar {limit}% da categoria."
 
 [plan_choose_instrument]
 en = "{category} – choose an instrument"
@@ -754,14 +924,9 @@ pl = "{category} – wybierz instrument"
 pt = "{category} – escolha um instrumento"
 
 [plan_no_targets]
-en = "{bucket} – no instrument targets set"
-pl = "{bucket} – brak celów dla instrumentów"
-pt = "{bucket} – sem objetivos definidos para os instrumentos"
-
-[plan_rest]
-en = "Remainder (rounding to whole units)"
-pl = "Reszta (zaokrąglenie do całych sztuk)"
-pt = "Resto (arredondamento a unidades inteiras)"
+en = "{bucket} – choose an instrument"
+pl = "{bucket} – wybierz instrument"
+pt = "{bucket} – escolha um instrumento"
 
 
 # -----------------------------------------------------------------------------
@@ -1333,11 +1498,6 @@ en = "Buckets"
 pl = "Koszyki"
 pt = "Grupos"
 
-[col_auto]
-en = "Automatic"
-pl = "Automatycznie"
-pt = "Automático"
-
 [col_target_in_category]
 en = "Target in category %"
 pl = "Cel w kategorii %"
@@ -1349,9 +1509,9 @@ pl = "Limit w kategorii %"
 pt = "Limite na categoria %"
 
 [settings_buckets_help]
-en = "Automatic = the calculator splits contributions by instrument targets. Limit = upper bound for the bucket's share (e.g. sandbox 10%)."
-pl = "Automatycznie = kalkulator sam rozdziela wpłaty wg celów instrumentów. Limit = górna granica udziału koszyka (np. piaskownica 10%)."
-pt = "Automático = a calculadora distribui os reforços pelos objetivos dos instrumentos. Limite = peso máximo do grupo (p. ex. sandbox 10%)."
+en = "Target in category = the bucket's share, which the calculator steers contributions to. Limit = upper bound for the bucket's share."
+pl = "Cel w kategorii = udział koszyka, do którego kalkulator kieruje wpłaty. Limit = górna granica udziału koszyka."
+pt = "Objetivo na categoria = o peso do grupo, para o qual a calculadora orienta os reforços. Limite = peso máximo do grupo."
 
 [btn_save_settings]
 en = "Save settings"
@@ -1373,9 +1533,9 @@ pt = "Não é possível remover grupos com instrumentos: {buckets}"
 # -----------------------------------------------------------------------------
 
 [err_fx_missing]
-en = "Missing exchange rate for {currency} (Holdings & prices → exchange rates)"
-pl = "Brak kursu dla waluty {currency} (Pozycje i ceny → kursy walut)"
-pt = "Falta a taxa de câmbio para {currency} (Posições e preços → taxas de câmbio)"
+en = "Missing exchange rate for {currency} (Market → exchange rates)"
+pl = "Brak kursu dla waluty {currency} (Giełda → kursy walut)"
+pt = "Falta a taxa de câmbio para {currency} (Bolsa → taxas de câmbio)"
 
 
 # -----------------------------------------------------------------------------

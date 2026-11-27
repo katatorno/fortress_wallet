@@ -1,7 +1,7 @@
 // scripts/Dashboard.jsx
 //
 // Net worth at a glance: headline numbers, allocation vs target, what the
-// portfolio is made of, net worth history and each automatic bucket vs its targets.
+// portfolio is made of, net worth history and each bought bucket vs its targets.
 
 const DashboardView = (app) => {
   const { data, T, money } = app;
@@ -60,21 +60,11 @@ const DashboardView = (app) => {
     </Panel>
   );
 
-  const buckets = Object.entries(data.buckets).filter(([, cfg]) => cfg.auto).map(([b, cfg]) => {
-    const members = summ.positions.filter(p => p.bucket === b && Number(p.target_in_bucket || 0) > 0);
-    const total = members.reduce((a, p) => a + p.value_eur, 0);
-    const tsumB = members.reduce((a, p) => a + Number(p.target_in_bucket), 0) || 1;
-    if(!total) return null;
-    return (
-      <Panel title={T("chart_bucket", { bucket: b })} icon="balance">
-        <TargetBars lang={app.L} currentName={T("legend_current")} targetName={T("legend_target")}
-          total={total} rows={members.map(p => ({
-            label: p.name, value: p.value_eur / total * 100,
-            target: Number(p.target_in_bucket) / tsumB * 100, cls: catCls(cfg.category),
-          }))} />
-      </Panel>
-    );
-  }).filter(Boolean);
+  // buckets being bought that have targets and hold something
+  const buckets = Object.entries(data.buckets)
+    .filter(([b, cfg]) => data.categories[cfg.category]?.buy && summ.positions.some(p =>
+      p.bucket === b && Number(p.target_in_bucket || 0) > 0 && p.value_eur > 0))
+    .map(([b]) => <BucketPanel app={app} positions={summ.positions} bucket={b} />);
 
   return (
     <stack gap="md">

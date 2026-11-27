@@ -28,7 +28,9 @@ const App = () => {
   const recBadge = <Badge color="wrn" size="sm" pos="top-right" hidden></Badge>;
   const views = [
     { key: "dashboard", icon: "dashboard", title: T("tab_dashboard"), render: DashboardView },
-    { key: "holdings", icon: "account_balance_wallet", title: T("tab_holdings"), render: HoldingsView },
+    { key: "market", icon: "candlestick_chart", title: T("tab_market"), render: MarketView },
+    { key: "other", icon: "diamond", title: T("tab_other"), render: OtherAssetsView },
+    { key: "cash", icon: "account_balance_wallet", title: T("tab_cash"), render: CashView },
     { key: "transactions", icon: "receipt_long", title: T("tab_transactions"), render: TransactionsView },
     { key: "calculator", icon: "calculate", title: T("tab_calculator"), render: CalculatorView },
     { key: "mortgage", icon: "home", title: T("tab_mortgage"), render: MortgageView },

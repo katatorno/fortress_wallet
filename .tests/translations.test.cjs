@@ -53,7 +53,7 @@ for(const re of [/\bT\(\s*"([a-z0-9_]+)"/g, /\btr\(data,\s*"([a-z0-9_]+)"/g, /I1
 for(const p of ["cat_equities", "cat_metals", "cat_bonds", "role_emergency", "role_prepay", "role_home", "role_other",
   "mode_reduce_term", "mode_reduce_payment", "tx_buy", "tx_sell", "tx_adjust",
   "status_saved", "status_dirty", "status_saving", "status_error", "status_auth", "status_conflict",
-  "plan_kind_cash", "plan_kind_buy", "plan_kind_unassigned", "plan_kind_rest",
+  "plan_kind_cash", "plan_kind_buy", "plan_kind_skip", "plan_kind_unassigned",
   "file_local_help_write", "file_local_help_download", "flash_cache_on", "flash_cache_off",
   "event_payment", "event_prepayment", "source_drive", "source_local", "rec_prepay_wins", "rec_prepay_loses",
   "rec_drift_above_t", "rec_drift_below_t"]) used.add(p);

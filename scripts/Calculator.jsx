@@ -3,6 +3,20 @@
 // "I have X € – what should I do with it?": emergency fund first, then the
 // prepayment pot, then purchases by target, without selling anything.
 
+/** The lines of a contribution plan as a table. */
+function planTable(app, plan) {
+  const { T, money } = app;
+  const kind = { cash: "plan_kind_cash", buy: "plan_kind_buy", skip: "plan_kind_skip", unassigned: "plan_kind_unassigned" };
+  const rows = plan.lines.map(ln => [
+    T(kind[ln.kind]), ln.label, ln.ticker || "", money(ln.eur, 2),
+    ln.kind === "buy" ? I18N.number(app.L, ln.units, 4) : "",
+    ln.kind === "buy" ? `${I18N.number(app.L, ln.price, 4)} ${ln.currency}` : "",
+  ]);
+  return rows.length
+    ? <Table columns={[T("col_action"), T("col_where"), T("col_ticker"), T("col_amount_eur"), T("col_quantity"), T("col_price")]} rows={rows} />
+    : <Empty icon="calculate" />;
+}
+
 const CalculatorView = (app) => {
   const { data, T, money } = app;
   const s = data.settings;
@@ -15,16 +29,10 @@ const CalculatorView = (app) => {
 
   function update() {
     plan = Core.contributionPlan(data, amount.value || 0, fill.checked, share.value);
-    const kind = { cash: "plan_kind_cash", buy: "plan_kind_buy", unassigned: "plan_kind_unassigned", rest: "plan_kind_rest" };
-    const rows = plan.lines.map(ln => [
-      T(kind[ln.kind]), ln.label, ln.ticker || "", money(ln.eur, 2),
-      ln.kind === "buy" ? I18N.number(app.L, ln.units, 4) : "",
-      ln.kind === "buy" ? `${I18N.number(app.L, ln.price, 4)} ${ln.currency}` : "",
-    ]);
     const cats = Object.keys(data.categories);
     const tsum = cats.reduce((a, c) => a + Number(data.categories[c].target_pct || 0), 0) || 1;
     result.replaceChildren(
-      rows.length ? <Table columns={[T("col_action"), T("col_where"), T("col_ticker"), T("col_amount_eur"), T("col_quantity"), T("col_price")]} rows={rows} /> : <Empty icon="calculate" />,
+      planTable(app, plan),
       ...plan.notes.map(n => <Note level="info">{n}</Note>),
       <Panel title={T("chart_before_after")} icon="bar_chart">
         <GroupedBars lang={app.L} cats={cats.map(c => Core.categoryLabel(data, c))} targetName={T("legend_target")}

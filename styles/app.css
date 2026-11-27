@@ -50,7 +50,7 @@
 .cell-input:hover { border-color: var(--border); }
 .cell-input:focus { outline: none; border-color: var(--accent); background: var(--surface2); }
 .cell-num { text-align: right; font-variant-numeric: tabular-nums; }
-select.cell-input { min-width: 8.5rem; }
+select.cell-input { min-width: 8.5rem; border-color: var(--border); cursor: pointer; }
 .cell-check { width: 1rem; height: 1rem; accent-color: var(--accent); }
 
 /* ---------------------------------------------------------------- slider */
