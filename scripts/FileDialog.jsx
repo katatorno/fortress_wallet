@@ -10,10 +10,7 @@ function openFileDialog(app) {
 
   // opening another wallet would drop unsaved changes: ask first
   async function guarded(fn) {
-    const st = Store.state();
-    if(st.status !== "saved" && st.source.kind !== "example") {
-      if(!(await Alert.ask("wrn", T("ask_discard")))) return;
-    }
+    if(Store.unsaved() && !(await Alert.ask("wrn", T("ask_discard")))) return;
     try {
       if(await fn() !== false) { modal.close(); app.reload(); }
     }
@@ -31,7 +28,7 @@ function openFileDialog(app) {
               try { if(await Store.saveAsLocal()) { Alert.ok(T("flash_saved")); render(); } }
               catch(e) { Alert.err(e.message); }
             }}>{T("btn_save_as")}</Button>
-            <Button icon="download" onClick={() => { Store.download(); render(); }}>{T("btn_download_copy")}</Button>
+            <Button icon="download" onClick={() => { Store.download(); Alert.ok(T("flash_downloaded")); render(); }}>{T("btn_download_copy")}</Button>
           </row>
         </stack>
       </Panel>

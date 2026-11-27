@@ -32,7 +32,7 @@ const Core = (() => {
 
   const round2 = (x) => Math.round((x + Math.sign(x) * 1e-9) * 100) / 100;
   const newId = () => Math.random().toString(16).slice(2, 10).padEnd(8, "0");
-  const clone = (x) => JSON.parse(JSON.stringify(x));
+
   const setDefault = (obj, key, value) => { if(obj[key] === undefined) obj[key] = value; return obj[key]; };
   const isBlank = (v) => v === null || v === undefined || v === "";
   /** `x` held between the limits that are given. */
@@ -1082,7 +1082,7 @@ const Core = (() => {
     ROLES, MODES, TX_TYPES, MortgageError, BucketError, saveBuckets,
     targetSum, badTargets, badShares, rebalance, saveTargets, saveInstruments, sumList, clamp,
     lang, tr, money, num, categoryLabel, roleLabel, modeLabel, txLabel,
-    round2, newId, clone, today, parseDate, addMonths, daysBetween, monthYear, dayMonthYear,
+    round2, newId, today, parseDate, addMonths, daysBetween, monthYear, dayMonthYear,
     FORMAT, normalize, serialize, parse,
     fx, toEur, quantities, positions, categoryValues, bucketValues, cashByRole, cashAccount,
     houseState, summary, allocationPct,

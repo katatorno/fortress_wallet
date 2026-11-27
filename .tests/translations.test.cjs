@@ -49,7 +49,7 @@ for(const re of [/\bT\(\s*"([a-z0-9_]+)"/g, /\btr\(data,\s*"([a-z0-9_]+)"/g, /I1
 // built from variables in the code
 for(const p of ["cat_equities", "cat_metals", "cat_bonds", "role_emergency", "role_prepay", "role_home", "role_other",
   "mode_reduce_term", "mode_reduce_payment", "tx_buy", "tx_sell", "tx_adjust",
-  "status_saved", "status_dirty", "status_saving", "status_error",
+  "status_saved", "status_dirty", "status_saving", "status_conflict", "status_error",
   "plan_kind_cash", "plan_kind_buy", "plan_kind_skip", "plan_kind_unassigned",
   "file_local_help_write", "file_local_help_download",
   "range_all", "range_year", "range_quarter", "range_month", "range_week",

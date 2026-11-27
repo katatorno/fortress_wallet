@@ -34,8 +34,7 @@ async function boot() {
 
   // leaving with unsaved changes asks first
   window.addEventListener("beforeunload", (e) => {
-    const st = Store.state();
-    if(st.status !== "saved" && st.source.kind !== "example") {
+    if(Store.unsaved()) {
       e.preventDefault();
       e.returnValue = "";
     }

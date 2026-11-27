@@ -2055,3 +2055,47 @@ pt = "Envia o programa, os textos e a carteira de exemplo. O seu ficheiro não v
 en = "Since you opened it, this page has fetched from: {hosts}"
 pl = "Od otwarcia strona pobierała coś z: {hosts}"
 pt = "Desde que a abriu, a página descarregou de: {hosts}"
+
+# -----------------------------------------------------------------------------
+#  Saving: a file changed elsewhere, downloads
+# -----------------------------------------------------------------------------
+
+[status_conflict]
+en = "Changed on disk"
+pl = "Zmieniony na dysku"
+pt = "Alterado no disco"
+
+[banner_conflict]
+en = "{name} was changed on the disk by something else (a tool, another tab) since it was opened here. Nothing was written over it. Read it again, dropping the changes made here, or write this version over it."
+pl = "Plik {name} zmienił się na dysku poza tą kartą (narzędzie, inna karta), odkąd go tu otwarto. Niczego nie nadpisano. Wczytaj go ponownie, tracąc zmiany zrobione tutaj, albo zapisz tę wersję na nim."
+pt = "{name} foi alterado no disco por outra coisa (uma ferramenta, outro separador) desde que foi aberto aqui. Nada foi escrito por cima. Leia-o de novo, perdendo as alterações feitas aqui, ou escreva esta versão por cima."
+
+[btn_reload_disk]
+en = "Read from disk"
+pl = "Wczytaj z dysku"
+pt = "Ler do disco"
+
+[btn_overwrite]
+en = "Write this version"
+pl = "Zapisz tę wersję"
+pt = "Escrever esta versão"
+
+[ask_reload_disk]
+en = "Read the file again from the disk? The changes made here since the last save are lost."
+pl = "Wczytać plik ponownie z dysku? Zmiany zrobione tutaj od ostatniego zapisu przepadną."
+pt = "Ler o ficheiro de novo do disco? As alterações feitas aqui desde a última gravação perdem-se."
+
+[ask_overwrite]
+en = "Write this version over the file? What was changed in it elsewhere is lost."
+pl = "Zapisać tę wersję na pliku? To, co zmieniono w nim gdzie indziej, przepadnie."
+pt = "Escrever esta versão por cima do ficheiro? O que foi alterado nele noutro lado perde-se."
+
+[flash_reloaded]
+en = "The file was read again from the disk."
+pl = "Plik wczytano ponownie z dysku."
+pt = "O ficheiro foi lido de novo do disco."
+
+[flash_downloaded]
+en = "The wallet was downloaded. If you cancelled the download, nothing was saved: download it again."
+pl = "Portfel pobrano. Jeśli anulowałeś pobieranie, nic nie zostało zapisane: pobierz go ponownie."
+pt = "A carteira foi descarregada. Se cancelou a transferência, nada foi guardado: descarregue-a de novo."

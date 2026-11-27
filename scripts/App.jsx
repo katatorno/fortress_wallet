@@ -89,6 +89,26 @@ const App = () => {
     if(await Store.save()) Alert.ok(T("flash_saved"));
   }
 
+  /** Downloads the wallet and says that a cancelled download saved nothing. */
+  function downloadNow() {
+    Store.download();
+    Alert.ok(T("flash_downloaded"));
+  }
+
+  // the file changed on the disk since it was read: read it again, or write over it
+  async function reloadFromDisk() {
+    if(!(await Alert.ask("wrn", T("ask_reload_disk")))) return;
+    try {
+      if(await Store.reloadFromDisk()) { Alert.ok(T("flash_reloaded")); mountApp(); }
+      else Alert.err(T("err_remembered_denied", { name: Store.state().source.name }));
+    }
+    catch(e) { Alert.err(e.message); }
+  }
+  async function overwrite() {
+    if(!(await Alert.ask("wrn", T("ask_overwrite")))) return;
+    if(await Store.save({ force: true })) Alert.ok(T("flash_saved"));
+  }
+
   // a click is what lets the browser ask for access to the remembered file
   async function openRemembered(handle) {
     try {
@@ -100,6 +120,15 @@ const App = () => {
 
   function bannerFor(st) {
     const btn = (icon, label, fn, variant) => <Button size="sm" variant={variant} icon={icon} onClick={fn}>{label}</Button>;
+    if(st.status === "conflict") {
+      return <Note level="err" title={T("banner_conflict", { name: st.source.name })}>
+        <row gap="sm">
+          {btn("refresh", T("btn_reload_disk"), () => reloadFromDisk(), "primary")}
+          {btn("save", T("btn_overwrite"), () => overwrite())}
+          {btn("save_as", T("btn_save_as"), () => openFileDialog(app))}
+        </row>
+      </Note>;
+    }
     if(st.status === "error") {
       return <Note level="err" title={T("banner_error", { error: st.error?.message || "" })}>
         {btn("refresh", T("btn_retry"), () => saveNow())}
@@ -118,7 +147,7 @@ const App = () => {
     if(st.status === "dirty" && !st.canSaveInPlace) {
       return <Note level="warn" title={T("banner_download_needed")}>
         <row gap="sm">
-          {btn("download", T("btn_download_copy"), () => Store.download(), "primary")}
+          {btn("download", T("btn_download_copy"), () => downloadNow(), "primary")}
           {btn("folder", T("btn_file"), () => openFileDialog(app))}
         </row>
       </Note>;
@@ -127,11 +156,11 @@ const App = () => {
   }
 
   function updateStatus(st) {
-    const color = { saved: "ok", dirty: "wrn", saving: "inf", error: "err" }[st.status];
+    const color = { saved: "ok", dirty: "wrn", saving: "inf", conflict: "err", error: "err" }[st.status];
     statusBadge.color = color;
     statusBadge.text = `${sourceText(st)} · ${T("status_" + st.status)}`;
     statusBadge.title = T("btn_file");
-    saveBtn.hidden = st.status === "saved" || st.status === "saving" || st.source.kind === "example";
+    saveBtn.hidden = !st.unsaved || st.status === "saving" || st.status === "conflict";
     footerSource.textContent = sourceText(st);
     const b = bannerFor(st);
     banner.replaceChildren(...(b ? [b] : []));
