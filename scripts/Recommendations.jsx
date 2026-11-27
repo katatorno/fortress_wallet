@@ -1,13 +1,14 @@
 // scripts/Recommendations.jsx
 //
-// Automatic hints (warnings first) and your own strategy notes in Markdown.
+// Automatic hints (warnings first) and your own strategy notes in Markdown. The
+// notes come from the file, so their links and pictures go through `Links`.
 
 const RecommendationsView = (app) => {
   const { data, T } = app;
   const order = { warn: 0, info: 1, ok: 2 };
   const recs = Core.recommendations(data).sort((a, b) => order[a.level] - order[b.level]);
   const notes = <Textarea value={data.strategy_notes || ""} auto minRows={8} maxRows={30} />;
-  const preview = <Markdown text={data.strategy_notes || ""} />;
+  const preview = Links.defuse(<Markdown text={data.strategy_notes || ""} image={(src) => Links.isSafe(src) ? src : ""} />);
   return (
     <stack gap="md">
       {recs.map(r => <Note level={r.level} title={r.title}>{r.text}</Note>)}

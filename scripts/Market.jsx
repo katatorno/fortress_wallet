@@ -94,6 +94,7 @@ const MarketView = (app) => {
         try {
           const res = await Online.fetchFx(data);
           app.commit(T("flash_fx_updated", { names: res.updated.join(", "), date: Core.dayMonthYear(res.date) }));
+          if(res.skipped.length) Alert.wrn(T("warn_fx_skipped", { names: res.skipped.join(", ") }));
         }
         catch(err) { Alert.err(T("err_fx_update", { error: err.message })); }
         finally { btn.loading = false; }

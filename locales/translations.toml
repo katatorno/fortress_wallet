@@ -1987,9 +1987,9 @@ pl = "Aplikacja nie tworzy ciasteczek."
 pt = "A aplicação não cria cookies."
 
 [privacy_beware_lost]
-en = "The browser may forget the link (clearing data, a private window). Your file stays. The app makes no backups of it, so keep one yourself."
-pl = "Przeglądarka może zapomnieć skrót (czyszczenie danych, tryb prywatny). Plik zostaje. Aplikacja nie robi jego kopii zapasowych, więc zadbaj o nie samodzielnie."
-pt = "O navegador pode esquecer a ligação (limpeza de dados, janela privada). O ficheiro fica. A aplicação não faz cópias de segurança, por isso guarde uma."
+en = "The browser may forget the link (clearing data, a private window). Your file stays. The app makes no backups of it, so keep one yourself. (The tools in tools/, run on your computer, keep a copy beside the file before they change it.)"
+pl = "Przeglądarka może zapomnieć skrót (czyszczenie danych, tryb prywatny). Plik zostaje. Aplikacja nie robi jego kopii zapasowych, więc zadbaj o nie samodzielnie. (Narzędzia z tools/, uruchamiane na komputerze, zostawiają kopię obok pliku, zanim go zmienią.)"
+pt = "O navegador pode esquecer a ligação (limpeza de dados, janela privada). O ficheiro fica. A aplicação não faz cópias de segurança, por isso guarde uma. (As ferramentas em tools/, usadas no seu computador, guardam uma cópia ao lado do ficheiro antes de o alterar.)"
 
 [privacy_net_title]
 en = "Whom the page talks to"
@@ -2017,9 +2017,9 @@ pl = "Tylko po kliknięciu przycisku kursów EBC"
 pt = "Só ao clicar no botão das taxas do BCE"
 
 [privacy_net_fx]
-en = "Receives the names of currencies and returns exchange rates."
-pl = "Dostaje nazwy walut i odsyła kursy."
-pt = "Recebe os nomes das moedas e devolve as taxas."
+en = "Receives the three-letter codes of your currencies and the address of this page, and returns exchange rates."
+pl = "Dostaje trzyliterowe kody Twoich walut i adres tej strony, odsyła kursy."
+pt = "Recebe os códigos de três letras das suas moedas e o endereço desta página, e devolve as taxas."
 
 [privacy_net_note]
 en = "Each connection shows the other side your IP address and browser. The app sends amounts and transactions nowhere."
@@ -2099,3 +2099,22 @@ pt = "O ficheiro foi lido de novo do disco."
 en = "The wallet was downloaded. If you cancelled the download, nothing was saved: download it again."
 pl = "Portfel pobrano. Jeśli anulowałeś pobieranie, nic nie zostało zapisane: pobierz go ponownie."
 pt = "A carteira foi descarregada. Se cancelou a transferência, nada foi guardado: descarregue-a de novo."
+
+# -----------------------------------------------------------------------------
+#  Data & privacy: links, development, exchange rates
+# -----------------------------------------------------------------------------
+
+[privacy_beware_links]
+en = "The rule (CSP) covers requests, not leaving the page: a link you click takes you where it leads. A link in the notes of a wallet file works only if it leads to a web page or an e-mail address; any other link, such as one that would run a program, is shown as plain text."
+pl = "Reguła (CSP) dotyczy zapytań, a nie opuszczania strony: kliknięty link prowadzi tam, dokąd wskazuje. Link w notatkach pliku portfela działa tylko wtedy, gdy prowadzi do strony WWW albo adresu e-mail; każdy inny, np. taki, który uruchomiłby program, jest pokazywany jako zwykły tekst."
+pt = "A regra (CSP) abrange pedidos, não a saída da página: uma ligação clicada leva onde aponta. Uma ligação nas notas de um ficheiro de carteira só funciona se levar a uma página web ou a um endereço de e-mail; qualquer outra, como uma que executaria um programa, aparece como texto simples."
+
+[privacy_net_dev]
+en = "This is the page as served by its own server after `tonka build`. Run for development (`tonka serve`), it also loads its program from unpkg.com and lib.tonkajsx.com and its fonts from font.tonkajsx.com."
+pl = "To opis strony podawanej przez własny serwer po `tonka build`. Uruchomiona do pracy nad kodem (`tonka serve`) pobiera też program z unpkg.com i lib.tonkajsx.com, a czcionki z font.tonkajsx.com."
+pt = "Isto descreve a página servida pelo próprio servidor depois de `tonka build`. Em desenvolvimento (`tonka serve`) também carrega o programa de unpkg.com e lib.tonkajsx.com e as fontes de font.tonkajsx.com."
+
+[warn_fx_skipped]
+en = "Not asked for, as they are no three-letter currency codes: {names}"
+pl = "Nie wysłano, bo to nie są trzyliterowe kody walut: {names}"
+pt = "Não pedidos, porque não são códigos de moeda de três letras: {names}"

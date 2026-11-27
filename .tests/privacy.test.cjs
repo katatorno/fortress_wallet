@@ -94,6 +94,9 @@ ok("no forms, no base address and no outside pictures", rule["form-action"]?.joi
 ok("outside scripts come over https", !/(src|href)="\/\//.test(html) && !/(src|href)="http:/.test(html));
 const outside = [...html.matchAll(/<script\b[^>]*\bsrc="(https:[^"]+)"/g)].map(m => m[1]);
 ok("outside scripts are named by the policy", outside.every(u => SERVED.includes(new URL(u).origin)), outside.join(", "));
+// a package named without its full version is whatever was published last
+const loose = outside.filter(u => new URL(u).origin === "https://unpkg.com" && !/@\d+\.\d+\.\d+\//.test(u));
+ok("packages from unpkg name their exact version", !loose.length, loose.join(", "));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
