@@ -10,7 +10,6 @@ const SettingsView = (app) => {
     emergency: <NumberInput value={Number(s.emergency_target)} min="0" step="500" />,
     expenses: <NumberInput value={Number(s.monthly_expenses)} min="0" step="50" />,
     income: <NumberInput value={Number(s.net_income)} min="0" step="50" />,
-    salaries: <NumberInput value={Number(s.salaries_per_year)} min="12" max="14" step="1" />,
     share: <NumberInput value={Number(s.prepay_share_pct)} min="0" max="100" step="5" />,
     minPrepay: <NumberInput value={Number(s.min_prepayment)} min="0" step="100" />,
     alt: <NumberInput value={Number(s.alt_safe_yield_pct)} min="0" step="0.1" title={T("set_alt_yield_help")} />,
@@ -61,7 +60,6 @@ const SettingsView = (app) => {
           {formRow(T("set_emergency_target"), f.emergency)}
           {formRow(T("set_monthly_expenses"), f.expenses)}
           {formRow(T("set_net_income"), f.income)}
-          {formRow(T("set_salaries"), f.salaries)}
           {formRow(T("set_prepay_share"), f.share)}
           {formRow(T("set_min_prepayment"), f.minPrepay)}
           {formRow(T("set_alt_yield"), f.alt)}
@@ -109,7 +107,7 @@ const SettingsView = (app) => {
         }
         Object.assign(s, {
           emergency_target: num(f.emergency, s.emergency_target), monthly_expenses: num(f.expenses, s.monthly_expenses),
-          net_income: num(f.income, s.net_income), salaries_per_year: Math.round(num(f.salaries, s.salaries_per_year)),
+          net_income: num(f.income, s.net_income),
           prepay_share_pct: num(f.share, s.prepay_share_pct), min_prepayment: num(f.minPrepay, s.min_prepayment),
           alt_safe_yield_pct: num(f.alt, s.alt_safe_yield_pct), drift_alert_pp: num(f.drift, s.drift_alert_pp),
           stale_days: Math.round(num(f.stale, s.stale_days)),

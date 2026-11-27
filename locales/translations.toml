@@ -4,7 +4,7 @@
 #  Each [key] has one line per language. Placeholders in {braces} are filled in
 #  by the app – keep the same placeholders in every language.
 #  Adding a language: add it to [_languages] and add a line to every key.
-#  After editing run:  tonka test fortress-wallet   (or: node .tests/translations.test.cjs)
+#  After editing run:  tonka test fortress_wallet   (or: node .tests/translations.test.cjs)
 # =============================================================================
 
 [_languages]
@@ -1470,11 +1470,6 @@ pt = "Despesas mensais (€)"
 en = "Monthly net income (€)"
 pl = "Dochód netto miesięcznie (€)"
 pt = "Rendimento líquido mensal (€)"
-
-[set_salaries]
-en = "Salaries per year"
-pl = "Pensji w roku"
-pt = "Salários por ano"
 
 [set_prepay_share]
 en = "Default % for prepayment"

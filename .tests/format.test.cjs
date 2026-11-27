@@ -20,16 +20,16 @@ function ok(name, cond, detail = "") {
 }
 
 // ---------------------------------------------------------------- the current format
-const VERSION = 5;
+const VERSION = 6;
 const words = (s) => s.split(" ");
 const SHAPE = {
   file: words("version settings categories buckets assets transactions cash cash_log house mortgage history strategy_notes "
     + "prices fx_history"),
-  settings: words("language theme price_api_key fx fx_yahoo emergency_target monthly_expenses net_income salaries_per_year "
+  settings: words("language theme price_api_key fx emergency_target monthly_expenses net_income "
     + "prepay_share_pct min_prepayment alt_safe_yield_pct drift_alert_pp stale_days"),
   category: words("target_pct buy"),
   bucket: words("category target_pct_in_category max_pct_in_category"),
-  asset: words("id name ticker price_symbol yahoo category bucket currency opening_quantity price target_in_bucket price_updated unit "
+  asset: words("id name ticker price_symbol category bucket currency opening_quantity price target_in_bucket price_updated unit "
     + "alert_price maturity"),
   transaction: words("id date asset_id type quantity price fee note"),
   cash: words("id name role currency amount"),
@@ -107,6 +107,15 @@ ok("the example carries no price service key", JSON.parse(text).settings.price_a
   ok("a chosen theme survives opening and saving", Core.parse(Core.serialize(dark)).settings.theme === "dark");
   const keyed = Core.parse(JSON.stringify({ ...old(), version: 2, settings: { price_api_key: "abc" } }));
   ok("a key survives opening and saving", Core.parse(Core.serialize(keyed)).settings.price_api_key === "abc");
+  const five = old();
+  five.version = 5;
+  five.settings = { fx: { USD: 1.1 }, fx_yahoo: { USD: "EURUSD=X" }, salaries_per_year: 14, prepay_share_pct: 30 };
+  five.assets[0].yahoo = "A.DE";
+  const six = Core.parse(JSON.stringify(five));
+  ok("version 6 drops the Yahoo symbols and the salaries a year", !("yahoo" in six.assets[0])
+    && !("fx_yahoo" in six.settings) && !("salaries_per_year" in six.settings));
+  ok("and keeps everything else as it was", six.settings.fx.USD === 1.1 && six.settings.prepay_share_pct === 30
+    && six.assets[0].target_in_bucket === 100 && six.buckets.hand.target_pct_in_category === 40);
   const current = { ...old(), version: VERSION };
   ok("a current file is not migrated again", "target_pct_in_category" in Core.normalize(current).buckets.hand);
   for(const [name, version] of [["a newer", VERSION + 1], ["a broken", "two"], ["a zero", 0]]) {

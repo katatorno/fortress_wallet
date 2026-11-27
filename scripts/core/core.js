@@ -1,8 +1,9 @@
 // scripts/core/core.js
 //
 // Fortress Wallet logic: EUR valuation, contribution calculator, mortgage with
-// prepayments, recommendations. No DOM, no JSX: it runs the same in the browser
-// and in Node (tests), and could move to any other framework untouched.
+// prepayments, recommendations, and the checks of a wallet file. No DOM, no JSX:
+// it runs the same in the browser and in Node (the tests and tools/ load it), and
+// needs only I18N (i18n.js) for its texts.
 //
 // Dates are ISO strings "YYYY-MM-DD" everywhere (they sort and compare as text).
 // Exchange rates are "units of currency per 1 EUR" (USD: 1.0943, PLN: 4.48).
@@ -87,7 +88,7 @@ const Core = (() => {
    * Whenever the format changes: raise it, add the step to MIGRATIONS and update
    * .tests/format.test.cjs. A file without a version is version 1.
    */
-  const FORMAT = 5;
+  const FORMAT = 6;
 
   /** MIGRATIONS[n] turns a file of version n into version n + 1. */
   const MIGRATIONS = {
@@ -112,6 +113,14 @@ const Core = (() => {
     // 5: the chosen theme travels with the wallet, like the language
     4(data) {
       setDefault(setDefault(data, "settings", {}), "theme", "system");
+    },
+    // 6: what nothing reads any more goes: Yahoo symbols (prices now come through
+    // price_symbol) and the number of salaries a year (no calculation used it)
+    5(data) {
+      const s = data.settings || {};
+      delete s.fx_yahoo;
+      delete s.salaries_per_year;
+      for(const a of data.assets || []) delete a.yahoo;
     },
   };
 
@@ -138,7 +147,6 @@ const Core = (() => {
     setDefault(s, "emergency_target", 10000);
     setDefault(s, "monthly_expenses", 1650);
     setDefault(s, "net_income", 2600);
-    setDefault(s, "salaries_per_year", 14);
     setDefault(s, "prepay_share_pct", 30);
     setDefault(s, "min_prepayment", 1000);
     setDefault(s, "alt_safe_yield_pct", 2.5);
@@ -176,7 +184,6 @@ const Core = (() => {
       setDefault(a, "id", newId());
       setDefault(a, "ticker", "");
       setDefault(a, "price_symbol", "");
-      setDefault(a, "yahoo", "");
       setDefault(a, "opening_quantity", 0);
       setDefault(a, "price", 0);
       setDefault(a, "currency", "EUR");
@@ -290,7 +297,7 @@ const Core = (() => {
     c.text("settings.price_api_key", s.price_api_key);
     c.keys("settings.fx", s.fx);
     for(const [cur, rate] of Object.entries(s.fx)) c.rate(`settings.fx.${cur}`, rate);
-    for(const k of ["emergency_target", "monthly_expenses", "net_income", "salaries_per_year", "prepay_share_pct",
+    for(const k of ["emergency_target", "monthly_expenses", "net_income", "prepay_share_pct",
       "min_prepayment", "drift_alert_pp", "stale_days"]) c.maybe(c.positive)(`settings.${k}`, s[k]);
     c.maybe(c.number)("settings.alt_safe_yield_pct", s.alt_safe_yield_pct);
     c.text("strategy_notes", data.strategy_notes);
@@ -1032,11 +1039,11 @@ const Core = (() => {
 
   /**
    * What a category's instruments cost and what they are worth, day by day, in EUR.
-   * \`invested\` is the purchase cost (with fees, at the day's rate) of what is still
+   * `invested` is the purchase cost (with fees, at the day's rate) of what is still
    * held: a sale takes its share of the cost out, so realised gains are not in it.
    * Opening quantities, whose cost is unknown, count at their first known price.
    * @returns {Array<{date:string, invested:number, value:number}>} from the first
-   *   transaction to \`to\`; the last day uses the current prices and rates
+   *   transaction to `to`; the last day uses the current prices and rates
    */
   function portfolioHistory(data, category, to = today()) {
     const assets = data.assets.filter(a => a.category === category);
@@ -1091,7 +1098,7 @@ const Core = (() => {
   /** How far back a history chart looks. */
   const RANGES = ["all", "year", "quarter", "month", "week"];
 
-  /** The first day of a range ending on \`to\`; null for the whole history. */
+  /** The first day of a range ending on `to`; null for the whole history. */
   function rangeStart(range, to = today()) {
     const months = { year: 12, quarter: 3, month: 1 }[range];
     if(months) return addMonths(to, -months);
@@ -1101,7 +1108,7 @@ const Core = (() => {
   }
 
   /**
-   * The points of a series from \`from\` on. The value that stood on the first day
+   * The points of a series from `from` on. The value that stood on the first day
    * opens the line, carried from the last point before it.
    * @param {Array<[string, number]>} points  by date, oldest first
    */
@@ -1180,7 +1187,7 @@ const Core = (() => {
       }
     }
 
-    // 3. Manual bucket limits (sandbox)
+    // 3. Limits of a bucket's share in its category (max_pct_in_category)
     const bvals = bucketValues(data, pos);
     for(const [b, cfg] of Object.entries(data.buckets)) {
       const lim = cfg.max_pct_in_category;
