@@ -38,6 +38,7 @@ A spreadsheet stopped being enough once a mortgage joined the portfolio. Fortres
 | **Mortgage & home** | Payments (from the schedule or a bank statement), prepayments with a preview of their effect, balance and interest charts, yearly prepayment simulator |
 | **Recommendations** | Automatic hints (emergency fund, limits, drift, stale prices, bond maturities, price alerts) + your strategy notes in Markdown |
 | **Settings** | Language, allocation targets, buckets, budget |
+| **Data & privacy** | How the app works in plain words, remembering the wallet file (off by default), what the browser holds now with a button that removes it, and whom the page talks to |
 
 Also:
 - 🌐 English / Polish / Portuguese, switchable at any time, remembered in your wallet file,
@@ -47,11 +48,17 @@ Also:
 
 ## Where your data lives
 
-In one file on your device. **File → Open a file.** In Chrome and Edge on a computer the app saves straight back into that file after every change; after a reload you open it again. In other browsers (phones, Firefox, Safari) you **download** the updated file. The file holds everything: money, settings, theme, language and the price service key. It is not encrypted.
+In one file on your device. **File → Open a file.** In Chrome and Edge on a computer the app saves straight back into that file after every change. In other browsers (phones, Firefox, Safari) you **download** the updated file. The file holds everything: money, settings, theme, language and the price service key. It is not encrypted.
 
 Nothing of it is sent to the server that hosts the page.
 
-**The app is cookie-free and keeps nothing in the browser:** no cookies, local or session storage, database or service worker. A reload starts again with the example data, in the browser's language and the system's theme. `privacy.test.cjs` guards this.
+### What the browser remembers
+
+**The app is cookie-free, and by default it keeps nothing in the browser.** A visit starts with the example data, in the browser's language and the system's theme.
+
+One thing can be switched on in **Data & privacy**: remembering the open file. What is stored is a link to the file as the browser hands it out, with no content and no path, in IndexedDB (database `fortress-files`). The file is offered as **Open …** on the next visit. When the browser is told to allow it on every visit (Chrome 122 and newer), it opens by itself. The same page lists everything stored right now, including leftovers of older versions, and removes it with one button. It also explains in plain words how the app works and whom it talks to.
+
+All of this is in `scripts/core/remember.js`; `privacy.test.cjs` keeps browser storage out of every other file.
 
 ## Quick start
 
@@ -107,14 +114,16 @@ fortress-wallet/
 │   ├── core/                 # plain JS, no DOM – the part that never depends on the UI
 │   │   ├── core.js           # valuation, calculator, mortgage, recommendations
 │   │   ├── i18n.js           # translations + number formats
-│   │   ├── store.js          # the open wallet: source, saving
+│   │   ├── store.js          # the open wallet: source, saving, conflicts
 │   │   ├── files.js          # local files (File System Access API / download)
+│   │   ├── remember.js       # the only place that keeps anything in the browser
 │   │   ├── online.js         # ECB exchange rates
 │   │   └── config.js         # values from app.ini
 │   ├── ui/                   # TonkaUI kit (copy, never edited here)
 │   ├── App.jsx               # shell, navigation, file status, banners
 │   ├── Dashboard.jsx … Settings.jsx   # one file per view
 │   ├── FileDialog.jsx        # open / save
+│   ├── Privacy.jsx           # data & privacy
 │   ├── Charts.jsx            # SVG charts, no library
 │   └── Widgets.jsx           # metric, editable table, expander, note, slider
 ├── styles/

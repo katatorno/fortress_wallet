@@ -38,6 +38,7 @@ const App = () => {
     { key: "mortgage", icon: "home", title: T("tab_mortgage"), render: MortgageView },
     { key: "recommendations", icon: "lightbulb", title: T("tab_recommendations"), render: RecommendationsView, badge: recBadge },
     { key: "settings", icon: "settings", title: T("tab_settings"), render: SettingsView },
+    { key: "privacy", icon: "shield", title: T("tab_privacy"), render: PrivacyView },
   ];
   let current = _appView;
   for(const v of views) v.nav = <SidebarBtn icon={v.icon} title={v.title} badge={v.badge} onClick={() => show(v.key)} />;
@@ -88,6 +89,15 @@ const App = () => {
     if(await Store.save()) Alert.ok(T("flash_saved"));
   }
 
+  // a click is what lets the browser ask for access to the remembered file
+  async function openRemembered(handle) {
+    try {
+      if(await Store.openRemembered(handle, true)) mountApp();
+      else Alert.err(T("err_remembered_denied", { name: handle.name }));
+    }
+    catch(e) { Alert.err(T("err_remembered", { name: handle.name, error: e.message })); }
+  }
+
   function bannerFor(st) {
     const btn = (icon, label, fn, variant) => <Button size="sm" variant={variant} icon={icon} onClick={fn}>{label}</Button>;
     if(st.status === "error") {
@@ -96,11 +106,14 @@ const App = () => {
       </Note>;
     }
     if(st.source.kind === "example") {
-      return <Note level="info" title={T("banner_example")}>
-        <row gap="sm">
-          {btn("folder_open", T("btn_file"), () => openFileDialog(app), "primary")}
-        </row>
-      </Note>;
+      const choose = btn("folder_open", T("btn_file"), () => openFileDialog(app), "primary");
+      const actions = <row gap="sm">{choose}</row>;
+      Remember.file().then((handle) => {
+        if(!handle) return;
+        choose.classList.remove("btn-primary"); // one suggested action at a time
+        actions.prepend(btn("history", T("btn_open_remembered", { name: handle.name }), () => openRemembered(handle), "primary"));
+      });
+      return <Note level="info" title={T("banner_example")}>{actions}</Note>;
     }
     if(st.status === "dirty" && !st.canSaveInPlace) {
       return <Note level="warn" title={T("banner_download_needed")}>

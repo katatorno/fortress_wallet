@@ -1,9 +1,9 @@
 // scripts/core/files.js
 //
 // Local wallet files. Where the browser has the File System Access API
-// (Chrome / Edge on a computer) a file is opened once and saved back in place
-// for as long as the page stays open. Elsewhere (phones, Firefox, Safari) a file
-// is read from a picker and saved by downloading a new copy.
+// (Chrome / Edge on a computer) a file is opened once and saved back in place,
+// and its handle can be opened again later (see remember.js). Elsewhere (phones,
+// Firefox, Safari) a file is read from a picker and saved by downloading a new copy.
 
 const LocalFile = (() => {
   const TYPES = [{ description: "Fortress Wallet", accept: { "application/json": [".json"] } }];
@@ -37,6 +37,24 @@ const LocalFile = (() => {
     const opts = { mode: mode === "write" ? "readwrite" : "read" };
     if((await handle.queryPermission?.(opts)) === "granted") return true;
     return (await handle.requestPermission?.(opts)) === "granted";
+  }
+
+  /** @returns {Promise<"granted"|"prompt"|"denied">} what the browser allows for a known file */
+  async function permission(handle) {
+    try { return (await handle.queryPermission?.({ mode: "readwrite" })) || "prompt"; }
+    catch { return "prompt"; }
+  }
+
+  /**
+   * Reads a file known by its handle. Without `ask` only when access is already
+   * granted; with it the browser may ask, which needs a click.
+   * @returns {Promise<{name:string, text:string, handle:FileSystemFileHandle}|null>} null without access
+   */
+  async function reopen(handle, ask = false) {
+    const allowed = ask ? await _permit(handle, "write") : (await permission(handle)) === "granted";
+    if(!allowed) return null;
+    const file = await handle.getFile();
+    return { name: file.name, text: await file.text(), handle };
   }
 
   // ------------------------------------------------------------ save
@@ -74,5 +92,5 @@ const LocalFile = (() => {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  return { canWrite, open, write, saveAs, download };
+  return { canWrite, open, permission, reopen, write, saveAs, download };
 })();

@@ -1733,3 +1733,320 @@ pt = "Tema claro"
 en = "Dark theme"
 pl = "Ciemny motyw"
 pt = "Tema escuro"
+
+# ------------------------------------------------------------ data & privacy
+
+[tab_privacy]
+en = "Data & privacy"
+pl = "Dane i prywatność"
+pt = "Dados e privacidade"
+
+[privacy_how_title]
+en = "How it works, in short"
+pl = "Jak to działa, w skrócie"
+pt = "Como funciona, em resumo"
+
+[privacy_how_1]
+en = "You open the page. The server sends the program only, without any data of yours."
+pl = "Wchodzisz na stronę. Serwer wysyła sam program, bez Twoich danych."
+pt = "Abre a página. O servidor envia apenas o programa, sem dados seus."
+
+[privacy_how_2]
+en = "You choose a file ending in .json from your own computer. The program reads it in your browser."
+pl = "Wybierasz plik z końcówką .json ze swojego komputera. Program czyta go w Twojej przeglądarce."
+pt = "Escolhe um ficheiro .json do seu computador. O programa lê-o no seu navegador."
+
+[privacy_how_3]
+en = "The file is not sent to the server. Changes go back to your disk (Chrome and Edge on a computer), or you download a new copy."
+pl = "Plik nie jest wysyłany na serwer. Zmiany wracają na Twój dysk (Chrome i Edge na komputerze) albo pobierasz nową kopię."
+pt = "O ficheiro não é enviado para o servidor. As alterações voltam ao seu disco (Chrome e Edge no computador), ou descarrega uma cópia nova."
+
+[privacy_how_4]
+en = "Everything is in that file: your money, settings, theme, language and, if you use one, an API key."
+pl = "W pliku jest wszystko: pieniądze, ustawienia, motyw, język i klucz API, jeśli go używasz."
+pt = "Está tudo nesse ficheiro: o dinheiro, as definições, o tema, o idioma e a chave de API, se a usar."
+
+[privacy_how_5]
+en = "The browser may remember one thing only, a link to the file, and only if you switch it on below."
+pl = "Przeglądarka może zapamiętać tylko jedno: skrót do pliku, i tylko jeśli to włączysz poniżej."
+pt = "O navegador só pode memorizar uma coisa, uma ligação ao ficheiro, e apenas se a ativar abaixo."
+
+[privacy_file_title]
+en = "Remember my wallet file"
+pl = "Pamiętanie pliku portfela"
+pt = "Memorizar o ficheiro da carteira"
+
+[privacy_file_path]
+en = "The page does not know where the file is: the browser never tells it the path. It can only get a link to this one file (like the key to one drawer), and that link can be remembered (IndexedDB). The file's content is not stored."
+pl = "Strona nie zna ścieżki do pliku, bo przeglądarka jej nie zdradza. Może dostać tylko skrót do tego jednego pliku (jak klucz do jednej szuflady) i ten skrót da się zapamiętać (IndexedDB). Zawartość pliku nie jest zapisywana."
+pt = "A página não sabe onde está o ficheiro: o navegador nunca lhe diz o caminho. Só pode receber uma ligação a esse ficheiro (como a chave de uma gaveta), e essa ligação pode ser memorizada (IndexedDB). O conteúdo do ficheiro não é guardado."
+
+[privacy_file_none]
+en = "No file is remembered."
+pl = "Żaden plik nie jest zapamiętany."
+pt = "Nenhum ficheiro memorizado."
+
+[privacy_file_granted]
+en = "Remembered file: {name}. The browser allows reading it, so it opens by itself."
+pl = "Zapamiętany plik: {name}. Przeglądarka pozwala go czytać, więc otwiera się sam."
+pt = "Ficheiro memorizado: {name}. O navegador permite lê-lo, por isso abre sozinho."
+
+[privacy_file_asks]
+en = "Remembered file: {name}. The browser will ask for access when you open it."
+pl = "Zapamiętany plik: {name}. Przy otwieraniu przeglądarka zapyta o dostęp."
+pt = "Ficheiro memorizado: {name}. O navegador pedirá acesso quando o abrir."
+
+[privacy_file_keep]
+en = "Remember the open file"
+pl = "Zapamiętaj otwarty plik"
+pt = "Memorizar o ficheiro aberto"
+
+[privacy_file_keep_named]
+en = "Remember {name}"
+pl = "Zapamiętaj plik {name}"
+pt = "Memorizar {name}"
+
+[privacy_file_forget]
+en = "Forget the file"
+pl = "Zapomnij plik"
+pt = "Esquecer o ficheiro"
+
+[privacy_file_open_first]
+en = "To remember a file, open it first with the File button at the top."
+pl = "Żeby zapamiętać plik, najpierw otwórz go przyciskiem „Plik” u góry."
+pt = "Para memorizar um ficheiro, abra-o primeiro com o botão Ficheiro no topo."
+
+[privacy_file_step_1]
+en = "Open your file with the File button at the top."
+pl = "Otwórz swój plik przyciskiem „Plik” u góry."
+pt = "Abra o seu ficheiro com o botão Ficheiro no topo."
+
+[privacy_file_step_2]
+en = "Come back here and click the Remember button."
+pl = "Wróć tutaj i kliknij przycisk „Zapamiętaj”."
+pt = "Volte aqui e clique no botão Memorizar."
+
+[privacy_file_step_3]
+en = "On your next visit click Open at the top of the page. The browser asks whether to allow it, once or on every visit."
+pl = "Przy następnej wizycie kliknij „Otwórz …” u góry strony. Przeglądarka zapyta o zgodę: jednorazową albo przy każdej wizycie."
+pt = "Na visita seguinte clique em Abrir no topo da página. O navegador pergunta se permite, uma vez ou em todas as visitas."
+
+[privacy_file_step_4]
+en = "From then on the file opens by itself, with what is in it at that moment. It is safer to allow it each time: one click more, and the page cannot read the file without you."
+pl = "Od tej pory plik otwiera się sam, zawsze z aktualną zawartością. Bezpieczniej jest zezwalać za każdym razem: to jedno kliknięcie więcej, a strona nie przeczyta pliku bez Ciebie."
+pt = "A partir daí o ficheiro abre sozinho, com o conteúdo atual. É mais seguro permitir de cada vez: um clique a mais, e a página não lê o ficheiro sem si."
+
+[privacy_file_revoke]
+en = "Forget the file removes the link. The permission kept by the browser is withdrawn with the icon next to the address bar."
+pl = "„Zapomnij plik” usuwa skrót. Zgodę zapamiętaną przez przeglądarkę cofniesz ikoną przy pasku adresu."
+pt = "Esquecer o ficheiro remove a ligação. A permissão guardada pelo navegador retira-se no ícone junto à barra de endereço."
+
+[privacy_file_unsupported]
+en = "This browser cannot remember a file (Firefox and Safari cannot; Brave only with a flag). You open the file each time."
+pl = "Ta przeglądarka nie potrafi zapamiętać pliku (Firefox i Safari tego nie umieją, Brave tylko po włączeniu flagi). Plik otwierasz za każdym razem."
+pt = "Este navegador não consegue memorizar um ficheiro (o Firefox e o Safari não; o Brave só com uma opção experimental). Abre o ficheiro de cada vez."
+
+[privacy_file_value]
+en = "link to “{name}” (no content, no path)"
+pl = "skrót do pliku „{name}” (bez zawartości i bez ścieżki)"
+pt = "ligação a “{name}” (sem conteúdo nem caminho)"
+
+[privacy_stored_title]
+en = "What is stored in this browser right now"
+pl = "Co jest teraz zapisane w tej przeglądarce"
+pt = "O que está guardado neste navegador agora"
+
+[privacy_stored_address]
+en = "This app runs at {address}. The browser keeps data separately for each such address."
+pl = "Aplikacja działa pod adresem {address}. Przeglądarka trzyma dane osobno dla każdego takiego adresu."
+pt = "A aplicação corre em {address}. O navegador guarda os dados em separado para cada endereço."
+
+[privacy_stored_nothing]
+en = "Nothing. This app has nothing stored in this browser."
+pl = "Nic. Ta aplikacja nie ma niczego zapisanego w tej przeglądarce."
+pt = "Nada. Esta aplicação não tem nada guardado neste navegador."
+
+[privacy_col_where]
+en = "Where"
+pl = "Gdzie"
+pt = "Onde"
+
+[privacy_col_name]
+en = "Name"
+pl = "Nazwa"
+pt = "Nome"
+
+[privacy_col_what]
+en = "What it is"
+pl = "Co to jest"
+pt = "O que é"
+
+[privacy_col_value]
+en = "Content"
+pl = "Zawartość"
+pt = "Conteúdo"
+
+[privacy_what_file]
+en = "Link to the wallet file"
+pl = "Skrót do pliku portfela"
+pt = "Ligação ao ficheiro da carteira"
+
+[privacy_what_old_copy]
+en = "From an older version: a copy of the whole wallet"
+pl = "Ze starszej wersji: kopia całego portfela"
+pt = "De uma versão antiga: cópia de toda a carteira"
+
+[privacy_what_old]
+en = "Left over from an older version"
+pl = "Pozostałość po starszej wersji"
+pt = "Resto de uma versão antiga"
+
+[privacy_what_old_db]
+en = "From an older version: link to the file opened last"
+pl = "Ze starszej wersji: skrót do ostatnio otwartego pliku"
+pt = "De uma versão antiga: ligação ao último ficheiro aberto"
+
+[privacy_cut]
+en = "({count} characters in all)"
+pl = "(razem znaków: {count})"
+pt = "(ao todo {count} caracteres)"
+
+[privacy_stored_others]
+en = "Other apps also store entries at this address. The button leaves them alone: {names}"
+pl = "Pod tym adresem są też wpisy innych aplikacji. Przycisk ich nie usuwa: {names}"
+pt = "Há também entradas de outras aplicações neste endereço. O botão não as remove: {names}"
+
+[privacy_clear]
+en = "Remove everything this app stored"
+pl = "Usuń wszystko, co zapisała ta aplikacja"
+pt = "Remover tudo o que esta aplicação guardou"
+
+[privacy_clear_help]
+en = "Removes only what the table shows. Your files on disk are not touched. Permission to a file is withdrawn with the icon next to the address bar."
+pl = "Usuwa tylko to, co widać w tabeli. Nie rusza plików na dysku. Zgodę na dostęp do pliku cofniesz ikoną przy pasku adresu."
+pt = "Remove apenas o que a tabela mostra. Os ficheiros no disco não são tocados. A permissão de um ficheiro retira-se no ícone junto à barra de endereço."
+
+[ask_clear_browser]
+en = "Remove everything this app stored in the browser? Your files stay."
+pl = "Usunąć wszystko, co ta aplikacja zapisała w przeglądarce? Pliki na dysku zostają."
+pt = "Remover tudo o que esta aplicação guardou no navegador? Os ficheiros ficam."
+
+[flash_file_kept]
+en = "Remembered {name}."
+pl = "Zapamiętano plik {name}."
+pt = "{name} memorizado."
+
+[flash_file_forgotten]
+en = "The file is no longer remembered."
+pl = "Plik nie jest już pamiętany."
+pt = "O ficheiro deixou de estar memorizado."
+
+[flash_browser_cleared]
+en = "Removed everything this app stored in the browser."
+pl = "Usunięto wszystko, co aplikacja zapisała w przeglądarce."
+pt = "Removido tudo o que a aplicação guardou no navegador."
+
+[err_storage]
+en = "Browser storage: {error}"
+pl = "Pamięć przeglądarki: {error}"
+pt = "Armazenamento do navegador: {error}"
+
+[err_remembered]
+en = "Cannot open the remembered file {name}: {error}"
+pl = "Nie można otworzyć zapamiętanego pliku {name}: {error}"
+pt = "Não é possível abrir o ficheiro memorizado {name}: {error}"
+
+[err_remembered_denied]
+en = "The browser did not give access to {name}."
+pl = "Przeglądarka nie dała dostępu do pliku {name}."
+pt = "O navegador não deu acesso a {name}."
+
+[btn_open_remembered]
+en = "Open {name}"
+pl = "Otwórz {name}"
+pt = "Abrir {name}"
+
+[privacy_beware_title]
+en = "Good to know"
+pl = "O czym warto wiedzieć"
+pt = "Bom saber"
+
+[privacy_beware_plain]
+en = "The wallet file is not encrypted. Anyone with access to your computer can read it, an API key in it included."
+pl = "Plik portfela nie jest zaszyfrowany. Kto ma dostęp do komputera, może go przeczytać razem z kluczem API."
+pt = "O ficheiro da carteira não está cifrado. Quem tiver acesso ao computador pode lê-lo, incluindo a chave de API."
+
+[privacy_beware_origin]
+en = "The browser grants access to a whole address, {address}, not to one folder of it. Every page at that address shares it."
+pl = "Przeglądarka przyznaje dostęp całemu adresowi {address}, a nie jednemu folderowi. Korzysta z niego każda strona pod tym adresem."
+pt = "O navegador dá o acesso a todo o endereço {address}, não a uma pasta. Todas as páginas desse endereço o partilham."
+
+[privacy_beware_cookies]
+en = "The app creates no cookies."
+pl = "Aplikacja nie tworzy ciasteczek."
+pt = "A aplicação não cria cookies."
+
+[privacy_beware_lost]
+en = "The browser may forget the link (clearing data, a private window). Your file stays. The app makes no backups of it, so keep one yourself."
+pl = "Przeglądarka może zapomnieć skrót (czyszczenie danych, tryb prywatny). Plik zostaje. Aplikacja nie robi jego kopii zapasowych, więc zadbaj o nie samodzielnie."
+pt = "O navegador pode esquecer a ligação (limpeza de dados, janela privada). O ficheiro fica. A aplicação não faz cópias de segurança, por isso guarde uma."
+
+[privacy_net_title]
+en = "Whom the page talks to"
+pl = "Z kim łączy się strona"
+pt = "Com quem a página comunica"
+
+[privacy_col_who]
+en = "Who"
+pl = "Z kim"
+pt = "Com quem"
+
+[privacy_col_when]
+en = "When"
+pl = "Kiedy"
+pt = "Quando"
+
+[privacy_col_gets]
+en = "What happens"
+pl = "Co się dzieje"
+pt = "O que acontece"
+
+[privacy_net_when_fx]
+en = "Only after clicking the ECB rates button"
+pl = "Tylko po kliknięciu przycisku kursów EBC"
+pt = "Só ao clicar no botão das taxas do BCE"
+
+[privacy_net_fx]
+en = "Receives the names of currencies and returns exchange rates."
+pl = "Dostaje nazwy walut i odsyła kursy."
+pt = "Recebe os nomes das moedas e devolve as taxas."
+
+[privacy_net_note]
+en = "Each connection shows the other side your IP address and browser. The app sends amounts and transactions nowhere."
+pl = "Przy każdym połączeniu druga strona widzi Twój adres IP i przeglądarkę. Aplikacja nie wysyła nigdzie kwot ani transakcji."
+pt = "Em cada ligação, o outro lado vê o seu endereço IP e o navegador. A aplicação não envia valores nem transações para lado nenhum."
+
+[privacy_beware_server]
+en = "The program comes from the server. Whoever controls the server can change the program, and a changed program can read an open file and send it away."
+pl = "Program pochodzi z serwera. Kto ma kontrolę nad serwerem, może zmienić program, a zmieniony program może odczytać otwarty plik i go wysłać."
+pt = "O programa vem do servidor. Quem controlar o servidor pode alterar o programa, e um programa alterado pode ler um ficheiro aberto e enviá-lo."
+
+[privacy_beware_permission]
+en = "If you allow access on every visit, the page reads and changes the file without asking. Opening the page is then enough."
+pl = "Jeśli zezwolisz na dostęp przy każdej wizycie, strona czyta i zmienia plik bez pytania. Wystarczy wtedy samo wejście na stronę."
+pt = "Se permitir o acesso em todas as visitas, a página lê e altera o ficheiro sem perguntar. Basta então abrir a página."
+
+[privacy_net_when_open]
+en = "On opening the page"
+pl = "Przy wejściu na stronę"
+pt = "Ao abrir a página"
+
+[privacy_net_server]
+en = "Sends the program, its texts and the example wallet. Your file does not go there."
+pl = "Wysyła program, teksty i przykładowy portfel. Twój plik tam nie trafia."
+pt = "Envia o programa, os textos e a carteira de exemplo. O seu ficheiro não vai para lá."
+
+[privacy_net_now]
+en = "Since you opened it, this page has fetched from: {hosts}"
+pl = "Od otwarcia strona pobierała coś z: {hosts}"
+pt = "Desde que a abriu, a página descarregou de: {hosts}"

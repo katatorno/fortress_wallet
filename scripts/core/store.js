@@ -6,8 +6,8 @@
 // into the file (Chrome / Edge on a computer); otherwise the app asks you to
 // download the updated file.
 //
-// The app keeps nothing in the browser: no cookies, no storage, no database.
-// Everything lives in this page's memory and in your file.
+// Nothing of the wallet is kept in the browser: it lives in this page's memory
+// and in your file. What may be remembered between visits is in remember.js.
 
 const Store = (() => {
   const AUTOSAVE_MS = 800;
@@ -59,6 +59,17 @@ const Store = (() => {
     _openFile(f);
     return true;
   }
+
+  /** Opens a remembered file; false when the browser does not let us in (see `LocalFile.reopen`). */
+  async function openRemembered(known, ask = false) {
+    const f = await LocalFile.reopen(known, ask);
+    if(!f) return false;
+    _openFile(f);
+    return true;
+  }
+
+  /** The open file's handle, where the browser gave one. */
+  const fileHandle = () => handle;
 
   // ------------------------------------------------------------ save
 
@@ -113,7 +124,7 @@ const Store = (() => {
 
   return {
     get, state, onChange,
-    openExample, openLocal,
+    openExample, openLocal, openRemembered, fileHandle,
     changed, save, download, saveAsLocal, unsaved,
   };
 })();

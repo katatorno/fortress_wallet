@@ -130,5 +130,10 @@ select.cell-input { min-width: 8.5rem; border-color: var(--border); cursor: poin
 /* the chart's range buttons scroll on a very narrow screen */
 .range-pick { overflow-x: auto; }
 
+/* ---------------------------------------------------------------- data & privacy: sentences, read from the left */
+.facts-list { margin: 0; padding-left: 1.4rem; display: flex; flex-direction: column; gap: var(--space-xs); }
+.table.facts th, .table.facts td { text-align: left; white-space: normal; }
+.stored-value { overflow-wrap: anywhere; }
+
 /* ---------------------------------------------------------------- notes and markdown */
 .note .panel-main span { color: var(--text2); }

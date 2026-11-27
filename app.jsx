@@ -1,8 +1,8 @@
 // app.jsx
 //
-// Start-up: load the texts, open the example
-// data, then draw the app. Nothing is read from or kept in the browser: the theme
-// follows the system until you switch it, the language follows the browser.
+// Start-up: load the texts, open the remembered wallet file or the example data,
+// then draw the app. Language and theme come from the open wallet; for the
+// example they follow the browser and the system.
 
 async function boot() {
   document.body.replaceChildren(<div class="boot"><Spinner /></div>);
@@ -14,10 +14,18 @@ async function boot() {
     return;
   }
 
+  let lang = (navigator.language || I18N.DEFAULT).slice(0, 2);
+  if(!(lang in I18N.languages())) lang = I18N.DEFAULT;
+  let problem = null;
   try {
-    let lang = (navigator.language || I18N.DEFAULT).slice(0, 2);
-    if(!(lang in I18N.languages())) lang = I18N.DEFAULT;
-    await Store.openExample(lang);
+    // the remembered file opens by itself when the browser already lets us in
+    const known = await Remember.file();
+    let opened = false;
+    if(known) {
+      try { opened = await Store.openRemembered(known); }
+      catch(e) { problem = { name: known.name, error: e.message }; }
+    }
+    if(!opened) await Store.openExample(lang);
   }
   catch(e) {
     document.body.replaceChildren(<pre class="boot-error">{e.message}</pre>);
@@ -34,6 +42,7 @@ async function boot() {
   });
 
   mountApp();
+  if(problem) Alert.err(I18N.t(lang, "err_remembered", problem));
 }
 
 boot();
