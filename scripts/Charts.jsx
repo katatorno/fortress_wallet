@@ -236,13 +236,23 @@ const _LineChart = ({ series, lang, marker, height = 260, markers }, W) => {
   const X = (t) => left + (t - x0) / (x1 - x0) * (W - left - right);
   const Y = (v) => top + (1 - v / max) * (h - top - bottom);
   const path = (points) => points.map((p, i) => `${i ? "L" : "M"}${X(_ts(p[0])).toFixed(1)} ${Y(p[1]).toFixed(1)}`).join(" ");
-  // year ticks
+  // ticks: days for a couple of months, then months, then years
   const y0 = new Date(x0).getUTCFullYear(), y1 = new Date(x1).getUTCFullYear();
   const span = y1 - y0;
   const yearStep = span > 30 ? 5 : span > 12 ? 2 : 1;
   const years = [];
   for(let y = y0 + 1; y <= y1; y++) if((y - y0) % yearStep === 0) years.push(y);
-  const showDays = span < 1;
+  const spanDays = (x1 - x0) / 86400000;
+  const showDays = spanDays <= 62;
+  const byMonth = !showDays && spanDays <= 900;
+  const months = [];
+  if(byMonth) {
+    // as many labels as fit, about one per 70 pixels
+    const every = Math.max(1, Math.ceil(spanDays / 30.4 / ((W - left - right) / 70)));
+    const first = new Date(x0);
+    for(let m = first.getUTCMonth() + 1; Date.UTC(y0, m, 1) <= x1; m += every) months.push(Date.UTC(y0, m, 1));
+  }
+  const monthLabel = (t) => Core.monthYear(new Date(t).toISOString().slice(0, 10));
 
   const cursor = <line y1={top} y2={h - bottom} class="chart-cursor" visibility="hidden" />;
   const dots = series.map(s => <circle r="4" class={["chart-dot", "s-" + s.cls]} visibility="hidden" />);
@@ -254,8 +264,11 @@ const _LineChart = ({ series, lang, marker, height = 260, markers }, W) => {
         <text x={left - 6} y={Y(f * max) + 4} text-anchor="end" class="chart-axis">{_compactMoney(lang, f * max)}</text>
       </g>)}
       {showDays
-        ? series[0].points.map(p => <text x={X(_ts(p[0]))} y={h - 8} text-anchor="middle" class="chart-axis">{Core.dayMonthYear(p[0]).slice(0, 5)}</text>)
-        : years.map(y => <text x={X(Date.UTC(y, 0, 1))} y={h - 8} text-anchor="middle" class="chart-axis">{y}</text>)}
+        ? series[0].points.filter((p, i, all) => i % Math.ceil(all.length / 8) === 0)
+          .map(p => <text x={X(_ts(p[0]))} y={h - 8} text-anchor="middle" class="chart-axis">{Core.dayMonthYear(p[0]).slice(0, 5)}</text>)
+        : byMonth
+          ? months.map(t => <text x={X(t)} y={h - 8} text-anchor="middle" class="chart-axis">{monthLabel(t)}</text>)
+          : years.map(y => <text x={X(Date.UTC(y, 0, 1))} y={h - 8} text-anchor="middle" class="chart-axis">{y}</text>)}
       {marker && _ts(marker) >= x0 && _ts(marker) <= x1
         ? <line x1={X(_ts(marker))} x2={X(_ts(marker))} y1={top} y2={h - bottom} class="chart-marker" /> : null}
       {series.map(s => <path d={path(s.points)} class={["chart-line", "s-" + s.cls, s.dash && "chart-dash"]} />)}
@@ -294,7 +307,7 @@ const _LineChart = ({ series, lang, marker, height = 260, markers }, W) => {
       dots[i].setAttribute("visibility", "visible");
     });
     tip.replaceChildren(
-      <strong>{showDays ? Core.dayMonthYear(ref[0]) : Core.monthYear(ref[0])}</strong>,
+      <strong>{showDays || byMonth ? Core.dayMonthYear(ref[0]) : Core.monthYear(ref[0])}</strong>,
       ...series.map((s, i) => hits[i] ? <inline gap="xs"><span class={["chart-key", s.cls]}></span>{s.name}: <b>{I18N.money(lang, hits[i][1])}</b></inline> : null).filter(Boolean),
     );
     tip.hidden = false;

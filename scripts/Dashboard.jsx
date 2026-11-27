@@ -55,6 +55,8 @@ const DashboardView = (app) => {
           { name: T("net_worth"), cls: "c1", points: hist.map(h => [h.date, h.net_worth]) },
           { name: T("investments"), cls: "c2", points: hist.map(h => [h.date, h.investments]) },
           { name: T("cash"), cls: "c3", points: hist.map(h => [h.date, h.cash]) },
+          ...(hist.some(h => h.cat_metals) ? [{ name: Core.categoryLabel(data, "metals"), cls: "c4",
+            points: hist.filter(h => h.cat_metals != null).map(h => [h.date, h.cat_metals]) }] : []),
         ]} />
         : <Empty icon="show_chart" description={T("history_empty")} />}
     </Panel>

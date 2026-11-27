@@ -844,6 +844,62 @@ const Core = (() => {
     return dates.length;
   }
 
+  /**
+   * What a category's instruments cost and what they are worth, day by day, in EUR.
+   * \`invested\` is the purchase cost (with fees, at the day's rate) of what is still
+   * held: a sale takes its share of the cost out, so realised gains are not in it.
+   * Opening quantities, whose cost is unknown, count at their first known price.
+   * @returns {Array<{date:string, invested:number, value:number}>} from the first
+   *   transaction to \`to\`; the last day uses the current prices and rates
+   */
+  function portfolioHistory(data, category, to = today()) {
+    const assets = data.assets.filter(a => a.category === category);
+    const byId = Object.fromEntries(assets.map(a => [a.id, a]));
+    const moves = data.transactions.filter(t => t.asset_id in byId && t.date <= to)
+      .sort((a, b) => a.date.localeCompare(b.date) || (a.type === "sell" ? 1 : 0) - (b.type === "sell" ? 1 : 0));
+    if(!moves.length) return [];
+    const start = moves[0].date;
+    const known = Object.fromEntries(assets.map(a => [a.id, Object.keys(data.prices[a.id] || {}).sort()]));
+    const fxDates = Object.keys(data.fx_history).sort();
+    const dates = [...new Set([...Object.values(known).flat(), ...moves.map(t => t.date), to])]
+      .filter(d => d >= start && d <= to).sort();
+
+    const rate = (currency, date) => {
+      if(currency === "EUR") return 1;
+      const day = date < to && fxDates.length ? _asOf(data.fx_history, fxDates, date) : null;
+      return Number(day?.[currency]) || fx(data, currency);
+    };
+    const price = (a, date) => {
+      if(date >= to || !known[a.id].length) return Number(a.price || 0);
+      const [open, close] = _asOf(data.prices[a.id], known[a.id], date);
+      return close ?? open;
+    };
+
+    const held = Object.fromEntries(assets.map(a => {
+      const quantity = Number(a.opening_quantity || 0);
+      return [a.id, { quantity, cost: quantity ? quantity * price(a, start) / rate(a.currency, start) : 0 }];
+    }));
+    let next = 0;
+    return dates.map(date => {
+      for(; next < moves.length && moves[next].date <= date; next++) {
+        const t = moves[next], a = byId[t.asset_id], h = held[t.asset_id];
+        const q = (t.type === "sell" ? -1 : 1) * Number(t.quantity || 0);
+        if(q < 0) h.cost -= h.cost * (h.quantity > 0 ? Math.min(-q / h.quantity, 1) : 1);
+        else if(t.type === "buy") h.cost += q * Number(t.price || 0) / rate(a.currency, t.date) + Number(t.fee || 0);
+        h.quantity += q;
+        if(Math.abs(h.quantity) < 1e-6) { h.quantity = 0; h.cost = 0; }
+      }
+      let invested = 0, value = 0;
+      for(const a of assets) {
+        const h = held[a.id];
+        if(!h.quantity) continue;
+        invested += h.cost;
+        value += h.quantity * price(a, date) / rate(a.currency, date);
+      }
+      return { date, invested: round2(invested), value: round2(value) };
+    });
+  }
+
   /** Nothing is held any more, and no percentage points at it. */
   const soldOut = (data, asset) => !Number(asset.target_in_bucket || 0)
     && data.transactions.some(t => t.asset_id === asset.id) && Math.abs(quantities(data)[asset.id]) < 1e-6;
@@ -991,6 +1047,6 @@ const Core = (() => {
     annuity, impliedRate, firstPaymentDate, initialPayment, runMortgage, mortgageState,
     mortgageReport, yearlyPrepayments, prepaymentBreakEvenMonths, nextPaymentEvent,
     waterfill, contributionPlan, applyPlan, addCash, addTransaction,
-    upsertSnapshot, addPrice, rebuildHistory, soldOut, bondMaturity, recommendations,
+    upsertSnapshot, addPrice, rebuildHistory, portfolioHistory, soldOut, bondMaturity, recommendations,
   };
 })();

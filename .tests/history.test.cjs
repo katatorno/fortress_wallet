@@ -59,6 +59,32 @@ const wallet = () => Core.normalize({
   ok("each day at the last known rate", on("2026-01-07").investments === 40 && near(on("2026-01-09").investments, 7.5));
 }
 
+// ---------------------------------------------------------------- put in vs worth
+{
+  const d = wallet();
+  const move = (id, date, type, quantity, price, fee = 0) =>
+    d.transactions.push({ id, date, asset_id: "webg", type, quantity, price, fee });
+  move("a", "2026-01-05", "buy", 2, 10, 1);
+  move("b", "2026-01-07", "buy", 2, 20);
+  move("c", "2026-01-09", "sell", 1, 50);
+  Core.addPrice(d, "webg", "2026-01-05", null, 10);
+  Core.addPrice(d, "webg", "2026-01-09", null, 30);
+  d.assets[0].price = 40;
+  const days = Core.portfolioHistory(d, "equities", "2026-01-12");
+  const on = (date) => days.find(x => x.date === date);
+  ok("it starts with the first purchase and ends today", days[0].date === "2026-01-05" && days.at(-1).date === "2026-01-12");
+  ok("invested is cost with fees", on("2026-01-05").invested === 21 && on("2026-01-07").invested === 61);
+  ok("a day without a price uses the last one", on("2026-01-07").value === 40);
+  ok("a sale takes its share of the cost out", on("2026-01-09").invested === 45.75 && on("2026-01-09").value === 90);
+  ok("today at the current price", days.at(-1).value === 120 && days.at(-1).invested === 45.75);
+  move("d", "2026-01-10", "sell", 3, 50);
+  ok("everything sold leaves nothing invested", Core.portfolioHistory(d, "equities", "2026-01-12").at(-1).invested === 0);
+  d.assets[0].currency = "USD";
+  d.fx_history = { "2026-01-05": { USD: 4 } };
+  ok("cost at the rate of the day it was paid", Core.portfolioHistory(d, "equities", "2026-01-12")[0].invested === 6);
+  ok("another category has no history", !Core.portfolioHistory(d, "metals").length);
+}
+
 // ---------------------------------------------------------------- the import
 {
   const d = wallet();

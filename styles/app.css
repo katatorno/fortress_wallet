@@ -6,6 +6,7 @@
   --c2: light-dark(#f47230, #e76624);
   --c3: light-dark(#00b894, #00a888);
   --cn: light-dark(#8a8a8a, #7a7a80);
+  --c4: light-dark(#c99700, #e0b020); /* metals */
   /* how strong the target behind a current-share bar is */
   --pale: 0.3;
 }
@@ -84,12 +85,15 @@ select.cell-input { min-width: 8.5rem; border-color: var(--border); cursor: poin
 .chart .c2, .chart-swatch .c2, .chart-key.c2 { fill: var(--c2); background: var(--c2); }
 .chart .c3, .chart-swatch .c3, .chart-key.c3 { fill: var(--c3); background: var(--c3); }
 .chart .cn, .chart-swatch .cn, .chart-key.cn { fill: var(--cn); background: var(--cn); }
+.chart .c4, .chart-swatch .c4, .chart-key.c4 { fill: var(--c4); background: var(--c4); }
 .chart-swatch .pale { fill-opacity: var(--pale); }
 .s-c1 { stroke: var(--c1); fill: var(--c1); }
 .s-c2 { stroke: var(--c2); fill: var(--c2); }
 .s-c3 { stroke: var(--c3); fill: var(--c3); }
 .s-cn { stroke: var(--cn); fill: var(--cn); }
-.chart .chart-line.s-c1, .chart .chart-line.s-c2, .chart .chart-line.s-c3, .chart .chart-line.s-cn,
+.s-c4 { stroke: var(--c4); fill: var(--c4); }
+.chart .chart-line.s-c1, .chart .chart-line.s-c2, .chart .chart-line.s-c3, .chart .chart-line.s-c4,
+.chart .chart-line.s-cn,
 .chart-swatch .chart-line { fill: none; stroke-width: 2; }
 .chart-swatch .chart-target { fill: var(--text); }
 

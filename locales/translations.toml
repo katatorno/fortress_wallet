@@ -490,6 +490,36 @@ en = "The shares must add up to 100% – now they give {sum}%."
 pl = "Udziały muszą dawać razem 100% – teraz dają {sum}%."
 pt = "Os pesos têm de somar 100% – agora somam {sum}%."
 
+[market_history_title]
+en = "Portfolio: put in vs worth"
+pl = "Portfel: wpłacone vs wartość"
+pt = "Carteira: investido vs valor"
+
+[legend_invested]
+en = "Invested"
+pl = "Wpłacone"
+pt = "Investido"
+
+[legend_value]
+en = "Value"
+pl = "Wartość"
+pt = "Valor"
+
+[market_gain]
+en = "Gain / loss"
+pl = "Zysk / strata"
+pt = "Ganho / perda"
+
+[market_history_help]
+en = "Invested = what you paid for what you hold today; gains from sales are not included."
+pl = "Wpłacone = tyle zapłacono za to, co jest dziś w portfelu; zyski ze sprzedaży nie są tu liczone."
+pt = "Investido = o que pagou pelo que tem hoje; os ganhos das vendas não estão incluídos."
+
+[market_history_empty]
+en = "The chart appears once there are transactions on at least two days."
+pl = "Wykres pojawi się, gdy będą transakcje z co najmniej dwóch dni."
+pt = "O gráfico aparece quando houver transações em pelo menos dois dias."
+
 [btn_record_purchases]
 en = "Record the purchases"
 pl = "Zapisz zakupy"

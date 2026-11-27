@@ -1,7 +1,35 @@
 // scripts/Market.jsx
 //
-// Equities only: the buckets' shares vs the plan (edited there), each bucket with
-// its targets, what to buy for an amount, the instruments and the exchange rates.
+// Equities only: what was put in vs what it is worth over time, the buckets' shares
+// vs the plan (edited there), each bucket with its targets, what to buy for an
+// amount, the instruments and the exchange rates.
+
+/** Invested vs worth: the three numbers of today and both lines over time. */
+function portfolioPanel(app) {
+  const { data, T, money } = app;
+  const days = Core.portfolioHistory(data, "equities");
+  const last = days[days.length - 1];
+  const gain = last ? last.value - last.invested : 0;
+  const percent = last?.invested ? ` (${gain >= 0 ? "+" : ""}${I18N.percent(app.L, gain / last.invested * 100)})` : "";
+  return (
+    <Panel title={T("market_history_title")} icon="show_chart">
+      {days.length >= 2
+        ? <stack gap="sm">
+          <div class="metrics">
+            <Metric label={T("legend_invested")} value={money(last.invested)} help={T("market_history_help")} />
+            <Metric label={T("legend_value")} value={money(last.value)} />
+            <Metric label={T("market_gain")} value={`${gain >= 0 ? "+" : ""}${money(gain)}${percent}`} />
+          </div>
+          <LineChart lang={app.L} series={[
+            { name: T("legend_value"), cls: "c1", points: days.map(d => [d.date, d.value]) },
+            { name: T("legend_invested"), cls: "cn", dash: true, points: days.map(d => [d.date, d.invested]) },
+          ]} />
+          <small tone="note">{T("market_history_help")}</small>
+        </stack>
+        : <Empty icon="show_chart" description={T("market_history_empty")} />}
+    </Panel>
+  );
+}
 
 const MarketView = (app) => {
   const { data, T, money } = app;
@@ -13,6 +41,7 @@ const MarketView = (app) => {
   // ---------------------------------------------------------- shares vs targets
   const buckets = bucketsOf(data, "equities");
   const shares = [
+    portfolioPanel(app),
     <BucketShares app={app} positions={pos} category="equities" title={T("bucket_shares_title")}
       footer={bucketEditor(app, "equities")} />,
     ...buckets.map(b => <BucketPanel app={app} positions={pos} bucket={b} footer={targetEditor(app, b)} />),
