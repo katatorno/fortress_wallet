@@ -1627,11 +1627,6 @@ en = "Load example data"
 pl = "Wczytaj dane przykładowe"
 pt = "Carregar dados de exemplo"
 
-[btn_continue]
-en = "Continue with {name}"
-pl = "Kontynuuj z {name}"
-pt = "Continuar com {name}"
-
 [btn_retry]
 en = "Try again"
 pl = "Spróbuj ponownie"
@@ -1768,9 +1763,9 @@ pl = "Zapis nie powiódł się: {error}"
 pt = "Falha ao guardar: {error}"
 
 [banner_drive_offline]
-en = "Showing the copy kept on this device. Connect Google Drive to load the latest version."
-pl = "Pokazuję kopię zapisaną na tym urządzeniu. Połącz się z Dyskiem Google, żeby wczytać najnowszą wersję."
-pt = "A mostrar a cópia guardada neste dispositivo. Ligue o Google Drive para carregar a versão mais recente."
+en = "Google sign-in has ended. Connect Google Drive to load the latest version."
+pl = "Logowanie do Google wygasło. Połącz się z Dyskiem Google, żeby wczytać najnowszą wersję."
+pt = "A sessão Google terminou. Ligue o Google Drive para carregar a versão mais recente."
 
 [btn_update_fx]
 en = "ECB rates"
@@ -1816,26 +1811,6 @@ pt = "Geral"
 en = "Language"
 pl = "Język"
 pt = "Idioma"
-
-[set_cache]
-en = "Remember my data on this device"
-pl = "Zapamiętaj moje dane na tym urządzeniu"
-pt = "Guardar os meus dados neste dispositivo"
-
-[set_cache_help]
-en = "Keeps a copy in this browser so the app opens with your numbers even offline. Turn it off on a shared computer."
-pl = "Trzyma kopię w tej przeglądarce, więc aplikacja otwiera się z Twoimi liczbami nawet offline. Wyłącz na wspólnym komputerze."
-pt = "Guarda uma cópia neste navegador, para a aplicação abrir com os seus valores mesmo offline. Desligue num computador partilhado."
-
-[flash_cache_on]
-en = "Your data will be kept on this device."
-pl = "Dane będą przechowywane na tym urządzeniu."
-pt = "Os dados ficarão guardados neste dispositivo."
-
-[flash_cache_off]
-en = "Nothing is kept on this device any more."
-pl = "Na tym urządzeniu nic już nie jest przechowywane."
-pt = "Já nada fica guardado neste dispositivo."
 
 [theme_light]
 en = "Light theme"

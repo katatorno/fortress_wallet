@@ -37,7 +37,7 @@ A spreadsheet stopped being enough once a mortgage joined the portfolio. Fortres
 | **Contribution calculator** | Amount → emergency fund → prepayment pot → purchases by target; record the whole plan with one click |
 | **Mortgage & home** | Payments (from the schedule or a bank statement), prepayments with a preview of their effect, balance and interest charts, yearly prepayment simulator |
 | **Recommendations** | Automatic hints (emergency fund, limits, drift, stale prices, bond maturities, price alerts) + your strategy notes in Markdown |
-| **Settings** | Language, allocation targets, buckets, budget, whether this device keeps a copy |
+| **Settings** | Language, allocation targets, buckets, budget |
 
 Also:
 - 🌐 English / Polish / Portuguese, switchable at any time, remembered in your wallet file,
@@ -49,11 +49,12 @@ Also:
 
 | | How it works |
 |---|---|
-| **A file on this device** | **File → Open a file.** In Chrome and Edge on a computer the app saves straight back into that file after every change, and can reopen it after a restart. In other browsers (phones, Firefox, Safari) you **download** the updated file. |
+| **A file on this device** | **File → Open a file.** In Chrome and Edge on a computer the app saves straight back into that file after every change. After a reload you open it again. In other browsers (phones, Firefox, Safari) you **download** the updated file. |
 | **Google Drive** | **File → Connect Google Drive.** The app asks Google for the narrowest permission there is, `drive.file`: it sees **only the files it created itself** (or that you pick for it), nothing else on your Drive. The file goes directly between your browser and Google. After about an hour, one click reconnects you. Changes made on another device are detected before anything is overwritten. |
-| **This device's browser** (optional) | **Settings → Remember my data on this device** keeps a copy in the browser so the app opens with your numbers right away. Off by default. |
 
 Nothing is ever sent to the server that hosts the page.
+
+**The app is cookie-free and keeps nothing in the browser:** no cookies, local or session storage, database or service worker. A reload starts again with the example data, in the browser's language and the system's theme. `privacy.test.cjs` guards this. Google Drive is off unless a Client ID is set in `app.ini`; turning it on loads Google's sign-in script, which uses Google's own cookies.
 
 ## Quick start
 
@@ -178,7 +179,7 @@ Prices of stocks, ETFs and metals are entered by hand: there is no free price so
 ## Tests
 
 ```bash
-tonka test fortress-wallet          # or: node .tests/core.test.cjs && node .tests/market.test.cjs && node .tests/translations.test.cjs
+tonka test fortress-wallet          # or: node .tests/core.test.cjs && node .tests/market.test.cjs && node .tests/privacy.test.cjs && node .tests/translations.test.cjs
 ```
 
 `market.test.cjs` holds the market view's rules: percentages in a bucket are 100% or all 0%, bucket shares are 100%, moves and deletions keep that, the "what to buy" calculator and no sell alerts for equities.

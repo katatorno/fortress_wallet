@@ -6,11 +6,10 @@
 // where that is possible (a local file opened in Chrome/Edge, or Drive);
 // otherwise the app asks you to download the updated file.
 //
-// Nothing about your data is kept in the browser unless you switch on
-// "Remember data on this device" – then a copy lives in localStorage.
+// The app keeps nothing in the browser: no cookies, no storage, no database.
+// Everything lives in this page's memory and in your file.
 
 const Store = (() => {
-  const KEY = { source: "fw.source", cache: "fw.cache", cacheOn: "fw.cacheOn", lang: "fw.lang" };
   const AUTOSAVE_MS = 800;
 
   let data = null;
@@ -21,11 +20,6 @@ const Store = (() => {
   let error = null;
   let timer = null;
   const subs = new Set();
-
-  const ls = {
-    get: (k) => { try { return localStorage.getItem(k); } catch(e) { return null; } },
-    set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch(e) { /* private mode */ } },
-  };
 
   // ------------------------------------------------------------ state
 
@@ -47,39 +41,7 @@ const Store = (() => {
     source = newSource;
     handle = opts.handle || null;
     driveVersion = opts.version ?? null;
-    ls.set(KEY.source, JSON.stringify({ kind: source.kind, name: source.name, fileId: source.fileId || null }));
-    if(data.settings?.language) ls.set(KEY.lang, data.settings.language);
-    _writeCache();
-    _setStatus(opts.dirty ? "dirty" : "saved");
-  }
-
-  /** Where the last session's wallet came from (no data, just its name). */
-  function lastSource() {
-    try { return JSON.parse(ls.get(KEY.source) || "null"); } catch(e) { return null; }
-  }
-
-  /** Language to show before a wallet is open. */
-  const preferredLanguage = () => ls.get(KEY.lang) || (navigator.language || "en").slice(0, 2);
-
-  // ------------------------------------------------------------ device cache (opt-in)
-
-  const cacheEnabled = () => ls.get(KEY.cacheOn) === "1";
-  function setCache(on) {
-    ls.set(KEY.cacheOn, on ? "1" : null);
-    if(on) _writeCache(); else ls.set(KEY.cache, null);
-    emit();
-  }
-  function _writeCache() {
-    if(!cacheEnabled() || !data) return;
-    ls.set(KEY.cache, JSON.stringify({ source, driveVersion, status, text: Core.serialize(data) }));
-  }
-  /** The copy kept on this device, if any. */
-  function cached() {
-    if(!cacheEnabled()) return null;
-    try {
-      const c = JSON.parse(ls.get(KEY.cache) || "null");
-      return c ? { data: Core.parse(c.text), source: c.source, version: c.driveVersion, dirty: c.status !== "saved" } : null;
-    } catch(e) { return null; }
+    _setStatus("saved");
   }
 
   // ------------------------------------------------------------ open
@@ -91,22 +53,8 @@ const Store = (() => {
     _open(d, { kind: "example", name: "" });
   }
 
-  function openCached() {
-    const c = cached();
-    if(!c) return false;
-    _open(c.data, c.source, { version: c.version, dirty: c.dirty });
-    return true;
-  }
-
   async function openLocal() {
     const f = await LocalFile.open();
-    if(!f) return false;
-    _open(Core.parse(f.text), { kind: "local", name: f.name }, { handle: f.handle });
-    return true;
-  }
-
-  async function reopenLocal() {
-    const f = await LocalFile.reopen();
     if(!f) return false;
     _open(Core.parse(f.text), { kind: "local", name: f.name }, { handle: f.handle });
     return true;
@@ -130,8 +78,6 @@ const Store = (() => {
     source = { kind: "drive", name: meta.name, fileId: meta.id };
     handle = null;
     driveVersion = meta.version;
-    ls.set(KEY.source, JSON.stringify({ kind: "drive", name: meta.name, fileId: meta.id }));
-    _writeCache();
     _setStatus("saved");
   }
 
@@ -139,9 +85,7 @@ const Store = (() => {
 
   /** Call after every change of the data. */
   function changed() {
-    if(data.settings?.language) ls.set(KEY.lang, data.settings.language);
     status = "dirty";
-    _writeCache();
     emit();
     clearTimeout(timer);
     if(canSaveInPlace()) timer = setTimeout(() => save(), AUTOSAVE_MS);
@@ -169,7 +113,6 @@ const Store = (() => {
         _setStatus("dirty");
         return false;
       }
-      _writeCache();
       _setStatus("saved");
       return true;
     }
@@ -195,9 +138,7 @@ const Store = (() => {
       source = { kind: "local", name: res.name };
       handle = res.handle;
       driveVersion = null;
-      ls.set(KEY.source, JSON.stringify({ kind: "local", name: res.name }));
     }
-    _writeCache();
     _setStatus("saved");
     return true;
   }
@@ -206,9 +147,8 @@ const Store = (() => {
   const unsaved = () => status !== "saved";
 
   return {
-    get, state, onChange, lastSource, preferredLanguage,
-    cacheEnabled, setCache, cached, openCached,
-    openExample, openLocal, reopenLocal, openDrive, pickDrive, createOnDrive,
+    get, state, onChange,
+    openExample, openLocal, openDrive, pickDrive, createOnDrive,
     changed, save, download, saveAsLocal, unsaved,
   };
 })();

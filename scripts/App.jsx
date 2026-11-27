@@ -5,6 +5,7 @@
 // of the app context; after every change the current one is drawn again.
 
 let _appUnsub = null;
+let _appView = "dashboard"; // the open view, kept over a rebuild
 
 /** Builds the whole app again (after opening another wallet or changing language). */
 function mountApp() {
@@ -37,8 +38,7 @@ const App = () => {
     { key: "recommendations", icon: "lightbulb", title: T("tab_recommendations"), render: RecommendationsView, badge: recBadge },
     { key: "settings", icon: "settings", title: T("tab_settings"), render: SettingsView },
   ];
-  let current = sessionStorage.getItem("fw.view") || "dashboard";
-  if(!views.some(v => v.key === current)) current = "dashboard";
+  let current = _appView;
   for(const v of views) v.nav = <SidebarBtn icon={v.icon} title={v.title} badge={v.badge} onClick={() => show(v.key)} />;
 
   const heading = <h2 class="view-title"></h2>;
@@ -48,7 +48,7 @@ const App = () => {
 
   function show(key) {
     current = key;
-    sessionStorage.setItem("fw.view", key);
+    _appView = key;
     for(const v of views) v.nav.active = v.key === key;
     refresh();
     content.scrollTop = 0;
@@ -93,23 +93,7 @@ const App = () => {
     if(await Store.save()) Alert.ok(T("flash_saved"));
   }
 
-  async function continueLast(last) {
-    try {
-      if(last.kind === "local") {
-        if(await Store.reopenLocal()) mountApp();
-        else openFileDialog(app);
-      }
-      else if(last.kind === "drive") {
-        if(!(await connectDrive())) return;
-        await Store.openDrive(last.fileId);
-        mountApp();
-      }
-    }
-    catch(e) { Alert.err(e.message); }
-  }
-
   function bannerFor(st) {
-    const last = Store.lastSource();
     const btn = (icon, label, fn, variant) => <Button size="sm" variant={variant} icon={icon} onClick={fn}>{label}</Button>;
     if(st.status === "auth") {
       return <Note level="warn" title={T("banner_auth")}>
@@ -132,9 +116,7 @@ const App = () => {
     if(st.source.kind === "example") {
       return <Note level="info" title={T("banner_example")}>
         <row gap="sm">
-          {last && last.kind !== "example" && last.name
-            ? btn("history", T("btn_continue", { name: last.name }), () => continueLast(last), "primary") : null}
-          {btn("folder_open", T("btn_file"), () => openFileDialog(app))}
+          {btn("folder_open", T("btn_file"), () => openFileDialog(app), "primary")}
         </row>
       </Note>;
     }

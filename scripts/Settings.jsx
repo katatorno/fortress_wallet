@@ -1,7 +1,6 @@
 // scripts/Settings.jsx
 //
-// Budget and emergency fund, allocation targets, buckets, language and what this
-// device keeps.
+// Budget and emergency fund, allocation targets, buckets and language.
 
 const SettingsView = (app) => {
   const { data, T } = app;
@@ -50,18 +49,11 @@ const SettingsView = (app) => {
     </Select>
   );
 
-  const cache = (
-    <Checkbox checked={Store.cacheEnabled()} label={T("set_cache")}
-      onChange={(on) => { Store.setCache(on); Alert.ok(T(on ? "flash_cache_on" : "flash_cache_off")); }} />
-  );
-
   return (
     <stack gap="md">
       <Panel title={T("settings_general_title")} icon="language">
         <stack gap="sm">
           {formRow(T("set_language"), language)}
-          {formRow("", cache)}
-          {formNote(<small tone="note">{T("set_cache_help")}</small>)}
         </stack>
       </Panel>
       <Panel title={T("settings_budget_title")} icon="account_balance">
