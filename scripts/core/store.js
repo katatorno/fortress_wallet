@@ -1,10 +1,10 @@
 // scripts/core/store.js
 //
 // The open wallet: its data, where it came from and whether it is saved.
-// Sources: "example" (built-in demo data), "local" (a file on this device),
-// "drive" (a file on Google Drive). Every change is saved back automatically
-// where that is possible (a local file opened in Chrome/Edge, or Drive);
-// otherwise the app asks you to download the updated file.
+// Sources: "example" (built-in demo data) and "local" (a file on this device).
+// Every change is saved back automatically where the browser lets a page write
+// into the file (Chrome / Edge on a computer); otherwise the app asks you to
+// download the updated file.
 //
 // The app keeps nothing in the browser: no cookies, no storage, no database.
 // Everything lives in this page's memory and in your file.
@@ -15,15 +15,14 @@ const Store = (() => {
   let data = null;
   let source = { kind: "example", name: "" };
   let handle = null;          // local file handle (File System Access API)
-  let driveVersion = null;    // version of the Drive file we last read or wrote
-  let status = "saved";       // saved | dirty | saving | error | auth | conflict
+  let status = "saved";       // saved | dirty | saving | error
   let error = null;
   let timer = null;
   const subs = new Set();
 
   // ------------------------------------------------------------ state
 
-  const canSaveInPlace = () => (source.kind === "local" && !!handle) || source.kind === "drive";
+  const canSaveInPlace = () => source.kind === "local" && !!handle;
   const get = () => data;
   const state = () => ({ data, source, status, error, canSaveInPlace: canSaveInPlace() });
   function onChange(fn) { subs.add(fn); return () => subs.delete(fn); }
@@ -35,12 +34,11 @@ const Store = (() => {
     emit();
   }
 
-  function _open(newData, newSource, opts = {}) {
+  function _open(newData, newSource, newHandle = null) {
     clearTimeout(timer);
     data = newData;
     source = newSource;
-    handle = opts.handle || null;
-    driveVersion = opts.version ?? null;
+    handle = newHandle;
     _setStatus("saved");
   }
 
@@ -53,32 +51,13 @@ const Store = (() => {
     _open(d, { kind: "example", name: "" });
   }
 
+  const _openFile = (f) => _open(Core.parse(f.text), { kind: "local", name: f.name }, f.handle);
+
   async function openLocal() {
     const f = await LocalFile.open();
     if(!f) return false;
-    _open(Core.parse(f.text), { kind: "local", name: f.name }, { handle: f.handle });
+    _openFile(f);
     return true;
-  }
-
-  async function openDrive(fileId) {
-    const { meta, text } = await GDrive.read(fileId);
-    _open(Core.parse(text), { kind: "drive", name: meta.name, fileId: meta.id }, { version: meta.version });
-  }
-
-  async function pickDrive() {
-    const picked = await GDrive.pick();
-    if(!picked) return false;
-    await openDrive(picked.id);
-    return true;
-  }
-
-  /** Puts the current wallet on Drive as a new file and keeps working on it there. */
-  async function createOnDrive(name = "fortress-wallet.json") {
-    const meta = await GDrive.create(name, Core.serialize(data));
-    source = { kind: "drive", name: meta.name, fileId: meta.id };
-    handle = null;
-    driveVersion = meta.version;
-    _setStatus("saved");
   }
 
   // ------------------------------------------------------------ save
@@ -92,34 +71,21 @@ const Store = (() => {
   }
 
   /**
-   * Saves where the wallet came from. `force` overwrites a Drive file changed elsewhere.
+   * Saves into the file the wallet came from.
    * @returns {Promise<boolean>} saved
    */
-  async function save({ force = false } = {}) {
+  async function save() {
     clearTimeout(timer);
+    if(!canSaveInPlace()) { _setStatus("dirty"); return false; }
     const text = Core.serialize(data);
     try {
-      if(source.kind === "local" && handle) {
-        _setStatus("saving");
-        if(!(await LocalFile.write(handle, text))) { _setStatus("error", new Error("No permission to write the file")); return false; }
-      }
-      else if(source.kind === "drive") {
-        if(!GDrive.connected()) { _setStatus("auth"); return false; }
-        _setStatus("saving");
-        const meta = await GDrive.update(source.fileId, text, force ? null : driveVersion);
-        driveVersion = meta.version;
-      }
-      else {
-        _setStatus("dirty");
-        return false;
-      }
+      _setStatus("saving");
+      if(!(await LocalFile.write(handle, text))) { _setStatus("error", new Error("No permission to write the file")); return false; }
       _setStatus("saved");
       return true;
     }
     catch(e) {
-      if(e.auth) _setStatus("auth", e);
-      else if(e.conflict) _setStatus("conflict", e);
-      else _setStatus("error", e);
+      _setStatus("error", e);
       return false;
     }
   }
@@ -137,7 +103,6 @@ const Store = (() => {
     if(res.handle) {
       source = { kind: "local", name: res.name };
       handle = res.handle;
-      driveVersion = null;
     }
     _setStatus("saved");
     return true;
@@ -148,7 +113,7 @@ const Store = (() => {
 
   return {
     get, state, onChange,
-    openExample, openLocal, openDrive, pickDrive, createOnDrive,
+    openExample, openLocal,
     changed, save, download, saveAsLocal, unsaved,
   };
 })();

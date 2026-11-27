@@ -1,12 +1,12 @@
 # 🏰 Fortress Wallet
 
-**Fortress Wallet** is a personal net-worth tracker that runs entirely in your browser. It covers an investment portfolio (ETFs, stocks, precious metals, bonds), cash, a home and a mortgage with prepayments. Your wallet is one JSON file that lives **on your device or on your Google Drive** and never touches a server. The interface is available in **English, Polish and Portuguese**.
+**Fortress Wallet** is a personal net-worth tracker that runs entirely in your browser. It covers an investment portfolio (ETFs, stocks, precious metals, bonds), cash, a home and a mortgage with prepayments. Your wallet is one JSON file that lives **on your device** and never touches a server. The interface is available in **English, Polish and Portuguese**.
 
 Built with [TonkaJSX](https://github.com/Xaeian/TonkaJSX) and its TonkaUI kit: no bundler, no modules, a single static `index.html` when built.
 
 ![TonkaJSX](https://img.shields.io/badge/TonkaJSX-1.2-d8a57f)
 ![Static](https://img.shields.io/badge/hosting-static%20files-success)
-![Data](https://img.shields.io/badge/data-your%20file%20%7C%20your%20Drive-blue)
+![Data](https://img.shields.io/badge/data-your%20file-blue)
 ![Languages](https://img.shields.io/badge/i18n-EN%20%7C%20PL%20%7C%20PT-blue)
 
 <!-- Add screenshots to docs/ and uncomment:
@@ -23,7 +23,7 @@ A spreadsheet stopped being enough once a mortgage joined the portfolio. Fortres
 - answers **"I have X € – what should I buy, and how many units?"** without ever selling anything,
 - tracks **net worth** including the home and the outstanding mortgage,
 - shows **what a prepayment is really worth** after the fee, and compares shortening the term with lowering the payment,
-- keeps **your data yours**: the page is static files, and the wallet is a file you open, on your device or your own Google Drive.
+- keeps **your data yours**: the page is static files, and the wallet is a file you open from your own device.
 
 ## Features
 
@@ -42,19 +42,16 @@ A spreadsheet stopped being enough once a mortgage joined the portfolio. Fortres
 Also:
 - 🌐 English / Polish / Portuguese, switchable at any time, remembered in your wallet file,
 - 🌗 light and dark theme,
-- 📱 works on a phone (the layout adapts, and the app can open your file from Google Drive),
+- 📱 works on a phone (the layout adapts; you download the changed file),
 - 📸 a net-worth snapshot on every change, which feeds the history chart.
 
 ## Where your data lives
 
-| | How it works |
-|---|---|
-| **A file on this device** | **File → Open a file.** In Chrome and Edge on a computer the app saves straight back into that file after every change. After a reload you open it again. In other browsers (phones, Firefox, Safari) you **download** the updated file. |
-| **Google Drive** | **File → Connect Google Drive.** The app asks Google for the narrowest permission there is, `drive.file`: it sees **only the files it created itself** (or that you pick for it), nothing else on your Drive. The file goes directly between your browser and Google. After about an hour, one click reconnects you. Changes made on another device are detected before anything is overwritten. |
+In one file on your device. **File → Open a file.** In Chrome and Edge on a computer the app saves straight back into that file after every change; after a reload you open it again. In other browsers (phones, Firefox, Safari) you **download** the updated file. The file is not encrypted.
 
-Nothing is ever sent to the server that hosts the page.
+Nothing of it is sent to the server that hosts the page.
 
-**The app is cookie-free and keeps nothing in the browser:** no cookies, local or session storage, database or service worker. A reload starts again with the example data, in the browser's language and the system's theme. `privacy.test.cjs` guards this. Google Drive is off unless a Client ID is set in `app.ini`; turning it on loads Google's sign-in script, which uses Google's own cookies.
+**The app is cookie-free and keeps nothing in the browser:** no cookies, local or session storage, database or service worker. A reload starts again with the example data, in the browser's language and the system's theme. `privacy.test.cjs` guards this.
 
 ## Quick start
 
@@ -90,11 +87,7 @@ locales/translations.toml
 data/wallet.example.json
 ```
 
-Any static hosting works: your own server, Cloudflare, GitHub Pages. Serve it over **HTTPS**, because Google sign-in and in-place file saving require it.
-
-### Google Drive (optional)
-
-See **[GOOGLE_SETUP.md](GOOGLE_SETUP.md)**: about 10 minutes in Google Cloud Console, then paste the Client ID into `app.ini`. Without it the app works with local files only.
+Any static hosting works: your own server, Cloudflare, GitHub Pages. Serve it over **HTTPS**, because opening and saving the file in place requires it.
 
 ## Project structure
 
@@ -103,8 +96,8 @@ A standard TonkaJSX project: `.js` files load before `.jsx`, deeper folders firs
 ```
 fortress-wallet/
 ├── app.html                  # entry for `tonka serve`
-├── app.jsx                   # start-up: texts, Google, wallet, app
-├── app.ini                   # title, version, Google IDs, deploy target
+├── app.jsx                   # start-up: texts, wallet, app
+├── app.ini                   # title, version, deploy target
 ├── fortress.svg              # icon
 ├── locales/
 │   └── translations.toml     # every text in the app, EN / PL / PT side by side
@@ -114,15 +107,14 @@ fortress-wallet/
 │   ├── core/                 # plain JS, no DOM – the part that never depends on the UI
 │   │   ├── core.js           # valuation, calculator, mortgage, recommendations
 │   │   ├── i18n.js           # translations + number formats
-│   │   ├── store.js          # the open wallet: source, saving, conflicts, device copy
+│   │   ├── store.js          # the open wallet: source, saving
 │   │   ├── files.js          # local files (File System Access API / download)
-│   │   ├── drive.js          # Google Drive (drive.file scope)
 │   │   ├── online.js         # ECB exchange rates
 │   │   └── config.js         # values from app.ini
 │   ├── ui/                   # TonkaUI kit (copy, never edited here)
 │   ├── App.jsx               # shell, navigation, file status, banners
 │   ├── Dashboard.jsx … Settings.jsx   # one file per view
-│   ├── FileDialog.jsx        # open / save / Google Drive
+│   ├── FileDialog.jsx        # open / save
 │   ├── Charts.jsx            # SVG charts, no library
 │   └── Widgets.jsx           # metric, editable table, expander, note, slider
 ├── styles/

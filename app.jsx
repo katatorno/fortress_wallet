@@ -1,6 +1,6 @@
 // app.jsx
 //
-// Start-up: load the texts, set up Google Drive (if configured), open the example
+// Start-up: load the texts, open the example
 // data, then draw the app. Nothing is read from or kept in the browser: the theme
 // follows the system until you switch it, the language follows the browser.
 
@@ -13,9 +13,6 @@ async function boot() {
     document.body.replaceChildren(<pre class="boot-error">{e.message}</pre>);
     return;
   }
-
-  GDrive.configure({ clientId: CONFIG.googleClientId, apiKey: CONFIG.googleApiKey, appId: CONFIG.googleAppId });
-  GDrive.preload().catch((e) => console.warn("Google sign-in not available:", e.message));
 
   try {
     let lang = (navigator.language || I18N.DEFAULT).slice(0, 2);

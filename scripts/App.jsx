@@ -21,7 +21,7 @@ const App = () => {
   const money = (x, dec = 0) => I18N.money(L, x, dec);
 
   const sourceText = (st) => st.source.kind === "example" ? T("source_example")
-    : T(st.source.kind === "drive" ? "source_drive" : "source_local", { name: st.source.name });
+    : T("source_local", { name: st.source.name });
 
   const app = { data, L, T, money, commit, refresh, reload: mountApp, sourceText };
 
@@ -81,33 +81,14 @@ const App = () => {
   const statusBadge = <Badge variant="tint" icon="description" class="status-badge" onClick={() => openFileDialog(app)}></Badge>;
   const saveBtn = <Button variant="primary" icon="save" hidden onClick={() => saveNow()}>{T("btn_save_now")}</Button>;
 
-  async function connectDrive() {
-    try { await GDrive.connect(); return true; }
-    catch(e) { Alert.err(T("err_drive", { error: e.message })); return false; }
-  }
-
   async function saveNow() {
     const st = Store.state();
     if(!st.canSaveInPlace) { openFileDialog(app); return; }
-    if(st.source.kind === "drive" && !GDrive.connected() && !(await connectDrive())) return;
     if(await Store.save()) Alert.ok(T("flash_saved"));
   }
 
   function bannerFor(st) {
     const btn = (icon, label, fn, variant) => <Button size="sm" variant={variant} icon={icon} onClick={fn}>{label}</Button>;
-    if(st.status === "auth") {
-      return <Note level="warn" title={T("banner_auth")}>
-        {btn("login", T("btn_drive_connect"), async () => { if(await connectDrive()) saveNow(); }, "primary")}
-      </Note>;
-    }
-    if(st.status === "conflict") {
-      return <Note level="err" title={T("banner_conflict")}>
-        <row gap="sm">
-          {btn("upload", T("btn_overwrite"), () => Store.save({ force: true }), "danger")}
-          {btn("download", T("btn_load_remote"), async () => { await Store.openDrive(st.source.fileId); mountApp(); })}
-        </row>
-      </Note>;
-    }
     if(st.status === "error") {
       return <Note level="err" title={T("banner_error", { error: st.error?.message || "" })}>
         {btn("refresh", T("btn_retry"), () => saveNow())}
@@ -118,15 +99,6 @@ const App = () => {
         <row gap="sm">
           {btn("folder_open", T("btn_file"), () => openFileDialog(app), "primary")}
         </row>
-      </Note>;
-    }
-    if(st.source.kind === "drive" && !GDrive.connected() && st.status === "saved") {
-      return <Note level="info" title={T("banner_drive_offline")}>
-        {btn("sync", T("btn_drive_connect"), async () => {
-          if(!(await connectDrive())) return;
-          await Store.openDrive(st.source.fileId);
-          mountApp();
-        })}
       </Note>;
     }
     if(st.status === "dirty" && !st.canSaveInPlace) {
@@ -141,7 +113,7 @@ const App = () => {
   }
 
   function updateStatus(st) {
-    const color = { saved: "ok", dirty: "wrn", saving: "inf", error: "err", auth: "wrn", conflict: "err" }[st.status];
+    const color = { saved: "ok", dirty: "wrn", saving: "inf", error: "err" }[st.status];
     statusBadge.color = color;
     statusBadge.text = `${sourceText(st)} · ${T("status_" + st.status)}`;
     statusBadge.title = T("btn_file");

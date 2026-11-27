@@ -12,7 +12,6 @@ en = "English"
 pl = "Polski"
 pt = "Português"
 
-
 # -----------------------------------------------------------------------------
 #  Tabs
 # -----------------------------------------------------------------------------
@@ -61,7 +60,6 @@ pt = "Recomendações"
 en = "Settings"
 pl = "Ustawienia"
 pt = "Definições"
-
 
 # -----------------------------------------------------------------------------
 #  Categories, cash roles, prepayment modes, transaction types
@@ -127,7 +125,6 @@ en = "Quantity adjustment"
 pl = "Korekta ilości"
 pt = "Ajuste de quantidade"
 
-
 # -----------------------------------------------------------------------------
 #  Sidebar and general labels
 # -----------------------------------------------------------------------------
@@ -136,8 +133,6 @@ pt = "Ajuste de quantidade"
 en = "Net worth"
 pl = "Majątek netto"
 pt = "Património líquido"
-
-
 
 [investments]
 en = "Investments"
@@ -174,12 +169,6 @@ en = "Target {value}"
 pl = "Cel {value}"
 pt = "Objetivo {value}"
 
-
-
-
-
-
-
 [btn_save]
 en = "Save"
 pl = "Zapisz"
@@ -190,14 +179,9 @@ en = "Add"
 pl = "Dodaj"
 pt = "Adicionar"
 
-
 # -----------------------------------------------------------------------------
 #  Notices (shown after an action)
 # -----------------------------------------------------------------------------
-
-
-
-
 
 [flash_fx_saved]
 en = "Exchange rates saved."
@@ -268,8 +252,6 @@ pt = "Estratégia guardada."
 en = "Settings saved."
 pl = "Zapisano ustawienia."
 pt = "Definições guardadas."
-
-
 
 # -----------------------------------------------------------------------------
 #  Charts and legends
@@ -585,7 +567,6 @@ en = "Interest"
 pl = "Odsetki"
 pt = "Juros"
 
-
 # -----------------------------------------------------------------------------
 #  Market and cash
 # -----------------------------------------------------------------------------
@@ -654,7 +635,6 @@ pt = "Nome"
 en = "Ticker"
 pl = "Ticker"
 pt = "Ticker"
-
 
 [col_category]
 en = "Category"
@@ -736,7 +716,6 @@ en = "Ticker (descriptive)"
 pl = "Ticker (opisowy)"
 pt = "Ticker (descritivo)"
 
-
 [field_opening_quantity]
 en = "Opening quantity"
 pl = "Ilość początkowa"
@@ -772,7 +751,6 @@ en = "Amount"
 pl = "Kwota"
 pt = "Montante"
 
-
 [btn_save_cash]
 en = "Save cash"
 pl = "Zapisz gotówkę"
@@ -782,7 +760,6 @@ pt = "Guardar dinheiro"
 en = "manual correction"
 pl = "korekta ręczna"
 pt = "correção manual"
-
 
 # -----------------------------------------------------------------------------
 #  Transactions
@@ -888,7 +865,6 @@ en = "Cash movements"
 pl = "Ruchy gotówki"
 pt = "Movimentos de dinheiro"
 
-
 # -----------------------------------------------------------------------------
 #  Contribution calculator
 # -----------------------------------------------------------------------------
@@ -987,7 +963,6 @@ pt = "{category} – escolha um instrumento"
 en = "{bucket} – choose an instrument"
 pl = "{bucket} – wybierz instrument"
 pt = "{bucket} – escolha um instrumento"
-
 
 # -----------------------------------------------------------------------------
 #  Mortgage & home
@@ -1313,7 +1288,6 @@ en = "The payment does not cover the interest – check the interest rate and pa
 pl = "Rata nie pokrywa odsetek – sprawdź oprocentowanie i ratę."
 pt = "A prestação não cobre os juros – verifique a taxa e a prestação."
 
-
 # -----------------------------------------------------------------------------
 #  Recommendations  (_t = title, _x = text)
 # -----------------------------------------------------------------------------
@@ -1473,7 +1447,6 @@ en = "Notes (Markdown)"
 pl = "Notatki (Markdown)"
 pt = "Notas (Markdown)"
 
-
 # -----------------------------------------------------------------------------
 #  Settings
 # -----------------------------------------------------------------------------
@@ -1583,11 +1556,6 @@ en = "Cannot remove buckets that hold instruments: {buckets}"
 pl = "Nie można usunąć koszyków z instrumentami: {buckets}"
 pt = "Não é possível remover grupos com instrumentos: {buckets}"
 
-
-
-
-
-
 # -----------------------------------------------------------------------------
 #  Errors from the logic module
 # -----------------------------------------------------------------------------
@@ -1597,9 +1565,8 @@ en = "Missing exchange rate for {currency} (Market → exchange rates)"
 pl = "Brak kursu dla waluty {currency} (Giełda → kursy walut)"
 pt = "Falta a taxa de câmbio para {currency} (Bolsa → taxas de câmbio)"
 
-
 # -----------------------------------------------------------------------------
-#  Files, Google Drive and other web-app texts
+#  Files and other web-app texts
 # -----------------------------------------------------------------------------
 
 [btn_file]
@@ -1622,11 +1589,6 @@ en = "{name} (this device)"
 pl = "{name} (to urządzenie)"
 pt = "{name} (este dispositivo)"
 
-[source_drive]
-en = "{name} (Google Drive)"
-pl = "{name} (Google Drive)"
-pt = "{name} (Google Drive)"
-
 [status_saved]
 en = "Saved"
 pl = "Zapisane"
@@ -1647,25 +1609,10 @@ en = "Save failed"
 pl = "Zapis nie powiódł się"
 pt = "Falha ao guardar"
 
-[status_auth]
-en = "Google sign-in needed"
-pl = "Potrzebne logowanie Google"
-pt = "É preciso iniciar sessão na Google"
-
-[status_conflict]
-en = "Changed on another device"
-pl = "Zmieniony na innym urządzeniu"
-pt = "Alterado noutro dispositivo"
-
 [btn_save_now]
 en = "Save"
 pl = "Zapisz"
 pt = "Guardar"
-
-[btn_open]
-en = "Open"
-pl = "Otwórz"
-pt = "Abrir"
 
 [btn_open_local]
 en = "Open a file"
@@ -1692,16 +1639,6 @@ en = "Try again"
 pl = "Spróbuj ponownie"
 pt = "Tentar de novo"
 
-[btn_overwrite]
-en = "Overwrite with my version"
-pl = "Nadpisz moją wersją"
-pt = "Substituir pela minha versão"
-
-[btn_load_remote]
-en = "Load the version from Drive"
-pl = "Wczytaj wersję z Dysku"
-pt = "Carregar a versão do Drive"
-
 [file_local_title]
 en = "On this device"
 pl = "Na tym urządzeniu"
@@ -1717,71 +1654,6 @@ en = "This browser cannot write into a file you open (phones, Firefox, Safari): 
 pl = "Ta przeglądarka nie zapisuje do otwartego pliku (telefony, Firefox, Safari): po zmianach pobierz zaktualizowany plik."
 pt = "Este navegador não grava no ficheiro aberto (telemóveis, Firefox, Safari): depois das alterações, descarregue o ficheiro atualizado."
 
-[file_drive_title]
-en = "Google Drive"
-pl = "Dysk Google"
-pt = "Google Drive"
-
-[drive_not_configured]
-en = "Google Drive is not set up for this copy of the app – see GOOGLE_SETUP.md."
-pl = "Dysk Google nie jest skonfigurowany w tej kopii aplikacji – zobacz GOOGLE_SETUP.md."
-pt = "O Google Drive não está configurado nesta cópia da aplicação – veja GOOGLE_SETUP.md."
-
-[drive_help]
-en = "The app gets access only to files it creates (or that you pick for it) – nothing else on your Drive. Your data goes straight between this browser and Google."
-pl = "Aplikacja dostaje dostęp tylko do plików, które sama utworzy (albo które jej wskażesz) – do niczego innego na Twoim Dysku. Dane idą prosto między tą przeglądarką a Google."
-pt = "A aplicação só tem acesso aos ficheiros que ela própria cria (ou que lhe indicar) – a mais nada no seu Drive. Os dados vão diretamente entre este navegador e a Google."
-
-[btn_drive_connect]
-en = "Connect Google Drive"
-pl = "Połącz z Dyskiem Google"
-pt = "Ligar ao Google Drive"
-
-[btn_drive_disconnect]
-en = "Disconnect"
-pl = "Rozłącz"
-pt = "Desligar"
-
-[btn_drive_pick]
-en = "Pick another file from Drive…"
-pl = "Wskaż inny plik z Dysku…"
-pt = "Escolher outro ficheiro do Drive…"
-
-[btn_save_to_drive]
-en = "Save to Drive"
-pl = "Zapisz na Dysku"
-pt = "Guardar no Drive"
-
-[drive_files_title]
-en = "Your wallet files on Drive"
-pl = "Twoje pliki portfela na Dysku"
-pt = "Os seus ficheiros de carteira no Drive"
-
-[drive_no_files]
-en = "No wallet files yet – save the current wallet to Drive below."
-pl = "Brak plików portfela – zapisz bieżący portfel na Dysku poniżej."
-pt = "Ainda sem ficheiros – guarde a carteira atual no Drive abaixo."
-
-[drive_modified]
-en = "modified {date} (UTC)"
-pl = "zmieniony {date} (UTC)"
-pt = "alterado {date} (UTC)"
-
-[drive_save_new_title]
-en = "Save the current wallet as a new file on Drive"
-pl = "Zapisz bieżący portfel jako nowy plik na Dysku"
-pt = "Guardar a carteira atual como novo ficheiro no Drive"
-
-[drive_privacy]
-en = "Sign-in lasts about an hour; after that one click reconnects. Nothing is stored on any server of ours."
-pl = "Logowanie trwa ok. godziny; potem jedno kliknięcie łączy ponownie. Nic nie trafia na żaden nasz serwer."
-pt = "A sessão dura cerca de uma hora; depois basta um clique para voltar a ligar. Nada fica guardado em nenhum servidor nosso."
-
-[err_drive]
-en = "Google Drive: {error}"
-pl = "Dysk Google: {error}"
-pt = "Google Drive: {error}"
-
 [ask_discard]
 en = "You have unsaved changes. Open another wallet anyway?"
 pl = "Masz niezapisane zmiany. Otworzyć mimo to inny portfel?"
@@ -1792,40 +1664,20 @@ en = "Saved."
 pl = "Zapisano."
 pt = "Guardado."
 
-[flash_saved_drive]
-en = "Saved to Google Drive."
-pl = "Zapisano na Dysku Google."
-pt = "Guardado no Google Drive."
-
 [banner_example]
-en = "You're looking at example data. Open your wallet file or connect Google Drive."
-pl = "Oglądasz dane przykładowe. Otwórz swój plik portfela albo połącz się z Dyskiem Google."
-pt = "Está a ver dados de exemplo. Abra o seu ficheiro de carteira ou ligue o Google Drive."
+en = "You're looking at example data. Open your wallet file."
+pl = "Oglądasz dane przykładowe. Otwórz swój plik portfela."
+pt = "Está a ver dados de exemplo. Abra o seu ficheiro de carteira."
 
 [banner_download_needed]
 en = "Your changes are only in this browser tab – download the updated file to keep them."
 pl = "Zmiany są tylko w tej karcie przeglądarki – pobierz zaktualizowany plik, żeby je zachować."
 pt = "As alterações só existem neste separador – descarregue o ficheiro atualizado para as manter."
 
-[banner_auth]
-en = "Connect Google Drive again to save your changes."
-pl = "Połącz się ponownie z Dyskiem Google, żeby zapisać zmiany."
-pt = "Ligue de novo o Google Drive para guardar as alterações."
-
-[banner_conflict]
-en = "The file on Drive was changed on another device since you opened it."
-pl = "Plik na Dysku zmienił się na innym urządzeniu, odkąd go otworzyłeś."
-pt = "O ficheiro no Drive foi alterado noutro dispositivo desde que o abriu."
-
 [banner_error]
 en = "Saving failed: {error}"
 pl = "Zapis nie powiódł się: {error}"
 pt = "Falha ao guardar: {error}"
-
-[banner_drive_offline]
-en = "Google sign-in has ended. Connect Google Drive to load the latest version."
-pl = "Logowanie do Google wygasło. Połącz się z Dyskiem Google, żeby wczytać najnowszą wersję."
-pt = "A sessão Google terminou. Ligue o Google Drive para carregar a versão mais recente."
 
 [btn_update_fx]
 en = "ECB rates"
