@@ -7,7 +7,7 @@
 
 const { readFileSync } = require("node:fs");
 const path = require("node:path");
-const { APP, loadCore } = require("../tools/wallet.cjs");
+const { APP, CORE_FILES, loadCore, loadScripts } = require("../tools/wallet.cjs");
 
 const { Core, I18N } = loadCore();
 const example = () => Core.parse(readFileSync(path.join(APP, "data", "wallet.example.json"), "utf8"));
@@ -18,6 +18,23 @@ function ok(name, cond) {
   console.log(`  ${cond ? "ok  " : "FAIL"} ${name}`);
 }
 const near = (a, b, tol = 0.01) => Math.abs(a - b) <= tol;
+
+// ---------------------------------------------------------------- the files of scripts/core/wallet
+{
+  // each takes from Core only what the files before it gave: a name taken too early
+  // would be undefined without a word, and fail only when it is used
+  const { run } = loadScripts(["i18n.js"]);
+  const early = [];
+  for(const f of CORE_FILES.filter(f => f.startsWith("wallet/"))) {
+    const text = readFileSync(path.join(APP, "scripts", "core", f), "utf8");
+    const taken = (text.match(/const \{([^}]*)\} = Core;/)?.[1] || "").split(",").map(s => s.trim()).filter(Boolean);
+    const known = run("typeof Core") === "object" ? Object.keys(run("Core")) : [];
+    early.push(...taken.filter(n => !known.includes(n)).map(n => `${f}: ${n}`));
+    run(text);
+  }
+  ok("each file of wallet/ takes only what the files before it gave", !early.length);
+  if(early.length) console.log("       " + early.join(", "));
+}
 
 // ---------------------------------------------------------------- valuation
 {

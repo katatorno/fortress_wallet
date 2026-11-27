@@ -132,8 +132,17 @@ fortress_wallet/
 ├── data/
 │   └── wallet.example.json   # example wallet (made-up numbers)
 ├── scripts/
-│   ├── core/                 # plain JS, no DOM – the part that never depends on the UI
-│   │   ├── core.js           # valuation, calculator, mortgage, recommendations
+│   ├── core/                 # plain JS – the part that never depends on the UI
+│   │   ├── wallet/           # the wallet logic (`Core`), loaded in the order of the numbers:
+│   │   │   ├── 1-base.js     #   names, texts, helpers, dates
+│   │   │   ├── 2-mortgage.js #   schedule, prepayments
+│   │   │   ├── 3-valuation.js #  worth in EUR, net worth
+│   │   │   ├── 4-file.js     #   format version, migrations, checks, JSON
+│   │   │   ├── 5-buckets.js  #   bucket percentages and their saves
+│   │   │   ├── 6-plan.js     #   contribution calculator
+│   │   │   ├── 7-forms.js    #   saves of the settings, cash, mortgage, transactions
+│   │   │   ├── 8-history.js  #   snapshots, stored prices, chart ranges
+│   │   │   └── 9-advice.js   #   recommendations
 │   │   ├── i18n.js           # translations + number formats
 │   │   ├── store.js          # the open wallet: source, saving, a file changed elsewhere
 │   │   ├── files.js          # local files (File System Access API / download)
@@ -155,7 +164,9 @@ fortress_wallet/
 └── .tests/                   # `tonka test fortress_wallet`
 ```
 
-`scripts/core` has no JSX, and `core.js` with `i18n.js` touches no DOM: they run in Node too (the tools and the tests load them), and would move to another framework with the `I18N` texts.
+`scripts/core` has no JSX, and `wallet/` with `i18n.js` touches no DOM: they run in Node too (the tools and the tests load them), and would move to another framework with the `I18N` texts.
+
+The files of `wallet/` load in the order of their numbers, as TonkaJSX loads a folder sorted by name (deeper folders first), and the tests read the folder the same way. `1-base.js` makes the global `Core`; each next file adds its part and takes from `Core` only what earlier files put there. A new part gets the number after the last file it needs.
 
 ## Translations
 
@@ -199,7 +210,7 @@ Older files, including those of the earlier Python version (with Polish category
 
 **Changing the format** (a key added, removed or given a new meaning):
 
-1. Raise `FORMAT` in `scripts/core/core.js`.
+1. Raise `FORMAT` in `scripts/core/wallet/4-file.js`.
 2. Add a step to `MIGRATIONS` that turns the previous version into the new one.
 3. Update `SHAPE` and `VERSION` in `.tests/format.test.cjs`, and `version` in `data/wallet.example.json`.
 

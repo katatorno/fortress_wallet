@@ -31,7 +31,14 @@ function responsiveChart(draw) {
     box.replaceChildren(draw(w));
   }
   paint(_SVG_W);
-  new ResizeObserver((entries) => paint(entries[0].contentRect.width)).observe(box);
+  // every redraw of a view makes new charts: one that has left the page stops watching
+  let shown = false;
+  const watch = new ResizeObserver((entries) => {
+    if(box.isConnected) shown = true;
+    else if(shown) { watch.disconnect(); return; }
+    paint(entries[0].contentRect.width);
+  });
+  watch.observe(box);
   return box;
 }
 

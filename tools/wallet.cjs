@@ -11,8 +11,12 @@ const vm = require("node:vm");
 const APP = path.join(__dirname, "..");
 const CORE = path.join(APP, "scripts", "core");
 
-/** The scripts of scripts/core the wallet logic needs, in the order the page loads them. */
-const CORE_FILES = ["i18n.js", "core.js"];
+/**
+ * The scripts of scripts/core the wallet logic needs: the texts, then the files of
+ * scripts/core/wallet sorted by name, the order TonkaJSX loads them in.
+ */
+const CORE_FILES = ["i18n.js", ...fs.readdirSync(path.join(CORE, "wallet")).filter(f => f.endsWith(".js")).sort()
+  .map(f => `wallet/${f}`)];
 
 /**
  * Runs scripts of scripts/core in one fresh context, as the page does: plain
