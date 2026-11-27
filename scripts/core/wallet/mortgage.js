@@ -1,7 +1,8 @@
 // scripts/core/wallet/mortgage.js
 //
 // The mortgage: annuity, the schedule with the payments and prepayments booked, its
-// projection to the end, what prepaying is worth, and the save of the home and the
+// projection to the end, what prepaying is worth, and every change of the loan:
+// booking and deleting payments and prepayments, and the save of the home and the
 // loan's parameters.
 
 const Mortgage = (() => {
@@ -41,6 +42,12 @@ const Mortgage = (() => {
     prepayment: Base.round2(prepayment), fee: Base.round2(fee), balance: Base.round2(balance), actual,
   });
 
+  /** What a prepayment of `amount` costs at a fee of `feePct` %: the fee, and the amount with it. */
+  function prepaymentCost(amount, feePct) {
+    const fee = Number(amount) * Number(feePct) / 100;
+    return { fee, cost: Number(amount) + fee };
+  }
+
   /**
    * Books the recorded events (payments and prepayments), then projects to the end.
    * extraEvents: hypothetical prepayments ({date, amount, mode, fee_pct}) for simulations.
@@ -64,7 +71,7 @@ const Mortgage = (() => {
 
     function prepay(amount, feePct, mode, nDone) {
       const amt = Math.min(Number(amount), bal);
-      const fee = amt * Number(feePct) / 100;
+      const { fee } = prepaymentCost(amt, feePct);
       bal = Base.round2(bal - amt);
       if(mode === "reduce_payment" && bal > 0) pay = annuity(bal, rate, Math.max(term - nDone, 1));
       return [amt, fee];
@@ -163,6 +170,54 @@ const Mortgage = (() => {
     return Number(m.prepayment_fee_pct || 0) / (rate / 12);
   }
 
+  /**
+   * Interest and principal of schedule rows summed by year, prepayments counted into
+   * the principal.
+   * @returns {Array<{year:string, interest:number, principal:number}>} oldest first
+   */
+  function yearlyTotals(rows) {
+    const years = {};
+    for(const r of rows) {
+      const y = r.date.slice(0, 4);
+      years[y] ??= { interest: 0, principal: 0 };
+      years[y].interest += r.interest;
+      years[y].principal += r.principal + r.prepayment;
+    }
+    return Object.keys(years).sort().map(year => ({ year, ...years[year] }));
+  }
+
+  /**
+   * The payment in force on a day, among schedule rows: that of the first payment from
+   * the day on. The last row, which settles what remains, counts only when no earlier
+   * one is that late.
+   */
+  function paymentOn(rows, date) {
+    const list = rows.filter(r => r.kind.startsWith("payment"));
+    for(const r of list.slice(0, -1)) if(r.date >= date) return r.payment;
+    return list.length ? list[list.length - 1].payment : 0;
+  }
+
+  /**
+   * What a prepayment would change, as a preview: the interest saved, the fee, what is
+   * gained net of it, and the end and the payment before and after.
+   * @param {{amount:any, date?:string, feePct?:any, mode:string}} prepayment  an empty date is today
+   * @returns {{saved:number, fee:number, net:number, end_date:string, old_end_date:string,
+   *   payment:number, old_payment:number}|null} null without an amount above 0
+   */
+  function prepaymentEffect(data, { amount, date = null, feePct = 0, mode }) {
+    if(!(Number(amount) > 0)) return null;
+    const m = data.mortgage;
+    const day = Rules.date(data, date, "field_date") || Dates.today();
+    const event = { id: "preview", date: day, type: "prepayment", amount: Number(amount), fee_pct: feePct || 0, mode };
+    const before = run(m).info, after = run({ ...m, events: [...m.events, event] }).info;
+    const saved = before.future_interest - after.future_interest;
+    const { fee } = prepaymentCost(amount, feePct || 0);
+    return {
+      saved, fee, net: saved - fee, end_date: after.end_date, old_end_date: before.end_date,
+      payment: after.payment, old_payment: before.payment,
+    };
+  }
+
   /** Next payment to book, split into interest and principal according to the schedule. */
   function nextPaymentEvent(m) {
     const { info } = run(m, [], false);
@@ -172,6 +227,71 @@ const Mortgage = (() => {
       id: Base.newId(), date: info.next_due, type: "payment", amount,
       interest, principal: Base.round2(amount - interest), note: "",
     };
+  }
+
+  // ---------------------------------------------------------------- changes of the loan
+  // Each checks everything first and throws Rules.RuleError before changing anything.
+
+  /** Whether the events recorded leave nothing to pay. */
+  const paidOff = (m) => run(m, [], false).info.balance <= 0;
+
+  /** The balance after the events recorded up to a day, those of that day included. */
+  const _balanceOn = (m, day) =>
+    run({ ...m, events: m.events.filter(e => Dates.parse(e.date) <= day) }, [], false).info.balance;
+
+  /** Books the next payment of the schedule; refused once the loan is paid off. */
+  function bookPayment(data) {
+    const m = data.mortgage;
+    if(paidOff(m)) throw new Rules.RuleError("warn_mortgage_paid_off");
+    m.events.push(nextPaymentEvent(m));
+  }
+
+  /**
+   * Books a payment as the bank statement gives it. An empty date is the day the next
+   * payment is due, an empty amount or part counts as 0.
+   * @param {{date?:string, amount?:any, interest?:any, principal?:any}} statement
+   */
+  function bookStatement(data, { date = null, amount = null, interest = null, principal = null }) {
+    const m = data.mortgage;
+    const day = Rules.date(data, date, "field_date") || run(m, [], false).info.next_due;
+    const part = (v, key) => Base.isBlank(v) ? 0 : Rules.number(data, v, key, 0);
+    m.events.push({ id: Base.newId(), date: day, type: "payment", amount: part(amount, "field_payment_eur"),
+      interest: part(interest, "field_interest_part"), principal: part(principal, "field_principal_part"),
+      note: Texts.tr(data, "note_from_statement") });
+  }
+
+  /**
+   * Books a prepayment and, with `fromPot`, takes it with its fee from the prepayment
+   * pot: both or neither. Refused above the balance of its day, and when the pot does
+   * not hold the cost.
+   * @param {{amount:any, date?:string, feePct?:any, mode:string, fromPot?:boolean}} prepayment
+   *   an empty date is today, an empty fee 0
+   */
+  function bookPrepayment(data, { amount, date = null, feePct = null, mode, fromPot = false }) {
+    const m = data.mortgage;
+    if(!Base.isNumeric(amount) || Number(amount) <= 0) throw new Rules.RuleError("warn_prepayment_amount");
+    const sum = Number(amount);
+    const day = Rules.date(data, date, "field_date") || Dates.today();
+    const percent = Base.isBlank(feePct) ? 0 : Rules.number(data, feePct, "field_fee_pct", 0, 100);
+    if(!MODES.includes(mode)) throw new Rules.RuleError("err_value_choice", { field: Texts.tr(data, "field_mode") });
+    const balance = _balanceOn(m, day);
+    if(sum > balance + 1e-9) {
+      throw new Rules.RuleError("warn_prepayment_over_balance", { balance: Texts.money(data, balance, 2) });
+    }
+    const { cost } = prepaymentCost(sum, percent);
+    const pot = fromPot ? Cash.account(data, "prepay") : null;
+    const held = Number(pot?.amount || 0);
+    if(fromPot && (!pot || held + 1e-9 < cost)) {
+      throw new Rules.RuleError("warn_pot_too_small", { pot: Texts.money(data, held, 2), cost: Texts.money(data, cost, 2) });
+    }
+    if(pot) Cash.add(data, pot.id, -cost, Texts.tr(data, "note_prepayment_with_fee"), day);
+    m.events.push({ id: Base.newId(), date: day, type: "prepayment", amount: sum, fee_pct: percent, mode, note: "" });
+  }
+
+  /** Removes the recorded events of the ids given. */
+  function deleteEvents(data, ids) {
+    const gone = new Set(ids);
+    data.mortgage.events = data.mortgage.events.filter(e => !gone.has(e.id));
   }
 
   /**
@@ -202,7 +322,9 @@ const Mortgage = (() => {
   }
 
   return {
-    MODES, annuity, impliedRate, firstPaymentDate, initialPayment, run, state, report,
-    yearlyPrepayments, prepaymentBreakEvenMonths, nextPaymentEvent, save,
+    MODES, annuity, impliedRate, firstPaymentDate, initialPayment, prepaymentCost, run, state,
+    report, yearlyPrepayments, prepaymentBreakEvenMonths, yearlyTotals, paymentOn,
+    prepaymentEffect, nextPaymentEvent, paidOff, bookPayment, bookStatement, bookPrepayment,
+    deleteEvents, save,
   };
 })();

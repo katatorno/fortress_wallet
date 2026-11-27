@@ -65,6 +65,11 @@ ok("the example carries no price service key", JSON.parse(text).settings.price_a
   Transactions.add(d, "webg", "buy", 1, 13);
   Plan.apply(d, Plan.contribution(d, 5000));
   d.mortgage.events.push(Mortgage.nextPaymentEvent(d.mortgage));
+  Cash.add(d, "prepay", 2000);
+  Mortgage.bookPayment(d);
+  Mortgage.bookStatement(d, { amount: 1000, interest: 700, principal: 300 });
+  Mortgage.bookPrepayment(d, { amount: 1000, feePct: 1, mode: "reduce_term", fromPot: true });
+  Mortgage.deleteEvents(d, [d.mortgage.events[0].id]);
   Instruments.save(d, d.assets.map(a => ({ ...a, delete: false })));
   Buckets.save(d, "equities", [{ old: "fortress", name: "fortress", share: 90 }, { old: "sandbox", name: "sandbox", share: 10 }]);
   WalletHistory.upsertSnapshot(d);

@@ -1188,6 +1188,21 @@ en = "The pot holds {pot}, but the prepayment plus fee is {cost}. Untick taking 
 pl = "W skarbonce jest {pot}, a nadpłata z prowizją to {cost}. Odznacz pobieranie ze skarbonki albo zmniejsz kwotę."
 pt = "A reserva tem {pot}, mas a amortização com comissão é {cost}. Desmarque a opção ou reduza o montante."
 
+[warn_prepayment_amount]
+en = "Enter a prepayment above 0."
+pl = "Podaj kwotę nadpłaty większą od 0."
+pt = "Indique um montante a amortizar superior a 0."
+
+[warn_prepayment_over_balance]
+en = "The mortgage balance on that day is {balance}, so a prepayment cannot be larger."
+pl = "Saldo kredytu w tym dniu to {balance}, więc nadpłata nie może być większa."
+pt = "O capital em dívida nesse dia é {balance}, por isso a amortização não pode ser maior."
+
+[warn_mortgage_paid_off]
+en = "The mortgage is paid off: there is no payment left to book."
+pl = "Kredyt jest spłacony: nie ma już raty do zaksięgowania."
+pt = "O crédito está pago: não há mais prestações a registar."
+
 [note_prepayment_with_fee]
 en = "mortgage prepayment + fee"
 pl = "nadpłata kredytu + prowizja"

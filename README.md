@@ -132,7 +132,7 @@ fortress_wallet/
 │   │   │   ├── transactions.js #  buy, sell, adjust; quantities
 │   │   │   ├── buckets.js    #   bucket percentages and their saves
 │   │   │   ├── instruments.js #   the instrument table's save, sold out ones
-│   │   │   ├── mortgage.js   #   schedule, prepayments, the loan's parameters
+│   │   │   ├── mortgage.js   #   the schedule, what prepaying is worth, every change of the loan
 │   │   │   ├── valuation.js  #   positions, worth in EUR, net worth
 │   │   │   ├── plan.js       #   contribution calculator
 │   │   │   ├── settings.js   #   the settings view's save
@@ -246,7 +246,7 @@ Best close the wallet in the app before running them. If it stays open, the app 
 
 - **Base currency: EUR.** Every position is converted with `settings.fx`.
 - **The contribution calculator** uses *water-filling*: it tops up the most underweight positions first until they reach a common level, then splits the rest by target. It never sells. Frozen categories are only diluted by new money.
-- **Mortgage:** annuity, interest = balance × rate / 12. A prepayment either *shortens the term* (same payment, ends earlier) or *lowers the payment* (recalculated over the remaining term).
+- **Mortgage:** annuity, interest = balance × rate / 12. A prepayment either *shortens the term* (same payment, ends earlier) or *lowers the payment* (recalculated over the remaining term). It costs its amount plus the fee on it. One larger than the balance on its day (after the events recorded up to that day) is refused, and so is one taken from the prepayment pot when the pot does not cover the cost.
 - **Net prepayment gain** = interest saved compared with no prepayments, minus fees.
 - **Net worth** = investments + cash + (before the deed: deposit | after the deed: home value − mortgage balance).
 
@@ -262,7 +262,7 @@ tonka test fortress_wallet          # or one suite: node .tests/<name>.test.cjs
 |---|---|
 | `core` | the module rules (each file loads alone, reaches exactly what is listed, every `Module.name` exists), valuation, the contribution calculator, the mortgage, recommendations, the file |
 | `market` | the market view's rules: percentages in a bucket are 100% or all 0%, bucket shares are 100%, moves and deletions keep that, one save of the buckets for both views, the "what to buy" calculator, no sell alerts for equities |
-| `rules` | the saves of the settings, cash, mortgage and transactions views: everything checked first, a refusal changes nothing; what a transaction does to a quantity |
+| `rules` | the saves of the settings, cash, mortgage and transactions views and the changes of the loan: everything checked first, a refusal changes nothing; what a transaction does to a quantity; the loan's yearly totals, payment on a day and prepayment effect |
 | `format` | the file's version and keys, migrations, files refused for values the app cannot use |
 | `history` | stored prices, the history built from them, the XTB import |
 | `store` | saving: the autosave, changes during a save, a file changed elsewhere, downloads; a change the wallet would not open with, or one that throws, is refused and undone |

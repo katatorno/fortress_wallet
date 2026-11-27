@@ -35,7 +35,7 @@ const near = (a, b, tol = 0.01) => Math.abs(a - b) <= tol;
     "wallet/cash.js": ["Base", "Dates", "Rules", "Texts"],
     "wallet/transactions.js": ["Base", "Dates", "Rules", "Texts"],
     "wallet/buckets.js": ["Base", "Texts", "Rules"],
-    "wallet/mortgage.js": ["Base", "Dates", "Rules", "Texts"],
+    "wallet/mortgage.js": ["Base", "Cash", "Dates", "Rules", "Texts"],
     "wallet/instruments.js": ["Dates", "Buckets", "Transactions"],
     "wallet/valuation.js": ["Dates", "Rates", "Cash", "Transactions", "Mortgage"],
     "wallet/plan.js": ["Base", "Dates", "Texts", "Valuation", "Cash"],

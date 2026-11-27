@@ -1,9 +1,10 @@
 // .tests/rules.test.cjs
 //
 // The saves of the settings, cash, mortgage and transactions views (Settings.save,
-// Cash.save, Mortgage.save, Transactions.record): everything is checked first, and a
-// refusal names its reason and changes nothing. Also: an instrument takes the
-// category of its bucket.
+// Cash.save, Mortgage.save, Transactions.record) and the changes of the loan
+// (payments and prepayments booked and deleted): everything is checked first, and a
+// refusal names its reason and changes nothing. Also: the numbers the loan's view
+// shows, and that an instrument takes the category of its bucket.
 // Run: tonka test fortress_wallet   (or: node .tests/rules.test.cjs)
 
 const { readFileSync } = require("node:fs");
@@ -124,6 +125,156 @@ function refusal(fn, start = example) {
   ok("a negative price is refused", refusal(d => Mortgage.save(d, { ...house, value: -5 }, loan)) === "err_value_min");
   ok("a date that is none is refused", refusal(d => Mortgage.save(d, { ...house, deed_date: "soon" }, loan)) === "err_value_choice");
   ok("an unknown mode is refused", refusal(d => Mortgage.save(d, house, { ...loan, default_mode: "fast" })) === "err_value_choice");
+}
+
+// ---------------------------------------------------------------- the changes of the loan
+{
+  /** The example with a loan of `amount` over a year, nothing booked, and `saved` in the prepayment pot. */
+  const owing = (amount = 1000, saved = 5000) => {
+    const d = example();
+    Object.assign(d.mortgage, { amount, rate_pct: 3.5, term_months: 12, first_payment_date: "2027-03-01", bank_payment: null,
+      events: [] });
+    d.cash.find(c => c.role === "prepay").amount = saved;
+    return d;
+  };
+  const events = (d) => d.mortgage.events;
+  const pot = (d) => Cash.account(d, "prepay").amount;
+  const same = (a, b) => JSON.stringify({ ...a, id: 0 }) === JSON.stringify({ ...b, id: 0 });
+
+  // -------------------------------------------------------------- a payment of the schedule
+  {
+    const d = owing();
+    const due = Mortgage.nextPaymentEvent(d.mortgage);
+    Mortgage.bookPayment(d);
+    ok("the next payment of the schedule is booked as it stands", events(d).length === 1 && same(events(d)[0], due),
+      JSON.stringify(events(d)));
+  }
+  const paid = () => {
+    const d = owing();
+    Mortgage.bookPrepayment(d, { amount: 1000, date: "2027-01-10", mode: "reduce_term" });
+    return d;
+  };
+  ok("a loan paid off has no payment left to book", refusal(d => Mortgage.bookPayment(d), paid) === "warn_mortgage_paid_off");
+  ok("nor has a wallet without a loan", refusal(d => Mortgage.bookPayment(d), () => owing(0)) === "warn_mortgage_paid_off");
+
+  // -------------------------------------------------------------- a payment of the statement
+  const statement = { date: "2027-03-02", amount: 85, interest: "2.9", principal: 82.1 };
+  {
+    const d = owing();
+    Mortgage.bookStatement(d, statement);
+    ok("a payment of the statement is booked as typed", same(events(d)[0], { id: 0, date: "2027-03-02", type: "payment",
+      amount: 85, interest: 2.9, principal: 82.1, note: "from bank statement" }) && !d.cash_log.length, JSON.stringify(events(d)));
+    Mortgage.bookStatement(d, { date: null, amount: null, interest: "" });
+    const empty = events(d)[1];
+    ok("an empty date is the day the next payment is due, an empty number 0", empty.date === "2027-04-01"
+      && empty.amount === 0 && empty.interest === 0 && empty.principal === 0, JSON.stringify(empty));
+  }
+  const booked = (change) => refusal(d => Mortgage.bookStatement(d, { ...statement, ...change }), owing);
+  for(const part of ["amount", "interest", "principal"]) {
+    ok(`a negative ${part} on a statement is refused`, booked({ [part]: -1 }) === "err_value_min");
+    ok(`so is one of the ${part} that is no number`, booked({ [part]: "x" }) === "err_value_number");
+  }
+  ok("a statement with a date that is none is refused", booked({ date: "soon" }) === "err_value_choice");
+
+  // -------------------------------------------------------------- a prepayment
+  const prepay = (d, change) => Mortgage.bookPrepayment(d,
+    { amount: 100, date: "2027-01-10", feePct: 1, mode: "reduce_term", fromPot: true, ...change });
+  const why = (change, start = owing) => refusal(d => prepay(d, change), start);
+  for(const [what, amount] of [["of 0", 0], ["below 0", -5], ["left empty", null], ["that is no number", "x"]]) {
+    ok(`a prepayment ${what} is refused`, why({ amount }) === "warn_prepayment_amount");
+  }
+  ok("a prepayment with a date that is none is refused", why({ date: "soon" }) === "err_value_choice");
+  ok("a fee below 0 is refused", why({ feePct: -1 }) === "err_value_range");
+  ok("a fee above 100 is refused", why({ feePct: 101 }) === "err_value_range");
+  ok("a mode that is none is refused", why({ mode: "fast" }) === "err_value_choice");
+  ok("3000 on a balance of 1000 is refused", why({ amount: 3000 }) === "warn_prepayment_over_balance");
+  let balance = null;
+  try { prepay(owing(), { amount: 3000 }); } catch(e) { balance = e.vars.balance; }
+  ok("and the refusal names the balance", balance === "€1,000.00", balance);
+  /** 1000 owed, 400 of it paid on 2027-03-01. */
+  const partly = () => {
+    const d = owing();
+    Mortgage.bookStatement(d, { date: "2027-03-01", amount: 400, principal: 400 });
+    return d;
+  };
+  ok("the balance counted is that of the day, the day's own events included",
+    why({ date: "2027-03-01", amount: 600.01 }, partly) === "warn_prepayment_over_balance"
+    && why({ date: "2027-03-01", amount: 600 }, partly) === null && why({ date: "2027-02-28", amount: 1000 }, partly) === null);
+  ok("a pot short of the amount with its fee is refused", why({ amount: 1000 }, () => owing(1000, 1009.99)) === "warn_pot_too_small");
+  ok("one holding just the cost pays it", why({ amount: 1000 }, () => owing(1000, 1010)) === null);
+  ok("a balance written as text is read as a number", why({ amount: 1000 }, () => owing(1000, "1010")) === null);
+  ok("taking from a pot that is none is refused", why({}, () => {
+    const d = owing();
+    d.cash = d.cash.filter(c => c.role !== "prepay");
+    return d;
+  }) === "warn_pot_too_small");
+  {
+    const d = owing(2000);
+    prepay(d, { amount: 1000 });
+    const move = d.cash_log.at(-1);
+    ok("1000 from the pot at a fee of 1% takes 1010", pot(d) === 3990 && d.cash_log.length === 1 && move.amount === -1010
+      && move.date === "2027-01-10" && move.note === "mortgage prepayment + fee", JSON.stringify(move));
+    const [row] = Mortgage.run(d.mortgage, [], false).rows;
+    ok("and the schedule counts the same: 1000 and a fee of 10", row.prepayment === 1000 && row.fee === 10
+      && -move.amount === row.prepayment + row.fee, JSON.stringify(row));
+    ok("the event is booked with it", events(d).length === 1 && same(events(d)[0],
+      { id: 0, date: "2027-01-10", type: "prepayment", amount: 1000, fee_pct: 1, mode: "reduce_term", note: "" }));
+    ok("the fee and the cost come from one place",
+      JSON.stringify(Mortgage.prepaymentCost(1000, 1)) === JSON.stringify({ fee: 10, cost: 1010 }));
+  }
+  {
+    const d = owing();
+    prepay(d, { fromPot: false, date: null, feePct: null });
+    ok("without the pot no money moves; an empty date is today, an empty fee 0", pot(d) === 5000 && !d.cash_log.length
+      && events(d)[0].date === Dates.today() && events(d)[0].fee_pct === 0);
+  }
+
+  // -------------------------------------------------------------- deleting events
+  {
+    const d = owing();
+    for(let i = 0; i < 3; i++) Mortgage.bookPayment(d);
+    const [first, second, third] = events(d).map(e => e.id);
+    Mortgage.deleteEvents(d, new Set([first, third]));
+    ok("the events named are deleted, the others stay", events(d).map(e => e.id).join() === second);
+    Mortgage.deleteEvents(d, ["nope"]);
+    ok("an id that is none deletes nothing", events(d).length === 1);
+  }
+}
+
+// ---------------------------------------------------------------- what the loan's view shows
+{
+  const near = (a, b, tol = 0.005) => Math.abs(a - b) <= tol;
+  const d = example(); // 270 000 at 3.5% over 420 months from 2027-03-01
+  const report = Mortgage.report(d.mortgage);
+  const lowered = Mortgage.report(d.mortgage, Mortgage.yearlyPrepayments("2028-02-01", 5000, "reduce_payment", 1));
+  const total = (years, key) => years.reduce((s, y) => s + y[key], 0);
+
+  const years = Mortgage.yearlyTotals(report.rows);
+  ok("a total for each year of the schedule, oldest first", years.length === 36 && years[0].year === "2027"
+    && years.at(-1).year === "2062" && years.every((y, i) => !i || y.year > years[i - 1].year));
+  ok("each year's interest and principal", near(years[0].interest, 7831.56) && near(years[0].principal, 3327.24)
+    && near(years[1].interest, 9267.84) && near(years[1].principal, 4122.72), JSON.stringify(years.slice(0, 2)));
+  ok("together they repay the loan and carry its interest", near(total(years, "principal"), 270000)
+    && near(total(years, "interest"), report.info.total_interest));
+  ok("prepayments count into the principal", near(total(Mortgage.yearlyTotals(lowered.rows), "principal"), 270000));
+
+  const on = (rows, date) => Mortgage.paymentOn(rows, date);
+  ok("the payment in force on a day", on(report.rows, "2020-01-01") === 1115.88 && on(report.rows, "2030-01-01") === 1115.88);
+  ok("after the end, the last one", on(report.rows, "2099-01-01") === report.rows.at(-1).payment && on([], "2030-01-01") === 0);
+  ok("lower after each prepayment which lowers it", on(lowered.rows, "2028-01-01") === 1115.88
+    && on(lowered.rows, "2028-03-01") === 1094.91 && on(lowered.rows, "2032-02-01") === 1029.89);
+
+  const before = JSON.stringify(d);
+  const effect = (mode, amount = 10000) => Mortgage.prepaymentEffect(d, { amount, date: "2027-06-15", feePct: 1.5, mode });
+  const term = effect("reduce_term"), less = effect("reduce_payment");
+  ok("a prepayment shortening the term: interest saved, fee, gain and the new end", near(term.saved, 22603.2)
+    && term.fee === 150 && near(term.net, 22453.2) && term.end_date === "2059-09-01" && term.old_end_date === "2062-02-01"
+    && near(term.payment, term.old_payment), JSON.stringify(term));
+  ok("one lowering the payment: the new payment, the same end", near(less.saved, 7361.94) && near(less.net, 7211.94)
+    && near(less.payment, 1074.5556) && near(less.old_payment, 1115.8847) && less.end_date === less.old_end_date,
+    JSON.stringify(less));
+  ok("no effect without an amount above 0", effect("reduce_term", 0) === null && effect("reduce_term", null) === null);
+  ok("a preview changes nothing", JSON.stringify(d) === before);
 }
 
 // ---------------------------------------------------------------- transactions
