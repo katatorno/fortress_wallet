@@ -7,14 +7,9 @@
 
 const { readFileSync } = require("node:fs");
 const path = require("node:path");
-const vm = require("node:vm");
+const { APP, loadCore } = require("../tools/wallet.cjs");
 
-const APP = path.join(__dirname, "..");
-const ctx = vm.createContext({ console });
-for(const f of ["i18n.js", "core.js"]) vm.runInContext(readFileSync(path.join(APP, "scripts", "core", f), "utf8"), ctx, { filename: f });
-const run = (code) => vm.runInContext(code, ctx);
-run(`I18N.use(I18N.parseToml(${JSON.stringify(readFileSync(path.join(APP, "locales", "translations.toml"), "utf8"))}))`);
-const Core = run("Core");
+const { Core } = loadCore();
 const text = readFileSync(path.join(APP, "data", "wallet.example.json"), "utf8");
 const example = () => Core.parse(text);
 

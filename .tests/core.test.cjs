@@ -3,18 +3,13 @@
 // The wallet logic of scripts/core as the page loads it (plain scripts, one global scope):
 // valuation in EUR, the contribution calculator, the mortgage with prepayments,
 // recommendations in every language, the JSON file and the migration of old files.
-// Run: tonka test fortress-wallet   (or: node .tests/core.test.cjs)
+// Run: tonka test fortress_wallet   (or: node .tests/core.test.cjs)
 
 const { readFileSync } = require("node:fs");
 const path = require("node:path");
-const vm = require("node:vm");
+const { APP, loadCore } = require("../tools/wallet.cjs");
 
-const APP = path.join(__dirname, "..");
-const ctx = vm.createContext({ console });
-for(const f of ["i18n.js", "core.js"]) vm.runInContext(readFileSync(path.join(APP, "scripts", "core", f), "utf8"), ctx, { filename: f });
-const run = (code) => vm.runInContext(code, ctx);
-run(`I18N.use(I18N.parseToml(${JSON.stringify(readFileSync(path.join(APP, "locales", "translations.toml"), "utf8"))}))`);
-const Core = run("Core");
+const { Core, I18N } = loadCore();
 const example = () => Core.parse(readFileSync(path.join(APP, "data", "wallet.example.json"), "utf8"));
 
 let pass = 0, fail = 0;
@@ -82,6 +77,9 @@ const near = (a, b, tol = 0.01) => Math.abs(a - b) <= tol;
   m2.events[m2.events.length - 1].mode = "reduce_payment";
   ok("lower-payment mode keeps the end, lowers the payment",
     Core.mortgageState(m2).payment < 950 && Core.runMortgage(m2).info.end_date === base.end_date);
+  const st2 = Core.mortgageState(m2);
+  ok("the lower payment spreads the balance over the payments left",
+    near(st2.payment, Core.annuity(st2.balance, 3.70, 444 - st2.paid_count), 0.005));
   let threw = false;
   try { Core.runMortgage({ ...m, bank_payment: 1, events: [] }); } catch(e) { threw = e.key === "err_payment_too_low"; }
   ok("a payment below the interest is reported", threw);
@@ -101,6 +99,35 @@ const near = (a, b, tol = 0.01) => Math.abs(a - b) <= tol;
   d.assets.find(a => a.id === "gold").alert_price = 1;
   ok("sell alert fires at the threshold", /threshold/.test(titles()));
   ok("EDO maturity from the series name", Core.bondMaturity({ name: "EDO1033" }) === "2033-10-01");
+}
+{
+  // one wallet per hint, every other hint kept quiet
+  const wallet = (assets, categories) => Core.normalize({
+    version: Core.FORMAT,
+    settings: { emergency_target: 0, drift_alert_pp: 2, stale_days: 14 },
+    categories, buckets: { b: { category: "equities", target_pct_in_category: 100 }, o: { category: "bonds" } },
+    assets: assets.map(a => ({ currency: "EUR", unit: "pcs", price_updated: "2026-11-20", ...a })),
+  });
+  const titles = (d, on = "2026-11-25") => Core.recommendations(d, on).map(r => r.title);
+  const t = (key, vars) => I18N.t("en", key, vars);
+  /** Whether a title is the text of `key`, the placeholders not given standing for anything. */
+  const has = (list, key, vars) => {
+    const re = new RegExp("^" + t(key, vars).replace(/[.*+?^$()|[\]\\]/g, "\\$&").replace(/\{\w+\}/g, ".*") + "$");
+    return list.some(x => re.test(x));
+  };
+  const both = { equities: { target_pct: 50, buy: true }, bonds: { target_pct: 50, buy: true } };
+  const d = wallet([{ id: "e", name: "E", category: "equities", bucket: "b", opening_quantity: 1, price: 100 }], both);
+  ok("a category above its target is said to be above", has(titles(d), "rec_drift_above_t", { name: Core.categoryLabel(d, "equities") })
+    && !has(titles(d), "rec_drift_below_t", { name: Core.categoryLabel(d, "equities") }));
+  ok("one below its target is said to be below", has(titles(d), "rec_drift_below_t", { name: Core.categoryLabel(d, "bonds") }));
+
+  const old = wallet([{ id: "e", name: "E", category: "equities", bucket: "b", opening_quantity: 1, price: 1, price_updated: "2026-10-01" }], both);
+  ok("a price older than the limit is named", titles(old).includes(t("rec_stale_t", { count: 1 })));
+  ok("a fresh price is not", !titles(d).includes(t("rec_stale_t", { count: 1 })));
+
+  const bond = wallet([{ id: "x", name: "EDO0127", category: "bonds", bucket: "o", opening_quantity: 1, price: 100 }], both);
+  ok("a bond due within a year is announced", has(titles(bond), "rec_bond_t", { name: "EDO0127", date: "01.2027" }));
+  ok("not earlier than a year before", !has(titles(bond, "2025-06-01"), "rec_bond_t", { name: "EDO0127" }));
 }
 
 // ---------------------------------------------------------------- file

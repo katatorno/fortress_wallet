@@ -2,16 +2,13 @@
 //
 // locales/translations.toml: every key has every language, placeholders match the
 // English text, and every key the code asks for exists.
-// Run: tonka test fortress-wallet   (or: node .tests/translations.test.cjs)
+// Run: tonka test fortress_wallet   (or: node .tests/translations.test.cjs)
 
 const { readFileSync, readdirSync } = require("node:fs");
 const path = require("node:path");
-const vm = require("node:vm");
+const { APP, loadScripts } = require("../tools/wallet.cjs");
 
-const APP = path.join(__dirname, "..");
-const ctx = vm.createContext({});
-vm.runInContext(readFileSync(path.join(APP, "scripts", "core", "i18n.js"), "utf8"), ctx);
-const I18N = vm.runInContext("I18N", ctx);
+const I18N = loadScripts(["i18n.js"]).run("I18N");
 const strings = I18N.parseToml(readFileSync(path.join(APP, "locales", "translations.toml"), "utf8"));
 I18N.use(strings);
 const langs = Object.keys(strings[I18N.META] || {});

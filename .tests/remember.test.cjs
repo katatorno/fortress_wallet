@@ -5,11 +5,7 @@
 // The storage of the browser is stood in for.
 // Run: tonka test fortress_wallet   (or: node .tests/remember.test.cjs)
 
-const { readFileSync } = require("node:fs");
-const path = require("node:path");
-const vm = require("node:vm");
-
-const code = readFileSync(path.join(__dirname, "..", "scripts", "core", "remember.js"), "utf8");
+const { loadScripts } = require("../tools/wallet.cjs");
 
 function storage(start = {}) {
   const map = new Map(Object.entries(start));
@@ -61,9 +57,8 @@ function database(start = {}) {
 }
 
 function load(local = storage(), session = storage(), idb = database()) {
-  const ctx = vm.createContext({ localStorage: local, sessionStorage: session, indexedDB: idb });
-  vm.runInContext(code, ctx);
-  return { R: vm.runInContext("Remember", ctx), local, session, idb };
+  const { run } = loadScripts(["remember.js"], { localStorage: local, sessionStorage: session, indexedDB: idb });
+  return { R: run("Remember"), local, session, idb };
 }
 
 let pass = 0, fail = 0;

@@ -1,23 +1,33 @@
 // .tests/privacy.test.cjs
 //
-// No cookies and no service worker. The browser's storage is touched in one place
-// only, scripts/core/remember.js, which remembers nothing but a link to the wallet
-// file when asked (see remember.test.cjs), and removes what older versions left.
-// The page may send requests to its own server and the exchange rate service only.
+// A lint of the sources, the app's and the UI kit's copy alike: no cookies, no
+// service worker, the browser's storage touched in scripts/core/remember.js only
+// (see remember.test.cjs), no HTML written from text in the app's own files, and
+// no address but the ones the policy names. It reads the text, comments left out:
+// a name or an address put together while the page runs is beyond it. What the
+// browser enforces is the page's Content Security Policy, checked at the end.
 // Run: tonka test fortress_wallet   (or: node .tests/privacy.test.cjs)
 
 const { readFileSync, readdirSync } = require("node:fs");
 const path = require("node:path");
 
 const APP = path.join(__dirname, "..");
-function walk(dir) {
-  return readdirSync(dir, { withFileTypes: true }).flatMap(e =>
-    e.isDirectory() ? (e.name === "ui" ? [] : walk(path.join(dir, e.name))) : [path.join(dir, e.name)]);
-}
-const files = [...walk(path.join(APP, "scripts")).filter(f => /\.jsx?$/.test(f)),
-  path.join(APP, "app.jsx"), path.join(APP, "app.html")];
+const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap(e =>
+  e.isDirectory() ? walk(path.join(dir, e.name)) : [path.join(dir, e.name)]);
+const rel = (f) => path.relative(APP, f).split(path.sep).join("/");
 
-const KEEPER = path.join("scripts", "core", "remember.js");
+const scripts = [...walk(path.join(APP, "scripts")).filter(f => /\.jsx?$/.test(f)), path.join(APP, "app.jsx")];
+const kit = (f) => rel(f).startsWith("scripts/ui/");
+const own = scripts.filter(f => !kit(f));
+const styles = walk(path.join(APP, "styles")).filter(f => f.endsWith(".css"));
+
+/** A file's text without its comments; a "//" right after a letter or a colon (an address) stays. */
+function code(f) {
+  return readFileSync(f, "utf8").replace(/\/\*[\s\S]*?\*\//g, "")
+    .split("\n").map(line => line.replace(/(^|\s)\/\/.*$/, "$1")).join("\n");
+}
+
+const KEEPER = "scripts/core/remember.js";
 const FORBIDDEN = {
   "cookies": /document\s*\.\s*cookie|cookieStore|\bCookie\s*\.\s*(set|get|remove)/,
   "the cache of the browser": /\bcaches\s*\./,
@@ -33,6 +43,8 @@ const KEEPER_ONLY = {
   "sessionStorage": /sessionStorage/,
   "IndexedDB": /indexedDB/,
 };
+// text turned into HTML: the kit paints code this way, the app never does
+const AS_HTML = /\.innerHTML\s*=|\.outerHTML\s*=|insertAdjacentHTML|document\s*\.\s*write/;
 
 let pass = 0, fail = 0;
 function ok(name, cond, detail = "") {
@@ -40,37 +52,48 @@ function ok(name, cond, detail = "") {
   console.log(`  ${cond ? "ok  " : "FAIL"} ${name}${cond ? "" : "\n       " + detail}`);
 }
 
-ok("the sources are found", files.length > 10);
-const using = (pattern) => files.filter(f => pattern.test(readFileSync(f, "utf8"))).map(f => path.relative(APP, f));
+ok("the sources are found", own.length > 10 && scripts.length > own.length && styles.length > 5);
+const using = (files, pattern) => files.filter(f => pattern.test(code(f))).map(rel);
 for(const [what, pattern] of Object.entries(FORBIDDEN)) {
-  const found = using(pattern);
+  const found = using(scripts, pattern);
   ok(`no use of ${what}`, !found.length, found.join(", "));
 }
 for(const [what, pattern] of Object.entries(KEEPER_ONLY)) {
-  const found = using(pattern).filter(f => f !== KEEPER);
+  const found = using(scripts, pattern).filter(f => f !== KEEPER);
   ok(`${what} only in ${KEEPER}`, !found.length, found.join(", "));
 }
+ok("the app writes no HTML from text", !using(own, AS_HTML).length, using(own, AS_HTML).join(", "));
 
 // every address the sources name: the exchange rate service, and two that are no
 // request: a namespace, and the footer's link, followed only on a click
 const ALLOWED = ["https://api.frankfurter.dev", "http://www.w3.org", "https://tonkajsx.com"];
 const SERVED = ["https://unpkg.com", "https://lib.tonkajsx.com", "https://font.tonkajsx.com"]; // named by the policy
-const addresses = files.flatMap(f => [...readFileSync(f, "utf8").matchAll(/(?:https?|wss?):\/\/[a-z0-9.-]+/gi)]
-  .map(m => m[0]).filter(a => !ALLOWED.includes(a) && !(f.endsWith("app.html") && SERVED.includes(a)))
-  .map(a => `${path.relative(APP, f)}: ${a}`));
-ok("no other address in the sources", !addresses.length, addresses.join(", "));
+const FONTS = ["https://font.tonkajsx.com"];
+const ADDRESS = /(?:https?|wss?):\/\/[a-z0-9-]+(?:\.[a-z0-9-]+)+/gi;
+const addresses = (files, allowed) => files.flatMap(f => [...code(f).matchAll(ADDRESS)]
+  .map(m => m[0]).filter(a => !allowed.includes(a)).map(a => `${rel(f)}: ${a}`));
+ok("no other address in the scripts", !addresses(scripts, ALLOWED).length, addresses(scripts, ALLOWED).join(", "));
+ok("no address in the styles but the font server", !addresses(styles, FONTS).length, addresses(styles, FONTS).join(", "));
 
 // the policy the browser enforces
 const html = readFileSync(path.join(APP, "app.html"), "utf8");
 const policy = html.match(/http-equiv="Content-Security-Policy" content="([^"]+)"/)?.[1] || "";
-const rule = Object.fromEntries(policy.split(";").map(p => p.trim().split(/\s+/)).map(([name, ...v]) => [name, v.join(" ")]));
+const rule = Object.fromEntries(policy.split(";").map(p => p.trim().split(/\s+/)).map(([name, ...v]) => [name, v]));
+const hosts = (name) => (rule[name] || []).filter(v => !v.startsWith("'") && !/^(data|blob):$/.test(v));
 ok("the page has a content security policy", !!policy);
-ok("nothing is allowed unless named", rule["default-src"] === "'none'" && !/\*|unsafe-eval/.test(policy), policy);
+ok("nothing is allowed unless named", rule["default-src"]?.join(" ") === "'none'" && !/\*|unsafe-eval/.test(policy), policy);
 ok("data may be requested from this server and the rate service only",
-  rule["connect-src"] === "'self' https://api.frankfurter.dev", rule["connect-src"]);
-ok("no forms and no outside pictures", rule["form-action"] === "'none'" && !/http/.test(rule["img-src"]), policy);
+  rule["connect-src"]?.join(" ") === "'self' https://api.frankfurter.dev", rule["connect-src"]?.join(" "));
+ok("scripts come from this page and the named servers only",
+  hosts("script-src").every(h => SERVED.includes(h)) && !(rule["script-src"] || []).some(v => /^(data|blob|http):/.test(v)),
+  rule["script-src"]?.join(" "));
+ok("fonts come from this page and the font server only", hosts("font-src").every(h => FONTS.includes(h)), rule["font-src"]?.join(" "));
+ok("no forms, no base address and no outside pictures", rule["form-action"]?.join(" ") === "'none'"
+  && rule["base-uri"]?.join(" ") === "'none'" && !hosts("img-src").length, policy);
 // a "//host" address follows the page onto plain http, which the policy refuses
-ok("outside scripts come over https", !/(src|href)="\/\//.test(html));
+ok("outside scripts come over https", !/(src|href)="\/\//.test(html) && !/(src|href)="http:/.test(html));
+const outside = [...html.matchAll(/<script\b[^>]*\bsrc="(https:[^"]+)"/g)].map(m => m[1]);
+ok("outside scripts are named by the policy", outside.every(u => SERVED.includes(new URL(u).origin)), outside.join(", "));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
