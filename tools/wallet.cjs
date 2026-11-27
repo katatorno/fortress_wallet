@@ -43,13 +43,28 @@ const { Core } = loadCore();
 
 const open = (file) => Core.parse(fs.readFileSync(file, "utf8"));
 
-/** Writes the wallet, first copying the file to "<name>.backup-<time>.json". */
+/** The name of a copy of `file` made now: "<name>.backup-<time><extension>", never the file itself. */
+function backupName(file, now = new Date()) {
+  const stamp = now.toISOString().replace(/[-:]/g, "").slice(0, 15);
+  const ext = path.extname(file);
+  const base = ext ? file.slice(0, -ext.length) : file;
+  return `${base}.backup-${stamp}${ext}`;
+}
+
+/**
+ * Writes the wallet: first a copy of the file as it is, then the new text into a
+ * temporary file that takes the file's place, so a broken write never leaves
+ * half a file behind.
+ * @returns {string} where the copy is
+ */
 function save(file, data) {
-  const stamp = new Date().toISOString().replace(/[-:]/g, "").slice(0, 15);
-  const backup = file.replace(/[.]json$/, `.backup-${stamp}.json`);
+  const backup = backupName(file);
+  if(path.resolve(backup) === path.resolve(file)) throw new Error(`No name for a copy of ${file}`);
   fs.copyFileSync(file, backup);
-  fs.writeFileSync(file, Core.serialize(data));
+  const temp = `${file}.tmp-${process.pid}`;
+  fs.writeFileSync(temp, Core.serialize(data));
+  fs.renameSync(temp, file);
   return backup;
 }
 
-module.exports = { APP, CORE_FILES, loadScripts, loadCore, Core, open, save };
+module.exports = { APP, CORE_FILES, loadScripts, loadCore, Core, open, save, backupName };

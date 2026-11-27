@@ -25,8 +25,23 @@ const KNOWN = {
 const BOND_FUNDS = ["LYQ2.DE"];
 
 const serial = (x) => new Date(Math.round((Number(x) - 25569) * 864e5)).toISOString().slice(0, 10);
-const currencyOf = (ticker) => ticker.endsWith(".US") ? "USD" : "EUR";
+// the currency of a market, by the ticker's ending; a market not named here is
+// refused rather than guessed (London, for one, quotes in pence)
+const MARKETS = {
+  US: "USD", PL: "PLN", CH: "CHF", DK: "DKK", SE: "SEK", NO: "NOK",
+  DE: "EUR", FR: "EUR", NL: "EUR", BE: "EUR", PT: "EUR", ES: "EUR", IT: "EUR", FI: "EUR", IE: "EUR", AT: "EUR",
+};
+function currencyOf(ticker) {
+  const market = String(ticker).split(".").pop();
+  if(!Object.hasOwn(MARKETS, market)) throw new Error(`${ticker}: the market .${market} is not known; add its currency to MARKETS in tools/import-xtb.cjs`);
+  return MARKETS[market];
+}
 const after = (rows, head) => rows.slice(rows.findIndex(r => r.A === head) + 1);
+/** A new instrument's id from its ticker: letters and digits, never empty nor a reserved name. */
+const idOf = (ticker) => {
+  const id = String(ticker).toLowerCase().replace(/[^a-z0-9]/g, "");
+  return !id || Core.isReserved(id) ? `x${id}` : id;
+};
 
 /** The export as plain records. */
 function readExport(file) {
@@ -63,7 +78,7 @@ function importInto(data, x) {
   const report = [];
   for(const ticker of tickers) {
     const known = KNOWN[ticker];
-    const id = known?.id ?? data.assets.find(a => a.ticker === ticker)?.id ?? ticker.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const id = known?.id ?? data.assets.find(a => a.ticker === ticker)?.id ?? idOf(ticker);
     let asset = data.assets.find(a => a.id === id);
     const held = x.lots.filter(l => l.ticker === ticker);
     const gone = x.closed.filter(l => l.ticker === ticker);
@@ -141,4 +156,4 @@ if(require.main === module) {
   else console.log(`written, previous version kept in ${save(target, data)}`);
 }
 
-module.exports = { readExport, importInto };
+module.exports = { readExport, importInto, currencyOf };
