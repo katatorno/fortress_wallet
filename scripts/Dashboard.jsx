@@ -6,17 +6,17 @@
 const DashboardView = (app) => {
   const { data, T, money } = app;
   const s = data.settings;
-  const summ = Core.summary(data);
+  const summ = Valuation.summary(data);
   const house = summ.house;
   const cats = Object.keys(data.categories);
-  const cur = Core.allocationPct(summ.categories);
+  const cur = Valuation.allocationPct(summ.categories);
   const tsum = cats.reduce((a, c) => a + Number(data.categories[c].target_pct || 0), 0) || 1;
 
   const metrics = (
     <div class="metrics">
       <Metric label={T("net_worth")} value={money(summ.net_worth)} />
       <Metric label={T("investments")} value={money(summ.investments)} />
-      <Metric label={Core.roleLabel(data, "emergency")} value={money(summ.cash.emergency || 0)}
+      <Metric label={Texts.roleLabel(data, "emergency")} value={money(summ.cash.emergency || 0)}
         help={T("target_value", { value: money(Number(s.emergency_target)) })} />
       {house.status === "owned"
         ? [<Metric label={T("home_equity")} value={money(house.equity)} />,
@@ -30,7 +30,7 @@ const DashboardView = (app) => {
     <Panel title={T("chart_allocation")} icon="donut_large" flex="1">
       <TargetBars lang={app.L} currentName={T("legend_current")} targetName={T("legend_target")}
         total={summ.investments} rows={cats.map(c => ({
-          label: Core.categoryLabel(data, c) + (data.categories[c].buy ? "" : " 🔒"),
+          label: Texts.categoryLabel(data, c) + (data.categories[c].buy ? "" : " 🔒"),
           value: cur[c] || 0,
           target: Number(data.categories[c].target_pct || 0) / tsum * 100,
           cls: catCls(c),
@@ -41,7 +41,7 @@ const DashboardView = (app) => {
   const composition = (
     <Panel title={T("chart_composition")} icon="grid_view" flex="1">
       <Treemap lang={app.L} groups={cats.map(c => ({
-        label: Core.categoryLabel(data, c), cls: catCls(c),
+        label: Texts.categoryLabel(data, c), cls: catCls(c),
         items: summ.positions.filter(p => p.category === c).map(p => ({ label: p.name, value: p.value_eur })),
       }))} />
     </Panel>
@@ -57,7 +57,7 @@ const DashboardView = (app) => {
           { name: T("net_worth"), cls: "c1", points: line("net_worth") },
           { name: T("investments"), cls: "c2", points: line("investments") },
           { name: T("cash"), cls: "c3", points: line("cash") },
-          ...(hist.some(h => h.cat_metals) ? [{ name: Core.categoryLabel(data, "metals"), cls: "c4", points: line("cat_metals") }] : []),
+          ...(hist.some(h => h.cat_metals) ? [{ name: Texts.categoryLabel(data, "metals"), cls: "c4", points: line("cat_metals") }] : []),
         ]} />
         : <Empty icon="show_chart" description={T("history_empty")} />}
     </Panel>

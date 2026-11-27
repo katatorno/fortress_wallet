@@ -9,7 +9,7 @@ const bucketsOf = (data, category) =>
   Object.keys(data.buckets).filter(b => data.buckets[b].category === category);
 
 /** A total of percentages as text: "100%", "73,68%". */
-const totalText = (data, sum) => Core.sumList(data, [{ name: "", sum }]).trim();
+const totalText = (data, sum) => Buckets.sumList(data, [{ name: "", sum }]).trim();
 
 /**
  * Each bucket's share of the category vs its planned share.
@@ -78,7 +78,7 @@ const BucketPanel = ({ app, positions, bucket, footer }) => {
  */
 function targetEditor(app, bucket) {
   const { data, T, money } = app;
-  const members = Core.positions(data).filter(p => p.bucket === bucket && !Core.soldOut(data, p));
+  const members = Valuation.positions(data).filter(p => p.bucket === bucket && !Instruments.soldOut(data, p));
   if(!members.length) return null;
   const grid = (
     <EditGrid rows={members.map(p => ({
@@ -90,17 +90,17 @@ function targetEditor(app, bucket) {
     ]} />
   );
   const drafted = (rows) => rows.map(r => ({ bucket, target_in_bucket: Number(r.target || 0) }));
-  const adds = (rows) => !Core.badTargets(data.buckets, drafted(rows), [bucket]).length;
+  const adds = (rows) => !Buckets.badTargets(data.buckets, drafted(rows), [bucket]).length;
   const save = (
     <Button variant="primary" icon="save" onClick={() => {
       const targets = Object.fromEntries(grid.rows.map(r => [r.id, r.target]));
-      if(Core.saveTargets(data, bucket, targets)) app.commit(T("flash_targets_saved", { bucket }));
+      if(Buckets.saveTargets(data, bucket, targets)) app.commit(T("flash_targets_saved", { bucket }));
     }}>{T("btn_save_targets")}</Button>
   );
   const total = liveNote(grid, (rows) => {
     save.disabled = !adds(rows);
     if(rows.every(r => !Number(r.target || 0))) return T("targets_none");
-    const sum = totalText(data, Core.targetSum(drafted(rows), bucket));
+    const sum = totalText(data, Buckets.targetSum(drafted(rows), bucket));
     return save.disabled ? T("targets_wrong", { sum }) : T("sum_ok", { sum });
   });
   // fills the fields only: nothing changes until it is saved
@@ -124,9 +124,9 @@ function targetEditor(app, bucket) {
  */
 function bucketEditor(app, category) {
   const { data, T, money } = app;
-  const pos = Core.positions(data);
+  const pos = Valuation.positions(data);
   const rows = () => bucketsOf(data, category).map(b => {
-    const members = pos.filter(p => p.bucket === b && !Core.soldOut(data, p));
+    const members = pos.filter(p => p.bucket === b && !Instruments.soldOut(data, p));
     return {
       old: b, name: b, share: Number(data.buckets[b].target_pct_in_category || 0),
       count: members.length,
@@ -134,9 +134,9 @@ function bucketEditor(app, category) {
     };
   });
   function save(list, message) {
-    try { Core.saveBuckets(data, category, list); }
+    try { Buckets.save(data, category, list); }
     catch(e) {
-      if(!(e instanceof Core.BucketError)) throw e;
+      if(!(e instanceof Rules.RuleError)) throw e;
       Alert.err(T(e.key, e.vars));
       return;
     }

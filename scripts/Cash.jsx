@@ -9,7 +9,7 @@ const CashView = (app) => {
   const cashGrid = (
     <EditGrid rows={data.cash} columns={[
       { key: "name", label: T("col_account"), width: "14rem" },
-      { key: "role", label: T("col_role"), type: "select", options: Core.ROLES.map(r => [r, Core.roleLabel(data, r)]) },
+      { key: "role", label: T("col_role"), type: "select", options: Cash.ROLES.map(r => [r, Texts.roleLabel(data, r)]) },
       { key: "currency", label: T("col_currency"), type: "select", options: currencies.map(c => [c, c]) },
       { key: "amount", label: T("col_amount"), type: "number", step: "0.01", width: "8rem" },
     ]} />
@@ -19,9 +19,9 @@ const CashView = (app) => {
       <stack gap="sm">
         {cashGrid}
         <row><Button variant="primary" icon="save" onClick={() => {
-          try { Core.saveCash(data, cashGrid.rows, T("note_manual_correction")); }
+          try { Cash.save(data, cashGrid.rows, T("note_manual_correction")); }
           catch(e) {
-            if(!(e instanceof Core.RuleError)) throw e;
+            if(!(e instanceof Rules.RuleError)) throw e;
             Alert.err(T(e.key, e.vars));
             return;
           }

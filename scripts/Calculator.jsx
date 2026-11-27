@@ -28,14 +28,14 @@ const CalculatorView = (app) => {
   const share = <Slider value={Number(s.prepay_share_pct)} suffix="%" onChange={() => update()} />;
 
   function update() {
-    plan = Core.contributionPlan(data, amount.value || 0, fill.checked, share.value);
+    plan = Plan.contribution(data, amount.value || 0, fill.checked, share.value);
     const cats = Object.keys(data.categories);
     const tsum = cats.reduce((a, c) => a + Number(data.categories[c].target_pct || 0), 0) || 1;
     result.replaceChildren(
       planTable(app, plan),
       ...plan.notes.map(n => <Note level="info">{n}</Note>),
       <Panel title={T("chart_before_after")} icon="bar_chart">
-        <GroupedBars lang={app.L} cats={cats.map(c => Core.categoryLabel(data, c))} targetName={T("legend_target")}
+        <GroupedBars lang={app.L} cats={cats.map(c => Texts.categoryLabel(data, c))} targetName={T("legend_target")}
           targets={cats.map(c => Number(data.categories[c].target_pct || 0) / tsum * 100)}
           series={[
             { name: T("legend_before"), cls: "c1", values: cats.map(c => plan.before_pct[c] || 0) },
@@ -46,7 +46,7 @@ const CalculatorView = (app) => {
   }
   update();
 
-  const applyDate = <DatePicker format="%Y-%m-%d" value={Core.today()} />;
+  const applyDate = <DatePicker format="%Y-%m-%d" value={Dates.today()} />;
   return (
     <stack gap="md">
       <Panel title={T("calc_title")} icon="calculate">
@@ -65,7 +65,7 @@ const CalculatorView = (app) => {
             {applyDate}
             <Button variant="primary" icon="check" onClick={() => {
               if(!plan?.lines.length) return;
-              Core.applyPlan(data, plan, applyDate.value);
+              Plan.apply(data, plan, applyDate.value);
               app.commit(T("flash_plan_applied", { amount: money(plan.amount) }));
             }}>{T("btn_apply_plan")}</Button>
           </row>

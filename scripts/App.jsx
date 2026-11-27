@@ -25,7 +25,7 @@ function mountApp() {
 
 const App = () => {
   const data = Store.get();
-  const L = Core.lang(data);
+  const L = Texts.lang(data);
   document.documentElement.lang = L;
   Theme.set(data.settings.theme);
   const T = (key, vars) => I18N.t(L, key, vars);
@@ -74,8 +74,8 @@ const App = () => {
       console.error(e);
       viewSlot.replaceChildren(<Note level="err" title={T("err_view")}>{e.message}</Note>);
     }
-    footerWorth.textContent = `${T("net_worth")}: ${money(Core.summary(data).net_worth)}`;
-    const warns = Core.recommendations(data).filter(r => r.level === "warn").length;
+    footerWorth.textContent = `${T("net_worth")}: ${money(Valuation.summary(data).net_worth)}`;
+    const warns = Advice.recommendations(data).filter(r => r.level === "warn").length;
     recBadge.text = warns;
     recBadge.hidden = !warns;
   }
@@ -90,7 +90,7 @@ const App = () => {
     if(!found.length) return true;
     Store.get().settings.theme = Theme.choice(); // a theme click that asked for no save stays
     mountApp();
-    Alert.err(T("err_change_refused", { problems: Core.problemList(found) }));
+    Alert.err(T("err_change_refused", { problems: WalletFile.problemList(found) }));
     return false;
   }
 

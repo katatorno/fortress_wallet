@@ -88,7 +88,7 @@ const EditGrid = ({ columns, rows, newRow, addLabel = "+" }) => {
       if(input.value === "") { draft[col.key] = null; return; }
       // a value outside the column's limits is pulled back as it is typed
       const typed = Number(input.value);
-      const kept = Core.clamp(typed, col.min, col.max);
+      const kept = Base.clamp(typed, col.min, col.max);
       if(kept !== typed) input.value = kept;
       draft[col.key] = kept;
     });

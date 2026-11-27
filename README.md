@@ -124,16 +124,24 @@ fortress_wallet/
 │   └── wallet.example.json   # example wallet (made-up numbers)
 ├── scripts/
 │   ├── core/                 # plain JS – the part that never depends on the UI
-│   │   ├── wallet/           # the wallet logic (`Core`), loaded in the order of the numbers:
-│   │   │   ├── 1-base.js     #   names, texts, helpers, dates
-│   │   │   ├── 2-mortgage.js #   schedule, prepayments
-│   │   │   ├── 3-valuation.js #  worth in EUR, net worth
-│   │   │   ├── 4-file.js     #   format version, migrations, checks, JSON
-│   │   │   ├── 5-buckets.js  #   bucket percentages and their saves
-│   │   │   ├── 6-plan.js     #   contribution calculator
-│   │   │   ├── 7-forms.js    #   saves of the settings, cash, mortgage, transactions
-│   │   │   ├── 8-history.js  #   snapshots, stored prices, chart ranges
-│   │   │   └── 9-advice.js   #   recommendations
+│   │   ├── wallet/           # the wallet logic, a module a file:
+│   │   │   ├── texts.js      #   texts in the wallet's language
+│   │   │   ├── rules.js      #   the refusal of a save, checks of typed numbers
+│   │   │   ├── rates.js      #   exchange rates, amounts in EUR
+│   │   │   ├── cash.js       #   cash accounts, their movements and table
+│   │   │   ├── transactions.js #  buy, sell, adjust; quantities
+│   │   │   ├── buckets.js    #   bucket percentages and their saves
+│   │   │   ├── instruments.js #   the instrument table's save, sold out ones
+│   │   │   ├── mortgage.js   #   schedule, prepayments, the loan's parameters
+│   │   │   ├── valuation.js  #   positions, worth in EUR, net worth
+│   │   │   ├── plan.js       #   contribution calculator
+│   │   │   ├── settings.js   #   the settings view's save
+│   │   │   ├── wallet-history.js # snapshots, stored prices, the history
+│   │   │   ├── advice.js     #   recommendations
+│   │   │   └── wallet-file.js #   format version, migrations, checks, JSON
+│   │   ├── base.js           # small helpers: rounding, blanks, numbers, ids
+│   │   ├── dates.js          # ISO dates
+│   │   ├── chart-math.js     # ranges and axes of the history charts
 │   │   ├── i18n.js           # translations + number formats
 │   │   ├── store.js          # the open wallet: source, checked changes, saving, a file changed elsewhere
 │   │   ├── files.js          # local files (File System Access API / download)
@@ -155,9 +163,16 @@ fortress_wallet/
 └── .tests/                   # `tonka test fortress_wallet`
 ```
 
-`scripts/core` has no JSX, and `wallet/` with `i18n.js` touches no DOM: they run in Node too (the tools and the tests load them), and would move to another framework with the `I18N` texts.
+`scripts/core` has no JSX, and `wallet/` with `base.js`, `dates.js`, `chart-math.js` and `i18n.js` touches no DOM: they run in Node too (the tools and the tests load them), and would move to another framework with the `I18N` texts.
 
-The files of `wallet/` load in the order of their numbers, as TonkaJSX loads a folder sorted by name (deeper folders first), and the tests read the folder the same way. `1-base.js` makes the global `Core`; each next file adds its part and takes from `Core` only what earlier files put there. A new part gets the number after the last file it needs.
+Each of those files is one **module**:
+
+- After its header comment a file is a single declaration, `const Name = (() => { … return { … }; })();`, and the global is named after the file: `wallet-file.js` makes `WalletFile` (`i18n.js` makes `I18N`).
+- A module names another one, `I18N` included, only inside a function. Every file therefore loads on its own, and the order of loading does not matter.
+- No local aliases of another module's functions: a call shows where it goes, as in `Dates.parse(x)`.
+- `base.js`, `dates.js` and `chart-math.js` know nothing of the wallet and reach no module of `wallet/`.
+
+A new module of the wallet goes into `wallet/`; one that knows nothing of the wallet goes beside it and into `CORE_FILES` in `tools/wallet.cjs`. Either way list it in `.tests/core.test.cjs` with the modules it may reach: the suite holds the files to these rules, and every `Module.name` written in the app and the tools to a name the module gives.
 
 ## Translations
 
@@ -203,7 +218,7 @@ Older files, including those of the earlier Python version (with Polish category
 
 **Changing the format** (a key added, removed or given a new meaning):
 
-1. Raise `FORMAT` in `scripts/core/wallet/4-file.js`.
+1. Raise `FORMAT` in `scripts/core/wallet/wallet-file.js`.
 2. Add a step to `MIGRATIONS` that turns the previous version into the new one.
 3. Update `SHAPE` and `VERSION` in `.tests/format.test.cjs`, and `version` in `data/wallet.example.json`.
 
@@ -243,7 +258,7 @@ tonka test fortress_wallet          # or one suite: node .tests/<name>.test.cjs
 
 | Suite | What it holds |
 |---|---|
-| `core` | valuation, the contribution calculator, the mortgage, recommendations |
+| `core` | the module rules (each file loads alone, reaches only where listed, every `Module.name` exists), valuation, the contribution calculator, the mortgage, recommendations, the file |
 | `market` | the market view's rules: percentages in a bucket are 100% or all 0%, bucket shares are 100%, moves and deletions keep that, the "what to buy" calculator, no sell alerts for equities |
 | `rules` | the saves of the settings, cash, mortgage and transactions views: everything checked first, a refusal changes nothing |
 | `format` | the file's version and keys, migrations, files refused for values the app cannot use |

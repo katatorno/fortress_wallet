@@ -5,7 +5,7 @@
 
 const TransactionsView = (app) => {
   const { data, T, money } = app;
-  const pos = Core.positions(data);
+  const pos = Valuation.positions(data);
   const byId = Object.fromEntries(pos.map(p => [p.id, p]));
 
   // ---------------------------------------------------------- new transaction
@@ -22,10 +22,10 @@ const TransactionsView = (app) => {
   );
   const type = (
     <Toggle value="buy">
-      {Core.TX_TYPES.map(t => <ToggleBtn value={t} label={Core.txLabel(data, t)} />)}
+      {Transactions.TYPES.map(t => <ToggleBtn value={t} label={Texts.txLabel(data, t)} />)}
     </Toggle>
   );
-  const date = <DatePicker format="%Y-%m-%d" value={Core.today()} />;
+  const date = <DatePicker format="%Y-%m-%d" value={Dates.today()} />;
   const qty = <NumberInput step="any" />;
   const fee = <NumberInput value={0} min="0" step="0.01" />;
   const updatePrice = <Checkbox checked label={T("field_update_price")} />;
@@ -46,15 +46,15 @@ const TransactionsView = (app) => {
           const aid = instrument.value;
           const q = qty.value;
           try {
-            Core.recordTransaction(data, { assetId: aid, type: type.value, quantity: q, price: price.value, fee: fee.value,
+            Transactions.record(data, { assetId: aid, type: type.value, quantity: q, price: price.value, fee: fee.value,
               date: date.value, note: note.value, updatePrice: updatePrice.checked });
           }
           catch(e) {
-            if(!(e instanceof Core.RuleError)) throw e;
+            if(!(e instanceof Rules.RuleError)) throw e;
             Alert.wrn(T(e.key, e.vars));
             return;
           }
-          app.commit(T("flash_transaction", { type: Core.txLabel(data, type.value), name: byId[aid].name, quantity: String(q) }));
+          app.commit(T("flash_transaction", { type: Texts.txLabel(data, type.value), name: byId[aid].name, quantity: String(q) }));
         }}>{T("btn_add_transaction")}</Button></row>
       </stack>
     </Panel>
@@ -63,7 +63,7 @@ const TransactionsView = (app) => {
   // ---------------------------------------------------------- cash deposit / withdrawal
   const account = <Select>{options(data.cash.map(c => [c.id, c.name]))}</Select>;
   const amount = <NumberInput step="0.01" />;
-  const cDate = <DatePicker format="%Y-%m-%d" value={Core.today()} />;
+  const cDate = <DatePicker format="%Y-%m-%d" value={Dates.today()} />;
   const cNote = <Input />;
   const cashPanel = (
     <Panel title={T("cash_op_title")} icon="payments" flex="1">
@@ -74,7 +74,7 @@ const TransactionsView = (app) => {
         {formRow(T("field_note"), cNote)}
         <row><Button variant="primary" icon="save" onClick={() => {
           if(!amount.value || !Number.isFinite(Number(amount.value))) { Alert.wrn(T("warn_amount_zero")); return; }
-          Core.addCash(data, account.value, amount.value, cNote.value, cDate.value);
+          Cash.add(data, account.value, amount.value, cNote.value, cDate.value);
           app.commit(T("flash_cash_op", { amount: money(amount.value, 2) }));
         }}>{T("btn_save")}</Button></row>
       </stack>
@@ -89,9 +89,9 @@ const TransactionsView = (app) => {
     }));
     const grid = (
       <EditGrid rows={rows} columns={[
-        { key: "date", label: T("field_date"), type: "readonly", fmt: Core.dayMonthYear },
+        { key: "date", label: T("field_date"), type: "readonly", fmt: Dates.dayMonthYear },
         { key: "instrument", label: T("field_instrument"), type: "readonly" },
-        { key: "type", label: T("field_type"), type: "readonly", fmt: (v) => Core.txLabel(data, v) },
+        { key: "type", label: T("field_type"), type: "readonly", fmt: (v) => Texts.txLabel(data, v) },
         { key: "quantity", label: T("col_quantity"), type: "readonly", align: "right", fmt: (v) => I18N.number(app.L, v, 4) },
         { key: "price", label: T("col_price"), type: "readonly", align: "right", fmt: (v) => I18N.number(app.L, v, 4) },
         { key: "fee", label: T("field_fee_eur"), type: "readonly", align: "right", fmt: (v) => money(v || 0, 2) },
@@ -117,7 +117,7 @@ const TransactionsView = (app) => {
   const cashLog = data.cash_log.length ? (
     <Panel title={T("cash_log_title")} icon="history">
       <Table columns={[T("field_date"), T("col_account"), T("col_amount"), T("field_note")]}
-        rows={[...data.cash_log].reverse().map(c => [Core.dayMonthYear(c.date), names[c.account_id] || c.account_id, money(c.amount, 2), c.note || ""])} />
+        rows={[...data.cash_log].reverse().map(c => [Dates.dayMonthYear(c.date), names[c.account_id] || c.account_id, money(c.amount, 2), c.note || ""])} />
     </Panel>
   ) : null;
 

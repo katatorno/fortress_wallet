@@ -7,17 +7,17 @@ const MortgageView = (app) => {
   const { data, T, money } = app;
   const h = data.house;
   const m = data.mortgage;
-  const deed = Core.parseDate(h.deed_date);
-  const modeOptions = Core.MODES.map(x => [x, Core.modeLabel(data, x)]);
+  const deed = Dates.parse(h.deed_date);
+  const modeOptions = Mortgage.MODES.map(x => [x, Texts.modeLabel(data, x)]);
   const out = [];
 
   if(!deed) out.push(<Note level="info">{T("mortgage_planning_mode")}</Note>);
   if(!Number(m.amount)) out.push(<Note level="info">{T("mortgage_enter_amount")}</Note>);
 
   let report = null;
-  try { report = Core.mortgageReport(m); }
+  try { report = Mortgage.report(m); }
   catch(e) {
-    if(e instanceof Core.MortgageError) out.push(<Note level="err">{T(e.key)}</Note>);
+    if(e instanceof Mortgage.MortgageError) out.push(<Note level="err">{T(e.key)}</Note>);
     else throw e;
   }
   const info = report?.info;
@@ -29,8 +29,8 @@ const MortgageView = (app) => {
         <Metric label={T("mortgage_balance")} value={money(info.balance)} />
         <Metric label={T("current_payment")} value={money(info.payment, 2)} />
         <Metric label={T("payments_made")} value={String(info.paid_count)} />
-        <Metric label={T("end_forecast")} value={Core.monthYear(info.end_date)}
-          help={T("end_without_prepayments", { date: Core.monthYear(info.baseline_end) })} />
+        <Metric label={T("end_forecast")} value={Dates.monthYear(info.end_date)}
+          help={T("end_without_prepayments", { date: Dates.monthYear(info.baseline_end) })} />
         <Metric label={T("future_interest")} value={money(info.future_interest)} />
         <Metric label={T("prepayment_gain")} value={money(info.net_saved)}
           help={T("prepayment_gain_help", { saved: money(info.interest_saved), fees: money(info.total_fees) })} />
@@ -44,11 +44,11 @@ const MortgageView = (app) => {
     value: <NumberInput value={Number(h.value)} min="0" step="1000" title={T("field_house_value_help")} />,
     deposit: <NumberInput value={Number(h.deposit_paid)} min="0" step="500" />,
     signed: <Checkbox checked={!!deed} label={T("field_deed_signed")} />,
-    deedDate: <DatePicker format="%Y-%m-%d" value={deed || Core.today()} />,
+    deedDate: <DatePicker format="%Y-%m-%d" value={deed || Dates.today()} />,
     amount: <NumberInput value={Number(m.amount)} min="0" step="500" onChange={() => implied()} />,
     rate: <NumberInput value={Number(m.rate_pct)} min="0" step="0.001" />,
     term: <NumberInput value={Number(m.term_months)} min="1" step="12" onChange={() => implied()} />,
-    first: <DatePicker format="%Y-%m-%d" value={Core.firstPaymentDate(m)} />,
+    first: <DatePicker format="%Y-%m-%d" value={Mortgage.firstPaymentDate(m)} />,
     bank: <NumberInput value={Number(m.bank_payment || 0)} min="0" step="0.01" onChange={() => implied()} />,
     fee: <NumberInput value={Number(m.prepayment_fee_pct)} min="0" step="0.01" />,
     mode: <Select value={m.default_mode || "reduce_term"}>{options(modeOptions)}</Select>,
@@ -57,7 +57,7 @@ const MortgageView = (app) => {
   function implied() {
     const pay = p.bank.value, amt = p.amount.value, term = p.term.value;
     impliedNote.textContent = pay && amt && term
-      ? T("implied_rate", { payment: money(pay, 2), rate: I18N.number(app.L, Core.impliedRate(amt, pay, term), 2) }) : "";
+      ? T("implied_rate", { payment: money(pay, 2), rate: I18N.number(app.L, Mortgage.impliedRate(amt, pay, term), 2) }) : "";
   }
   implied();
   out.push(
@@ -79,9 +79,9 @@ const MortgageView = (app) => {
         {formRow(T("field_default_mode"), p.mode)}
         <row><Button variant="primary" icon="save" onClick={() => {
           try {
-            Core.saveMortgage(data, {
+            Mortgage.save(data, {
               purchase_price: p.purchase.value, value: p.value.value, deposit_paid: p.deposit.value,
-              deed_date: p.signed.checked ? (p.deedDate.value || Core.today()) : null,
+              deed_date: p.signed.checked ? (p.deedDate.value || Dates.today()) : null,
             }, {
               amount: p.amount.value, rate_pct: p.rate.value, term_months: p.term.value,
               first_payment_date: p.first.value || null, bank_payment: p.bank.value,
@@ -89,7 +89,7 @@ const MortgageView = (app) => {
             });
           }
           catch(e) {
-            if(!(e instanceof Core.RuleError)) throw e;
+            if(!(e instanceof Rules.RuleError)) throw e;
             Alert.err(T(e.key, e.vars));
             return;
           }
@@ -102,7 +102,7 @@ const MortgageView = (app) => {
   if(!info || !Number(m.amount)) return <stack gap="md">{out}</stack>;
 
   // ---------------------------------------------------------- payments
-  const next = Core.nextPaymentEvent(m);
+  const next = Mortgage.nextPaymentEvent(m);
   const s1 = {
     date: <DatePicker format="%Y-%m-%d" value={next.date} />,
     amount: <NumberInput value={next.amount} step="0.01" />,
@@ -114,7 +114,7 @@ const MortgageView = (app) => {
       <stack gap="sm">
         <row gap="sm" align="center" justify="between">
           <span>{UI.markup(T("next_payment", {
-            date: Core.dayMonthYear(next.date), amount: money(next.amount, 2),
+            date: Dates.dayMonthYear(next.date), amount: money(next.amount, 2),
             interest: money(next.interest, 2), principal: money(next.principal, 2),
           }))}</span>
           <Button variant="primary" icon="check" disabled={info.balance <= 0} onClick={() => {
@@ -129,7 +129,7 @@ const MortgageView = (app) => {
             {formRow(T("field_interest_part"), s1.interest)}
             {formRow(T("field_principal_part"), s1.principal)}
             <row><Button icon="check" onClick={() => {
-              m.events.push({ id: Core.newId(), date: s1.date.value || next.date, type: "payment",
+              m.events.push({ id: Base.newId(), date: s1.date.value || next.date, type: "payment",
                 amount: s1.amount.value || 0, interest: s1.interest.value || 0, principal: s1.principal.value || 0,
                 note: T("note_from_statement") });
               app.commit(T("flash_payment_booked"));
@@ -141,10 +141,10 @@ const MortgageView = (app) => {
   );
 
   // ---------------------------------------------------------- prepayment
-  const pot = Core.cashAccount(data, "prepay");
+  const pot = Cash.account(data, "prepay");
   const pp = {
     amount: <NumberInput value={1000} min="0" step="100" onChange={() => preview()} />,
-    date: <DatePicker format="%Y-%m-%d" value={Core.today()} onChange={() => preview()} />,
+    date: <DatePicker format="%Y-%m-%d" value={Dates.today()} onChange={() => preview()} />,
     fee: <NumberInput value={Number(m.prepayment_fee_pct)} min="0" step="0.01" onChange={() => preview()} />,
     mode: <Toggle value={m.default_mode || "reduce_term"} onChange={() => preview()}>
       {modeOptions.map(([v, label]) => <ToggleBtn value={v} label={label} />)}
@@ -156,12 +156,12 @@ const MortgageView = (app) => {
   function preview() {
     const amt = pp.amount.value || 0;
     if(amt <= 0) { effect.textContent = ""; return; }
-    const ev = { id: "preview", date: pp.date.value || Core.today(), type: "prepayment", amount: amt, fee_pct: pp.fee.value || 0, mode: pp.mode.value };
-    const after = Core.mortgageReport({ ...m, events: [...m.events, ev] }).info;
+    const ev = { id: "preview", date: pp.date.value || Dates.today(), type: "prepayment", amount: amt, fee_pct: pp.fee.value || 0, mode: pp.mode.value };
+    const after = Mortgage.report({ ...m, events: [...m.events, ev] }).info;
     const saved = info.future_interest - after.future_interest;
     const feeEur = amt * (pp.fee.value || 0) / 100;
     const what = pp.mode.value === "reduce_term"
-      ? T("effect_term", { new: Core.monthYear(after.end_date), old: Core.monthYear(info.end_date) })
+      ? T("effect_term", { new: Dates.monthYear(after.end_date), old: Dates.monthYear(info.end_date) })
       : T("effect_payment", { new: money(after.payment, 2), old: money(info.payment, 2) });
     effect.replaceChildren(...UI.markup(T("prepayment_effect", { effect: what, saved: money(saved), fee: money(feeEur, 2), net: money(saved - feeEur) })));
   }
@@ -184,9 +184,9 @@ const MortgageView = (app) => {
             Alert.wrn(T("warn_pot_too_small", { pot: money(pot.amount, 2), cost: money(cost, 2) }));
             return;
           }
-          const date = pp.date.value || Core.today();
-          m.events.push({ id: Core.newId(), date, type: "prepayment", amount: amt, fee_pct: feePct, mode: pp.mode.value, note: "" });
-          if(pp.fromPot.checked && pot) Core.addCash(data, pot.id, -cost, T("note_prepayment_with_fee"), date);
+          const date = pp.date.value || Dates.today();
+          m.events.push({ id: Base.newId(), date, type: "prepayment", amount: amt, fee_pct: feePct, mode: pp.mode.value, note: "" });
+          if(pp.fromPot.checked && pot) Cash.add(data, pot.id, -cost, T("note_prepayment_with_fee"), date);
           app.commit(T("flash_prepayment_booked", { amount: money(amt) }));
         }}>{T("btn_book_prepayment")}</Button></row>
       </stack>
@@ -197,13 +197,13 @@ const MortgageView = (app) => {
   if(m.events.length) {
     const grid = (
       <EditGrid rows={[...m.events].sort((a, b) => b.date.localeCompare(a.date)).map(e => ({ ...e, delete: false }))} columns={[
-        { key: "date", label: T("field_date"), type: "readonly", fmt: Core.dayMonthYear },
+        { key: "date", label: T("field_date"), type: "readonly", fmt: Dates.dayMonthYear },
         { key: "type", label: T("field_type"), type: "readonly", fmt: (v) => T(v === "payment" ? "event_payment" : "event_prepayment") },
         { key: "amount", label: T("col_amount_eur"), type: "readonly", align: "right", fmt: (v) => money(v, 2) },
         { key: "interest", label: T("field_interest_part"), type: "readonly", align: "right", fmt: (v) => v == null ? "" : money(v, 2) },
         { key: "principal", label: T("field_principal_part"), type: "readonly", align: "right", fmt: (v) => v == null ? "" : money(v, 2) },
         { key: "fee_pct", label: T("field_fee_pct"), type: "readonly", align: "right", fmt: (v) => v == null ? "" : I18N.percent(app.L, v, 2) },
-        { key: "mode", label: T("field_mode"), type: "readonly", fmt: (v) => v ? Core.modeLabel(data, v) : "" },
+        { key: "mode", label: T("field_mode"), type: "readonly", fmt: (v) => v ? Texts.modeLabel(data, v) : "" },
         { key: "delete", label: T("col_delete"), type: "check" },
       ]} />
     );
@@ -235,7 +235,7 @@ const MortgageView = (app) => {
   out.push(
     <row gap="md" align="stretch">
       <Panel title={T("chart_balance")} icon="show_chart" flex="1">
-        <LineChart lang={app.L} marker={Core.today()} series={[
+        <LineChart lang={app.L} marker={Dates.today()} series={[
           { name: T("legend_no_prepayments"), cls: "cn", dash: true, points: report.baseRows.map(r => [r.date, r.balance]) },
           { name: T("legend_your_mortgage"), cls: "c1", points: pays.map(r => [r.date, r.balance]) },
         ]} />
@@ -252,7 +252,7 @@ const MortgageView = (app) => {
   // ---------------------------------------------------------- simulator
   const sim = {
     amount: <NumberInput value={3000} min="0" step="500" onChange={() => simulate()} />,
-    start: <DatePicker format="%Y-%m-%d" value={Core.addMonths(Core.firstPaymentDate(m), 11)} onChange={() => simulate()} />,
+    start: <DatePicker format="%Y-%m-%d" value={Dates.addMonths(Mortgage.firstPaymentDate(m), 11)} onChange={() => simulate()} />,
     fee: <NumberInput value={Number(m.prepayment_fee_pct)} min="0" step="0.01" onChange={() => simulate()} />,
   };
   const simOut = <stack gap="sm"></stack>;
@@ -263,18 +263,18 @@ const MortgageView = (app) => {
   }
   function simulate() {
     const amt = sim.amount.value || 0;
-    const start = sim.start.value || Core.today();
+    const start = sim.start.value || Dates.today();
     if(amt <= 0) { simOut.replaceChildren(); return; }
-    const rows = [[T("sim_no_prepayments"), Core.monthYear(info.baseline_end), money(Core.initialPayment(m), 2),
+    const rows = [[T("sim_no_prepayments"), Dates.monthYear(info.baseline_end), money(Mortgage.initialPayment(m), 2),
       money(0), money(info.baseline_interest), money(0), money(0), money(0)]];
     const curves = [];
     for(const [mode, cls] of [["reduce_term", "c1"], ["reduce_payment", "c2"]]) {
-      const r = Core.mortgageReport(m, Core.yearlyPrepayments(start, amt, mode, sim.fee.value || 0));
-      rows.push([Core.modeLabel(data, mode), Core.monthYear(r.info.end_date), money(paymentAt(r.rows, Core.addMonths(start, 48)), 2),
+      const r = Mortgage.report(m, Mortgage.yearlyPrepayments(start, amt, mode, sim.fee.value || 0));
+      rows.push([Texts.modeLabel(data, mode), Dates.monthYear(r.info.end_date), money(paymentAt(r.rows, Dates.addMonths(start, 48)), 2),
         money(r.info.total_prepaid), money(r.info.total_interest), money(r.info.interest_saved), money(r.info.total_fees), money(r.info.net_saved)]);
-      curves.push({ name: Core.modeLabel(data, mode), cls, points: r.rows.filter(x => x.kind.startsWith("payment")).map(x => [x.date, x.balance]) });
+      curves.push({ name: Texts.modeLabel(data, mode), cls, points: r.rows.filter(x => x.kind.startsWith("payment")).map(x => [x.date, x.balance]) });
     }
-    const be = Core.prepaymentBreakEvenMonths(m);
+    const be = Mortgage.prepaymentBreakEvenMonths(m);
     simOut.replaceChildren(
       <Table columns={[T("sim_col_variant"), T("sim_col_end"), T("sim_col_payment5"), T("sim_col_prepaid"),
         T("sim_col_interest"), T("sim_col_saved"), T("sim_col_fees"), T("sim_col_net")]} rows={rows} />,

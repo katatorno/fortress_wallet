@@ -2,16 +2,16 @@
 //
 // The data file's format: its version, the migration of older files, and a record
 // of every key the current version knows. A new or removed key fails here until
-// Core.FORMAT is raised, a migration added and SHAPE updated.
+// WalletFile.FORMAT is raised, a migration added and SHAPE updated.
 // Run: tonka test fortress_wallet   (or: node .tests/format.test.cjs)
 
 const { readFileSync } = require("node:fs");
 const path = require("node:path");
 const { APP, loadCore } = require("../tools/wallet.cjs");
 
-const { Core } = loadCore();
+const { Buckets, Cash, Instruments, Mortgage, Plan, Transactions, Valuation, WalletFile, WalletHistory } = loadCore();
 const text = readFileSync(path.join(APP, "data", "wallet.example.json"), "utf8");
-const example = () => Core.parse(text);
+const example = () => WalletFile.parse(text);
 
 let pass = 0, fail = 0;
 function ok(name, cond, detail = "") {
@@ -52,8 +52,8 @@ function unknown(d) {
     items.flatMap(item => Object.keys(item).filter(k => !SHAPE[part].includes(k)).map(k => `${part}.${k}`))))];
 }
 
-const HOW = "the format changed: raise Core.FORMAT, add a migration, update SHAPE";
-ok("this test describes the current version", Core.FORMAT === VERSION, HOW);
+const HOW = "the format changed: raise WalletFile.FORMAT, add a migration, update SHAPE";
+ok("this test describes the current version", WalletFile.FORMAT === VERSION, HOW);
 ok("the example declares the current version", JSON.parse(text).version === VERSION);
 // the example is public: a real key must never reach it
 ok("the example carries no price service key", JSON.parse(text).settings.price_api_key === "");
@@ -61,15 +61,15 @@ ok("the example carries no price service key", JSON.parse(text).settings.price_a
   const raw = JSON.parse(text);
   ok("the example holds only known keys", !unknown(raw).length, `${unknown(raw).join(", ")} – ${HOW}`);
   const d = example();
-  Core.addCash(d, "emergency", 10);
-  Core.addTransaction(d, "webg", "buy", 1, 13);
-  Core.applyPlan(d, Core.contributionPlan(d, 5000));
-  d.mortgage.events.push(Core.nextPaymentEvent(d.mortgage));
-  Core.saveInstruments(d, d.assets.map(a => ({ ...a, delete: false })));
-  Core.saveBuckets(d, "equities", [{ old: "fortress", name: "fortress", share: 90 }, { old: "sandbox", name: "sandbox", share: 10 }]);
-  Core.upsertSnapshot(d);
+  Cash.add(d, "emergency", 10);
+  Transactions.add(d, "webg", "buy", 1, 13);
+  Plan.apply(d, Plan.contribution(d, 5000));
+  d.mortgage.events.push(Mortgage.nextPaymentEvent(d.mortgage));
+  Instruments.save(d, d.assets.map(a => ({ ...a, delete: false })));
+  Buckets.save(d, "equities", [{ old: "fortress", name: "fortress", share: 90 }, { old: "sandbox", name: "sandbox", share: 10 }]);
+  WalletHistory.upsertSnapshot(d);
   ok("saving adds only known keys", !unknown(d).length, `${unknown(d).join(", ")} – ${HOW}`);
-  const fresh = Core.normalize({});
+  const fresh = WalletFile.normalize({});
   ok("a new wallet holds only known keys", !unknown(fresh).length, `${unknown(fresh).join(", ")} – ${HOW}`);
   const missing = SHAPE.asset.filter(k => k !== "maturity" && d.assets.some(a => !(k in a)));
   ok("every instrument has every key of the format", !missing.length, missing.join(", "));
@@ -90,37 +90,37 @@ ok("the example carries no price service key", JSON.parse(text).settings.price_a
         target_in_bucket: 0, fractional: true },
     ],
   });
-  const d = Core.parse(JSON.stringify(old()));
+  const d = WalletFile.parse(JSON.stringify(old()));
   ok("a file without a version is brought to the current one", d.version === VERSION);
   ok("the automatic and fractional settings are dropped",
     Object.values(d.buckets).every(b => !("auto" in b)) && d.assets.every(a => !("fractional" in a)));
   ok("a manual bucket's unused share is dropped, its limit kept",
     !("target_pct_in_category" in d.buckets.hand) && d.buckets.hand.max_pct_in_category === 10);
-  ok("the migrated shares add up", !Core.badShares(d.buckets).length);
-  ok("quantities, prices and percentages stay", Core.summary(d).investments === 25 && d.assets[0].target_in_bucket === 100);
-  const again = Core.parse(Core.serialize(d));
-  ok("opening a migrated file changes nothing more", Core.serialize(again) === Core.serialize(d));
-  ok("the version is written first", Core.serialize(d).startsWith(`{\n  "version": ${VERSION},`));
+  ok("the migrated shares add up", !Buckets.badShares(d.buckets).length);
+  ok("quantities, prices and percentages stay", Valuation.summary(d).investments === 25 && d.assets[0].target_in_bucket === 100);
+  const again = WalletFile.parse(WalletFile.serialize(d));
+  ok("opening a migrated file changes nothing more", WalletFile.serialize(again) === WalletFile.serialize(d));
+  ok("the version is written first", WalletFile.serialize(d).startsWith(`{\n  "version": ${VERSION},`));
   ok("an older file gets an empty place for the key", d.settings.price_api_key === "");
   ok("an older file follows the system's theme", d.settings.theme === "system");
-  const dark = Core.parse(JSON.stringify({ ...old(), version: 4, settings: { theme: "dark" } }));
-  ok("a chosen theme survives opening and saving", Core.parse(Core.serialize(dark)).settings.theme === "dark");
-  const keyed = Core.parse(JSON.stringify({ ...old(), version: 2, settings: { price_api_key: "abc" } }));
-  ok("a key survives opening and saving", Core.parse(Core.serialize(keyed)).settings.price_api_key === "abc");
+  const dark = WalletFile.parse(JSON.stringify({ ...old(), version: 4, settings: { theme: "dark" } }));
+  ok("a chosen theme survives opening and saving", WalletFile.parse(WalletFile.serialize(dark)).settings.theme === "dark");
+  const keyed = WalletFile.parse(JSON.stringify({ ...old(), version: 2, settings: { price_api_key: "abc" } }));
+  ok("a key survives opening and saving", WalletFile.parse(WalletFile.serialize(keyed)).settings.price_api_key === "abc");
   const five = old();
   five.version = 5;
   five.settings = { fx: { USD: 1.1 }, fx_yahoo: { USD: "EURUSD=X" }, salaries_per_year: 14, prepay_share_pct: 30 };
   five.assets[0].yahoo = "A.DE";
-  const six = Core.parse(JSON.stringify(five));
+  const six = WalletFile.parse(JSON.stringify(five));
   ok("version 6 drops the Yahoo symbols and the salaries a year", !("yahoo" in six.assets[0])
     && !("fx_yahoo" in six.settings) && !("salaries_per_year" in six.settings));
   ok("and keeps everything else as it was", six.settings.fx.USD === 1.1 && six.settings.prepay_share_pct === 30
     && six.assets[0].target_in_bucket === 100 && six.buckets.hand.target_pct_in_category === 40);
   const current = { ...old(), version: VERSION };
-  ok("a current file is not migrated again", "target_pct_in_category" in Core.normalize(current).buckets.hand);
+  ok("a current file is not migrated again", "target_pct_in_category" in WalletFile.normalize(current).buckets.hand);
   for(const [name, version] of [["a newer", VERSION + 1], ["a broken", "two"], ["a zero", 0]]) {
     let refused = false;
-    try { Core.parse(JSON.stringify({ ...old(), version })); } catch(e) { refused = /version|format/i.test(e.message); }
+    try { WalletFile.parse(JSON.stringify({ ...old(), version })); } catch(e) { refused = /version|format/i.test(e.message); }
     ok(`${name} version is refused`, refused);
   }
 }
@@ -131,7 +131,7 @@ ok("the example carries no price service key", JSON.parse(text).settings.price_a
   function refusal(change) {
     const raw = JSON.parse(text);
     change(raw);
-    try { Core.parse(JSON.stringify(raw)); return null; }
+    try { WalletFile.parse(JSON.stringify(raw)); return null; }
     catch(e) { return e.message; }
   }
   const cases = [
@@ -167,7 +167,7 @@ ok("the example carries no price service key", JSON.parse(text).settings.price_a
   }) === null);
   ok("the refusal is in the wallet's language", /Popraw/.test(refusal((r) => { r.settings.language = "pl"; r.assets[0].price = "x"; })));
   let threw = false;
-  try { Core.addPrice(example(), "__proto__", "2026-01-02", null, 1); } catch { threw = true; }
+  try { WalletHistory.addPrice(example(), "__proto__", "2026-01-02", null, 1); } catch { threw = true; }
   ok("no price is kept under a reserved name", threw && !("2026-01-02" in {}));
 }
 

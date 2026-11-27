@@ -19,7 +19,7 @@ const Online = (() => {
     const names = Object.keys(data.settings.fx || {});
     const currencies = names.filter(c => CODE.test(c) && c !== "EUR");
     const skipped = names.filter(c => !currencies.includes(c));
-    if(!currencies.length) return { updated: [], skipped, date: Core.today() };
+    if(!currencies.length) return { updated: [], skipped, date: Dates.today() };
     const query = new URLSearchParams({ base: "EUR", symbols: currencies.join(",") });
     const res = await fetch(`${FX_URL}?${query}`);
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -32,7 +32,7 @@ const Online = (() => {
         updated.push(`EUR/${cur}`);
       }
     }
-    const date = /^\d{4}-\d{2}-\d{2}$/.test(body?.date) ? body.date : Core.today();
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(body?.date) ? body.date : Dates.today();
     return { updated, skipped, date };
   }
 

@@ -1,7 +1,7 @@
 // scripts/Settings.jsx
 //
 // Budget and emergency fund, allocation targets, buckets and language. The rules
-// of a save are in Core.saveSettings: everything is checked first, and a refused
+// of a save are in Settings.save: everything is checked first, and a refused
 // save changes nothing.
 
 const SettingsView = (app) => {
@@ -21,7 +21,7 @@ const SettingsView = (app) => {
 
   const targets = (
     <EditGrid rows={Object.entries(data.categories).map(([c, cfg]) => ({
-      category: c, label: Core.categoryLabel(data, c), target_pct: Number(cfg.target_pct), buy: !!cfg.buy,
+      category: c, label: Texts.categoryLabel(data, c), target_pct: Number(cfg.target_pct), buy: !!cfg.buy,
     }))} columns={[
       { key: "label", label: T("col_category"), type: "readonly" },
       { key: "target_pct", label: T("col_target_pct"), type: "number", min: 0, max: 100, width: "5rem" },
@@ -39,7 +39,7 @@ const SettingsView = (app) => {
         target: cfg.target_pct_in_category ?? null, limit: cfg.max_pct_in_category ?? null, delete: false,
       }))} columns={[
         { key: "bucket", label: T("col_bucket"), width: "9rem" },
-        { key: "category", label: T("col_category"), type: "select", options: Object.keys(data.categories).map(c => [c, Core.categoryLabel(data, c)]) },
+        { key: "category", label: T("col_category"), type: "select", options: Object.keys(data.categories).map(c => [c, Texts.categoryLabel(data, c)]) },
         { key: "target", label: T("col_target_in_category"), type: "number", min: 0, max: 100, width: "5rem" },
         { key: "limit", label: T("col_limit_in_category"), type: "number", min: 0, max: 100, width: "5rem" },
         { key: "delete", label: T("col_delete"), type: "check" },
@@ -56,7 +56,7 @@ const SettingsView = (app) => {
   function save() {
     const value = (input, fallback) => input.value ?? fallback;
     try {
-      Core.saveSettings(data, {
+      Settings.save(data, {
         settings: {
           emergency_target: value(f.emergency, s.emergency_target), monthly_expenses: value(f.expenses, s.monthly_expenses),
           net_income: value(f.income, s.net_income), prepay_share_pct: value(f.share, s.prepay_share_pct),
@@ -68,7 +68,7 @@ const SettingsView = (app) => {
       });
     }
     catch(e) {
-      if(!(e instanceof Core.RuleError)) throw e;
+      if(!(e instanceof Rules.RuleError)) throw e;
       Alert.err(T(e.key, e.vars));
       return;
     }

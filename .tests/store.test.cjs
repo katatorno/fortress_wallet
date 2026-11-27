@@ -51,8 +51,8 @@ function world({ withHandle = true } = {}) {
     clearTimeout: (t) => w.timers.delete(t),
     fetch: async () => ({ text: async () => EXAMPLE }),
   };
-  const { run, Core } = loadCore(["store.js"], globals);
-  w.Core = Core;
+  const { ctx, run, ...modules } = loadCore(["store.js"], globals);
+  Object.assign(w, modules); // by name, from the context the store runs in
   w.Store = run("Store");
   /** Runs the timers due, as the time passing would, and waits for what they started. */
   w.tick = async () => {
@@ -69,19 +69,19 @@ const change = (w, note) => { w.Store.get().strategy_notes = note; return w.Stor
 
 /** An instrument added as the form of Instruments.jsx adds one, and what `changed` answers. */
 function addInstrument(w, fields) {
-  const { Core, Store } = w;
+  const { Base, Buckets, Dates, Store, WalletFile } = w;
   const data = Store.get();
   const bucket = Object.keys(data.buckets)[0];
-  const asset = Core.normalize({ assets: [{
-    id: Core.newId(), name: "New", ticker: "", category: data.buckets[bucket].category, bucket,
-    currency: "EUR", opening_quantity: 0, price: 0, unit: "pcs", price_updated: Core.today(), ...fields,
+  const asset = WalletFile.normalize({ assets: [{
+    id: Base.newId(), name: "New", ticker: "", category: data.buckets[bucket].category, bucket,
+    currency: "EUR", opening_quantity: 0, price: 0, unit: "pcs", price_updated: Dates.today(), ...fields,
   }] }).assets[0];
   data.assets.push(asset);
-  Core.rebalance(data, bucket);
+  Buckets.rebalance(data, bucket);
   return Store.changed();
 }
 /** The message of opening a file with this text, "" when it opens. */
-const refusal = (w, text) => { try { w.Core.parse(text); return ""; } catch(e) { return e.message; } };
+const refusal = (w, text) => { try { w.WalletFile.parse(text); return ""; } catch(e) { return e.message; } };
 
 // the wallet's maps, by their paths: the rest of its objects are records
 const MAPS = /^(categories|buckets|settings\.fx|prices(\.[^.]+)?|fx_history(\.[^.]+)?)$/;
@@ -202,12 +202,12 @@ function places(value, at = []) {
   {
     const w = world();
     await w.Store.openLocal();
-    const before = w.Core.serialize(w.Store.get());
+    const before = w.WalletFile.serialize(w.Store.get());
     const at = w.Store.get().assets.length;
     const found = addInstrument(w, { price: -5 });
     ok("a negative price is refused, naming where", found.length === 1 && found[0].startsWith(`assets[${at}].price:`),
       JSON.stringify(found));
-    ok("the wallet is as it was before the change", w.Core.serialize(w.Store.get()) === before);
+    ok("the wallet is as it was before the change", w.WalletFile.serialize(w.Store.get()) === before);
     ok("the status stays and no save is due", w.Store.state().status === "saved" && !w.Store.unsaved() && !w.timers.size);
     await w.tick();
     ok("nothing reaches the file", !w.writes.length && w.file.text === EXAMPLE);
@@ -215,15 +215,15 @@ function places(value, at = []) {
     await w.tick();
     ok("and is saved as usual", w.writes.length === 1 && notes(w.file.text) === "one" && !w.Store.unsaved()
       && JSON.parse(w.file.text).assets.length === at, w.writes.length);
-    ok("an accepted change takes the day's snapshot", JSON.parse(w.file.text).history.some(h => h.date === w.Core.today()));
+    ok("an accepted change takes the day's snapshot", JSON.parse(w.file.text).history.some(h => h.date === w.Dates.today()));
   }
   {
     const w = world();
     await w.Store.openLocal();
     change(w, "one");
-    const before = w.Core.serialize(w.Store.get());
+    const before = w.WalletFile.serialize(w.Store.get());
     addInstrument(w, { price: -5 });
-    ok("a refusal keeps the change accepted before it", w.Core.serialize(w.Store.get()) === before);
+    ok("a refusal keeps the change accepted before it", w.WalletFile.serialize(w.Store.get()) === before);
     ok("which is still unsaved, its save still due", w.Store.state().status === "dirty" && w.Store.unsaved() && w.timers.size === 1);
     await w.tick();
     ok("and is saved without the refused one", w.writes.length === 1 && w.file.text === before, w.writes.length);
@@ -231,15 +231,15 @@ function places(value, at = []) {
   {
     const w = world();
     await w.Store.openExample("en");
-    const before = w.Core.serialize(w.Store.get());
+    const before = w.WalletFile.serialize(w.Store.get());
     ok("the example is held to the same check", addInstrument(w, { price: -5 }).length === 1
-      && w.Core.serialize(w.Store.get()) === before);
+      && w.WalletFile.serialize(w.Store.get()) === before);
     const found = addInstrument(w, { currency: "GBP" });
     ok("a change only the sums cannot take is refused too", found.length === 1 && found[0].includes("GBP")
-      && w.Core.serialize(w.Store.get()) === before, JSON.stringify(found));
+      && w.WalletFile.serialize(w.Store.get()) === before, JSON.stringify(found));
     const huge = addInstrument(w, { price: 1e308, opening_quantity: 10 });
     ok("so is one whose numbers add up to no number", huge.some(p => /^history\[\d+\]\.net_worth:/.test(p))
-      && w.Core.serialize(w.Store.get()) === before, JSON.stringify(huge));
+      && w.WalletFile.serialize(w.Store.get()) === before, JSON.stringify(huge));
     ok("which leaves nothing that stops the next change", change(w, "one").length === 0);
   }
 
@@ -250,10 +250,10 @@ function places(value, at = []) {
     // an element in every list and map the example leaves empty
     const live = w.Store.get();
     const [asset] = live.assets, [account] = live.cash;
-    w.Core.addTransaction(live, asset.id, "buy", 1, 10);
-    w.Core.addCash(live, account.id, 10);
-    live.mortgage.events.push(w.Core.nextPaymentEvent(live.mortgage));
-    w.Core.addPrice(live, asset.id, "2026-01-02", null, 10);
+    w.Transactions.add(live, asset.id, "buy", 1, 10);
+    w.Cash.add(live, account.id, 10);
+    live.mortgage.events.push(w.Mortgage.nextPaymentEvent(live.mortgage));
+    w.WalletHistory.addPrice(live, asset.id, "2026-01-02", null, 10);
     live.fx_history["2026-01-02"] = { USD: 1.1 };
     w.Store.changed();
     await w.tick();
@@ -280,7 +280,7 @@ function places(value, at = []) {
         const what = `${place.join(".")} = ${name}`;
         if(found.length) {
           refused += 1;
-          if(w.writes.length !== writes || w.Core.serialize(w.Store.get()) !== start) kept.push(what);
+          if(w.writes.length !== writes || w.WalletFile.serialize(w.Store.get()) !== start) kept.push(what);
         }
         else {
           accepted += 1;
@@ -298,20 +298,20 @@ function places(value, at = []) {
   // ---------------------------------------------------------- the check itself
   {
     const w = world();
-    const data = w.Core.parse(EXAMPLE);
-    ok("the example has nothing to refuse", w.Core.check(data).length === 0);
+    const data = w.WalletFile.parse(EXAMPLE);
+    ok("the example has nothing to refuse", w.WalletFile.check(data).length === 0);
     data.assets[0].price = -5;
-    const found = w.Core.check(data);
-    const message = refusal(w, w.Core.serialize(data));
+    const found = w.WalletFile.check(data);
+    const message = refusal(w, w.WalletFile.serialize(data));
     ok("the check names the place that opening such a file names", found.length === 1
       && found[0].startsWith("assets[0].price:") && message.includes(found[0]), `${JSON.stringify(found)} | ${message}`);
     data.assets[0].price = 1;
     data.assets[0].currency = "GBP";
-    const sums = w.Core.check(data);
+    const sums = w.WalletFile.check(data);
     ok("and gives the same reason when only the sums fail", sums.length === 1
-      && sums[0] === refusal(w, w.Core.serialize(data)), JSON.stringify(sums));
+      && sums[0] === refusal(w, w.WalletFile.serialize(data)), JSON.stringify(sums));
     const many = Array.from({ length: 12 }, (_, i) => `place${i}`);
-    ok("a long list of places is cut after ten", w.Core.problemList(many) === `${many.slice(0, 10).join("; ")} … (+2)`);
+    ok("a long list of places is cut after ten", w.WalletFile.problemList(many) === `${many.slice(0, 10).join("; ")} … (+2)`);
   }
 
   console.log(`\n${pass} passed, ${fail} failed`);

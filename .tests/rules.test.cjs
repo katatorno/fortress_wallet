@@ -1,7 +1,7 @@
 // .tests/rules.test.cjs
 //
-// The saves of the settings, cash, mortgage and transactions views (Core.saveSettings,
-// saveCash, saveMortgage, recordTransaction): everything is checked first, and a
+// The saves of the settings, cash, mortgage and transactions views (Settings.save,
+// Cash.save, Mortgage.save, Transactions.record): everything is checked first, and a
 // refusal names its reason and changes nothing. Also: an instrument takes the
 // category of its bucket.
 // Run: tonka test fortress_wallet   (or: node .tests/rules.test.cjs)
@@ -10,8 +10,8 @@ const { readFileSync } = require("node:fs");
 const path = require("node:path");
 const { APP, loadCore } = require("../tools/wallet.cjs");
 
-const { Core } = loadCore();
-const example = () => Core.parse(readFileSync(path.join(APP, "data", "wallet.example.json"), "utf8"));
+const { Advice, Buckets, Cash, Instruments, Mortgage, Rules, Settings, Transactions, WalletFile } = loadCore();
+const example = () => WalletFile.parse(readFileSync(path.join(APP, "data", "wallet.example.json"), "utf8"));
 
 let pass = 0, fail = 0;
 function ok(name, cond, detail = "") {
@@ -26,7 +26,7 @@ function refusal(fn, start = example) {
   const before = JSON.stringify(d);
   try { fn(d); }
   catch(e) {
-    if(!(e instanceof Core.RuleError)) return `not a rule: ${e.message}`;
+    if(!(e instanceof Rules.RuleError)) return `not a rule: ${e.message}`;
     return JSON.stringify(d) === before ? e.key : "data changed";
   }
   return null;
@@ -36,14 +36,14 @@ function refusal(fn, start = example) {
 {
   const cats = (d, change = {}) => Object.entries(d.categories).map(([c, cfg]) => ({ category: c, target_pct: cfg.target_pct, buy: cfg.buy, ...(change[c] || {}) }));
   const d = example();
-  Core.saveSettings(d, { settings: { emergency_target: "5000", stale_days: 7.6 }, categories: cats(d) });
+  Settings.save(d, { settings: { emergency_target: "5000", stale_days: 7.6 }, categories: cats(d) });
   ok("settings are saved, as numbers", d.settings.emergency_target === 5000 && d.settings.stale_days === 8);
-  ok("a negative amount is refused", refusal(d => Core.saveSettings(d, { settings: { emergency_target: -1 } })) === "err_value_min");
-  ok("a share above 100% is refused", refusal(d => Core.saveSettings(d, { settings: { prepay_share_pct: 150 } })) === "err_value_range");
-  ok("text where a number belongs is refused", refusal(d => Core.saveSettings(d, { settings: { net_income: "abc" } })) === "err_value_number");
-  ok("category targets must add up to 100%", refusal(d => Core.saveSettings(d, { categories: cats(d, { bonds: { target_pct: 0 } }) }))
+  ok("a negative amount is refused", refusal(d => Settings.save(d, { settings: { emergency_target: -1 } })) === "err_value_min");
+  ok("a share above 100% is refused", refusal(d => Settings.save(d, { settings: { prepay_share_pct: 150 } })) === "err_value_range");
+  ok("text where a number belongs is refused", refusal(d => Settings.save(d, { settings: { net_income: "abc" } })) === "err_value_number");
+  ok("category targets must add up to 100%", refusal(d => Settings.save(d, { categories: cats(d, { bonds: { target_pct: 0 } }) }))
     === "err_category_sum");
-  ok("a later refusal keeps the earlier values from being saved", refusal(d => Core.saveSettings(d, {
+  ok("a later refusal keeps the earlier values from being saved", refusal(d => Settings.save(d, {
     settings: { emergency_target: 1 }, categories: cats(d, { bonds: { target_pct: 0 } }) })) === "err_category_sum");
 }
 
@@ -53,7 +53,7 @@ function refusal(fn, start = example) {
     old: b, name: b, category: cfg.category, share: cfg.target_pct_in_category ?? null, limit: cfg.max_pct_in_category ?? null,
     ...(change[b] || {}),
   }));
-  const save = (d, list) => Core.saveSettings(d, { buckets: list });
+  const save = (d, list) => Settings.save(d, { buckets: list });
 
   const d = example();
   save(d, rows(d, { fortress: { name: "core" } }));
@@ -87,7 +87,7 @@ function refusal(fn, start = example) {
   save(e, rows(e, { spare: { category: "metals" }, metals: { share: 100 }, bonds: { share: null } }));
   ok("an empty bucket may change category", e.buckets.spare.category === "metals");
   save(e, rows(e, { spare: { delete: true }, metals: { share: null } }));
-  ok("and be removed", !("spare" in e.buckets) && !Core.badShares(e.buckets).length);
+  ok("and be removed", !("spare" in e.buckets) && !Buckets.badShares(e.buckets).length);
 }
 
 // ---------------------------------------------------------------- cash
@@ -96,13 +96,13 @@ function refusal(fn, start = example) {
   const d = example();
   const id = d.cash[0].id;
   const logged = d.cash_log.length;
-  Core.saveCash(d, rows(d, { [id]: { amount: d.cash[0].amount + 25, name: "Renamed" } }), "fix", "2026-11-27");
+  Cash.save(d, rows(d, { [id]: { amount: d.cash[0].amount + 25, name: "Renamed" } }), "fix", "2026-11-27");
   ok("a changed balance is logged as a correction", d.cash_log.length === logged + 1 && d.cash_log.at(-1).amount === 25
     && d.cash_log.at(-1).note === "fix" && d.cash[0].name === "Renamed");
-  ok("an unknown role is refused", refusal(d => Core.saveCash(d, rows(d, { [id]: { role: "toys" } }))) === "err_value_choice");
-  ok("a currency without a rate is refused", refusal(d => Core.saveCash(d, rows(d, { [id]: { currency: "XYZ" } }))) === "err_value_choice");
+  ok("an unknown role is refused", refusal(d => Cash.save(d, rows(d, { [id]: { role: "toys" } }))) === "err_value_choice");
+  ok("a currency without a rate is refused", refusal(d => Cash.save(d, rows(d, { [id]: { currency: "XYZ" } }))) === "err_value_choice");
   ok("a balance that is no number is refused, the rows before it unsaved too",
-    refusal(d => Core.saveCash(d, rows(d, { [d.cash[0].id]: { amount: 1 }, [d.cash.at(-1).id]: { amount: "x" } }))) === "err_value_number");
+    refusal(d => Cash.save(d, rows(d, { [d.cash[0].id]: { amount: 1 }, [d.cash.at(-1).id]: { amount: "x" } }))) === "err_value_number");
 }
 
 // ---------------------------------------------------------------- mortgage
@@ -111,25 +111,25 @@ function refusal(fn, start = example) {
   const loan = { amount: 270000, rate_pct: 3.5, term_months: "419.6", first_payment_date: "2027-03-01", bank_payment: 0,
     prepayment_fee_pct: 1, default_mode: "reduce_term" };
   const d = example();
-  Core.saveMortgage(d, house, loan);
+  Mortgage.save(d, house, loan);
   ok("the parameters are saved", d.house.value === 310000 && d.mortgage.term_months === 420 && d.mortgage.bank_payment === null
     && d.house.deed_date === "2026-12-20");
-  ok("a negative rate is refused", refusal(d => Core.saveMortgage(d, house, { ...loan, rate_pct: -1 })) === "err_value_range");
-  ok("no payments at all is refused", refusal(d => Core.saveMortgage(d, house, { ...loan, term_months: 0 })) === "err_value_range");
-  ok("a negative price is refused", refusal(d => Core.saveMortgage(d, { ...house, value: -5 }, loan)) === "err_value_min");
-  ok("a date that is none is refused", refusal(d => Core.saveMortgage(d, { ...house, deed_date: "soon" }, loan)) === "err_value_choice");
-  ok("an unknown mode is refused", refusal(d => Core.saveMortgage(d, house, { ...loan, default_mode: "fast" })) === "err_value_choice");
+  ok("a negative rate is refused", refusal(d => Mortgage.save(d, house, { ...loan, rate_pct: -1 })) === "err_value_range");
+  ok("no payments at all is refused", refusal(d => Mortgage.save(d, house, { ...loan, term_months: 0 })) === "err_value_range");
+  ok("a negative price is refused", refusal(d => Mortgage.save(d, { ...house, value: -5 }, loan)) === "err_value_min");
+  ok("a date that is none is refused", refusal(d => Mortgage.save(d, { ...house, deed_date: "soon" }, loan)) === "err_value_choice");
+  ok("an unknown mode is refused", refusal(d => Mortgage.save(d, house, { ...loan, default_mode: "fast" })) === "err_value_choice");
 }
 
 // ---------------------------------------------------------------- transactions
 {
-  const tx = (d, t) => Core.recordTransaction(d, { assetId: "webg", type: "buy", quantity: 1, price: 13, date: "2026-11-20", ...t });
+  const tx = (d, t) => Transactions.record(d, { assetId: "webg", type: "buy", quantity: 1, price: 13, date: "2026-11-20", ...t });
   const d = example();
-  const held = Core.heldOn(d, "webg");
+  const held = Transactions.heldOn(d, "webg");
   tx(d, { quantity: 2, date: "2026-11-27" });
-  ok("a purchase is recorded, its price the newest", Core.heldOn(d, "webg") === held + 2 && asset(d, "webg").price === 13);
+  ok("a purchase is recorded, its price the newest", Transactions.heldOn(d, "webg") === held + 2 && asset(d, "webg").price === 13);
   tx(d, { type: "sell", quantity: 1, date: "2026-11-21" });
-  ok("a sale of what is held is recorded", Core.heldOn(d, "webg") === held + 1);
+  ok("a sale of what is held is recorded", Transactions.heldOn(d, "webg") === held + 1);
   ok("an unknown instrument is refused", refusal(d => tx(d, { assetId: "nope" })) === "warn_add_instrument_first");
   ok("a quantity of 0 is refused", refusal(d => tx(d, { quantity: 0 })) === "warn_quantity_zero");
   ok("a negative purchase is refused", refusal(d => tx(d, { quantity: -1 })) === "warn_quantity_positive");
@@ -147,11 +147,11 @@ function refusal(fn, start = example) {
 // ---------------------------------------------------------------- category from the bucket
 {
   const d = example();
-  Core.saveInstruments(d, d.assets.map(a => ({ ...a, delete: false, ...(a.id === "nke" ? { bucket: "metals", category: "equities" } : {}) })));
+  Instruments.save(d, d.assets.map(a => ({ ...a, delete: false, ...(a.id === "nke" ? { bucket: "metals", category: "equities" } : {}) })));
   ok("a moved instrument takes its new bucket's category", asset(d, "nke").category === "metals");
   const e = example();
   asset(e, "gpc").category = "bonds"; // as a file made before could have it
-  const titles = Core.recommendations(e, "2026-11-27").map(r => r.title);
+  const titles = Advice.recommendations(e, "2026-11-27").map(r => r.title);
   ok("an instrument in a bucket of another category is pointed out", titles.some(t => t.includes(asset(e, "gpc").name)
     && /another category/.test(t)));
 }

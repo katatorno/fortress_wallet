@@ -17,11 +17,11 @@ function instrumentPanels(app, categories) {
   const currencies = ["EUR", ...Object.keys(data.settings.fx)];
   const bucketNames = categories.flatMap(c => bucketsOf(data, c));
   // listed bucket by bucket, in the buckets' order
-  const pos = Core.positions(data).filter(p => categories.includes(p.category) && !Core.soldOut(data, p))
+  const pos = Valuation.positions(data).filter(p => categories.includes(p.category) && !Instruments.soldOut(data, p))
     .sort((a, b) => bucketNames.indexOf(a.bucket) - bucketNames.indexOf(b.bucket));
   // with buckets of several categories each one says its category
   const several = categories.length > 1;
-  const bucketOptions = bucketNames.map(b => [b, several ? `${b} (${Core.categoryLabel(data, data.buckets[b].category)})` : b]);
+  const bucketOptions = bucketNames.map(b => [b, several ? `${b} (${Texts.categoryLabel(data, data.buckets[b].category)})` : b]);
   const alerts = !categories.includes("equities"); // equities are only bought: no sell alerts
 
   /** Saves and says in which buckets the percentages were recalculated. */
@@ -41,7 +41,7 @@ function instrumentPanels(app, categories) {
       { key: "price", label: T("col_price"), type: "number", step: "0.0001", min: 0, width: "6.5rem" },
       { key: "value_eur", label: T("col_value_eur"), type: "readonly", align: "right", fmt: (v) => money(v, 2) },
       ...(alerts ? [{ key: "alert_price", label: T("col_alert"), type: "number", width: "6rem" }] : []),
-      { key: "price_updated", label: T("col_price_date"), type: "readonly", fmt: (v) => v ? Core.dayMonthYear(v) : "–" },
+      { key: "price_updated", label: T("col_price_date"), type: "readonly", fmt: (v) => v ? Dates.dayMonthYear(v) : "–" },
       { key: "delete", label: T("col_delete"), type: "check" },
     ]} />
   );
@@ -56,7 +56,7 @@ function instrumentPanels(app, categories) {
         {confirm}
         <row><Button variant="primary" icon="save" onClick={() => {
           if(grid.rows.some(r => r.delete) && !confirm.checked) { Alert.wrn(T("warn_confirm_delete")); return; }
-          commitWith(Core.saveInstruments(data, grid.rows), T("flash_instruments_saved"));
+          commitWith(Instruments.save(data, grid.rows), T("flash_instruments_saved"));
         }}>{T("btn_save_instruments")}</Button></row>
       </stack>
     </Panel>
@@ -84,15 +84,15 @@ function instrumentPanels(app, categories) {
           if(!name) { Alert.wrn(T("warn_name_required")); return; }
           const bucket = data.buckets[f.bucket.value];
           if(!bucket) { Alert.wrn(T("warn_bucket_required")); return; }
-          const asset = Core.normalize({ assets: [{
-            id: Core.newId(), name, ticker: f.ticker.value,
+          const asset = WalletFile.normalize({ assets: [{
+            id: Base.newId(), name, ticker: f.ticker.value,
             category: bucket.category, bucket: f.bucket.value,
             currency: f.currency.value, opening_quantity: f.qty.value || 0, price: f.price.value || 0,
             unit: f.unit.value || "pcs",
-            price_updated: Core.today(),
+            price_updated: Dates.today(),
           }] }).assets[0];
           data.assets.push(asset);
-          commitWith([asset.bucket].filter(b => Core.rebalance(data, b)), T("flash_instrument_added", { name }));
+          commitWith([asset.bucket].filter(b => Buckets.rebalance(data, b)), T("flash_instrument_added", { name }));
         }}>{T("btn_add")}</Button></row>
       </stack>
     </Expander>
@@ -104,7 +104,7 @@ function instrumentPanels(app, categories) {
 /** Everything that is not traded as equities: metals, bonds. */
 const OtherAssetsView = (app) => {
   const categories = Object.keys(app.data.categories).filter(c => c !== "equities");
-  const pos = Core.positions(app.data);
+  const pos = Valuation.positions(app.data);
   return (
     <stack gap="md">
       {categories.flatMap(c => bucketsOf(app.data, c))

@@ -7,7 +7,7 @@
 /** Invested vs worth: the three numbers of today and both lines over time. */
 function portfolioPanel(app) {
   const { data, T, money } = app;
-  const days = Core.portfolioHistory(data, "equities");
+  const days = WalletHistory.portfolio(data, "equities");
   const last = days[days.length - 1];
   const gain = last ? last.value - last.invested : 0;
   const percent = last?.invested ? ` (${gain >= 0 ? "+" : ""}${I18N.percent(app.L, gain / last.invested * 100)})` : "";
@@ -34,7 +34,7 @@ function portfolioPanel(app) {
 const MarketView = (app) => {
   const { data, T, money } = app;
   const s = data.settings;
-  const pos = Core.positions(data).filter(p => p.category === "equities");
+  const pos = Valuation.positions(data).filter(p => p.category === "equities");
   // the same wallet as the calculator sees it, with equities as the only thing to buy
   const equitiesOnly = () => ({ ...data, categories: { equities: data.categories.equities || { buy: false } } });
 
@@ -52,17 +52,17 @@ const MarketView = (app) => {
   const result = <stack gap="md"></stack>;
   let plan = null;
   const amount = <NumberInput value={500} min="0" step="100" onChange={() => update()} />;
-  const date = <DatePicker format="%Y-%m-%d" value={Core.today()} />;
+  const date = <DatePicker format="%Y-%m-%d" value={Dates.today()} />;
   const record = (
     <Button variant="primary" icon="check" onClick={() => {
       const spent = plan.lines.filter(l => l.kind === "buy").reduce((a, l) => a + l.eur, 0);
-      Core.applyPlan(data, plan, date.value);
+      Plan.apply(data, plan, date.value);
       app.commit(T("flash_purchases_recorded", { amount: money(spent, 2) }));
     }}>{T("btn_record_purchases")}</Button>
   );
 
   function update() {
-    plan = Core.contributionPlan(equitiesOnly(), amount.value || 0, false, 0);
+    plan = Plan.contribution(equitiesOnly(), amount.value || 0, false, 0);
     record.disabled = !plan.lines.some(l => l.kind === "buy");
     result.replaceChildren(
       planTable(app, plan),
@@ -93,7 +93,7 @@ const MarketView = (app) => {
         btn.loading = true;
         try {
           const res = await Online.fetchFx(data);
-          app.commit(T("flash_fx_updated", { names: res.updated.join(", "), date: Core.dayMonthYear(res.date) }));
+          app.commit(T("flash_fx_updated", { names: res.updated.join(", "), date: Dates.dayMonthYear(res.date) }));
           if(res.skipped.length) Alert.wrn(T("warn_fx_skipped", { names: res.skipped.join(", ") }));
         }
         catch(err) { Alert.err(T("err_fx_update", { error: err.message })); }

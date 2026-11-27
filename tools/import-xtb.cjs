@@ -7,7 +7,7 @@
 //
 //   node tools/import-xtb.cjs <export.xlsx> <wallet.json> [--dry-run]
 
-const { Core, open, save } = require("./wallet.cjs");
+const { Base, Transactions, WalletFile, WalletHistory, open, save } = require("./wallet.cjs");
 const { readXlsx } = require("./xlsx.cjs");
 
 // XTB ticker → the instrument it is in the wallet, and its symbol at the price service
@@ -40,7 +40,7 @@ const after = (rows, head) => rows.slice(rows.findIndex(r => r.A === head) + 1);
 /** A new instrument's id from its ticker: letters and digits, never empty nor a reserved name. */
 const idOf = (ticker) => {
   const id = String(ticker).toLowerCase().replace(/[^a-z0-9]/g, "");
-  return !id || Core.isReserved(id) ? `x${id}` : id;
+  return !id || Base.isReserved(id) ? `x${id}` : id;
 };
 
 /** The export as plain records. */
@@ -86,37 +86,37 @@ function importInto(data, x) {
       const bond = BOND_FUNDS.includes(ticker);
       const category = bond ? "bonds" : "equities";
       const buckets = Object.keys(data.buckets).filter(b => data.buckets[b].category === category);
-      asset = Core.normalize({ assets: [{ id, name: x.names[ticker], category, bucket: buckets[buckets.length - 1],
+      asset = WalletFile.normalize({ assets: [{ id, name: x.names[ticker], category, bucket: buckets[buckets.length - 1],
         currency: currencyOf(ticker) }] }).assets[0];
       data.assets.push(asset);
     }
     if(asset.currency !== currencyOf(ticker)) throw new Error(`${ticker}: the wallet has it in ${asset.currency}`);
-    const before = Core.quantities(data)[id];
+    const before = Transactions.quantities(data)[id];
     Object.assign(asset, { ticker, opening_quantity: 0, price_symbol: asset.price_symbol || known?.symbol || "" });
 
     const trade = (lotId, type, date, quantity, price, note) =>
       data.transactions.push({ id: `xtb-${lotId}-${type}`, date, asset_id: id, type, quantity, price, fee: 0, note });
     for(const l of held) {
       trade(l.id, "buy", l.openDate, l.volume, l.openPrice, "XTB");
-      if(marketPrice(l, l.openPrice)) Core.addPrice(data, id, l.openDate, null, l.openPrice, true);
+      if(marketPrice(l, l.openPrice)) WalletHistory.addPrice(data, id, l.openDate, null, l.openPrice, true);
     }
     for(const l of gone) {
       trade(l.id, "buy", l.openDate, l.volume, l.openPrice, /Transfer/i.test(l.comment) ? "XTB transfer" : "XTB");
       trade(l.id, "sell", l.closeDate, l.volume, l.closePrice, "XTB");
-      if(marketPrice(l, l.openPrice)) Core.addPrice(data, id, l.openDate, null, l.openPrice, true);
-      Core.addPrice(data, id, l.closeDate, null, l.closePrice, true);
+      if(marketPrice(l, l.openPrice)) WalletHistory.addPrice(data, id, l.openDate, null, l.openPrice, true);
+      WalletHistory.addPrice(data, id, l.closeDate, null, l.closePrice, true);
     }
     if(held.length) {
       asset.price = held[0].price;
       asset.price_updated = x.date;
-      Core.addPrice(data, id, x.date, null, held[0].price, true);
+      WalletHistory.addPrice(data, id, x.date, null, held[0].price, true);
     }
     else {
       const last = [...gone].sort((a, b) => a.closeDate.localeCompare(b.closeDate)).at(-1);
       asset.price = last.closePrice;
       asset.price_updated = last.closeDate;
     }
-    const now = Core.quantities(data)[id];
+    const now = Transactions.quantities(data)[id];
     const expected = held.reduce((s, l) => s + l.volume, 0);
     if(Math.abs(now - expected) > 1e-6) throw new Error(`${ticker}: ${now} after import, the export holds ${expected}`);
     report.push({ ticker, id, before, now: Math.round(now * 1e4) / 1e4, price: asset.price });
@@ -133,7 +133,7 @@ function importInto(data, x) {
       note: c.ticker ? `${c.type}: ${c.ticker}` : c.type });
   }
   data.cash_log.sort((a, b) => a.date.localeCompare(b.date));
-  account.amount = Core.round2(x.cash.reduce((s, c) => s + c.amount, 0));
+  account.amount = Base.round2(x.cash.reduce((s, c) => s + c.amount, 0));
   data.transactions.sort((a, b) => a.date.localeCompare(b.date));
   const first = [...x.cash.map(c => c.date), ...data.transactions.map(t => t.date)].sort()[0];
   return { report, first, cash: account.amount };
@@ -145,7 +145,7 @@ if(require.main === module) {
   const x = readExport(source);
   const data = open(target);
   const done = importInto(data, x);
-  Core.parse(Core.serialize(data)); // the result must open
+  WalletFile.parse(WalletFile.serialize(data)); // the result must open
   console.log("ticker     | id     | quantity before → now | price");
   for(const r of done.report) {
     if(r.now || r.before) console.log(`${r.ticker.padEnd(10)} | ${r.id.padEnd(6)} | ${+r.before.toFixed(4)} → ${r.now} | ${r.price}`);

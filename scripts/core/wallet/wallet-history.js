@@ -1,27 +1,21 @@
-// scripts/core/wallet/8-history.js
+// scripts/core/wallet/wallet-history.js
 //
-// History: net-worth snapshots, stored prices, the history rebuilt from them, what was
-// put in against what it is worth, and the ranges of the history charts.
+// The wallet's history: net-worth snapshots, stored prices, the history rebuilt from
+// them, and what was put in against what it is worth.
 
-Object.assign(Core, (() => {
-  const {
-    round2, setDefault, isReserved, today, parseDate, addMonths, fx, quantities, summary,
-  } = Core;
-
-  // ---------------------------------------------------------------- history
-
+const WalletHistory = (() => {
   /** The numbers of one day's snapshot, as the wallet `data` stands. */
   function _snapshot(data, date) {
-    const s = summary(data);
+    const s = Valuation.summary(data);
     const snap = {
       date,
-      investments: round2(s.investments),
-      cash: round2(s.cash_total),
-      house_equity: round2(s.house.equity),
-      mortgage: round2(s.house.mortgage),
-      net_worth: round2(s.net_worth),
+      investments: Base.round2(s.investments),
+      cash: Base.round2(s.cash_total),
+      house_equity: Base.round2(s.house.equity),
+      mortgage: Base.round2(s.house.mortgage),
+      net_worth: Base.round2(s.net_worth),
     };
-    for(const [c, v] of Object.entries(s.categories)) snap[`cat_${c}`] = round2(v);
+    for(const [c, v] of Object.entries(s.categories)) snap[`cat_${c}`] = Base.round2(v);
     return snap;
   }
 
@@ -32,7 +26,7 @@ Object.assign(Core, (() => {
   }
 
   function upsertSnapshot(data, on = null) {
-    _putSnapshots(data, [_snapshot(data, parseDate(on) || today())]);
+    _putSnapshots(data, [_snapshot(data, Dates.parse(on) || Dates.today())]);
   }
 
   /**
@@ -40,8 +34,8 @@ Object.assign(Core, (() => {
    * opening is never replaced by one without; `fill` writes only where there is none.
    */
   function addPrice(data, assetId, date, open, close, fill = false) {
-    if(isReserved(assetId) || isReserved(date)) throw new Error(`Not a usable name: ${assetId} ${date}`);
-    const days = setDefault(data.prices, assetId, {});
+    if(Base.isReserved(assetId) || Base.isReserved(date)) throw new Error(`Not a usable name: ${assetId} ${date}`);
+    const days = Base.setDefault(data.prices, assetId, {});
     const old = days[date];
     if(old && (fill || (old[0] != null && open == null))) return;
     days[date] = [open ?? null, close];
@@ -68,7 +62,7 @@ Object.assign(Core, (() => {
    * an account without a log, a price never stored) counts as it is today.
    * @returns {number} days written
    */
-  function rebuildHistory(data, from, to = today()) {
+  function rebuild(data, from, to = Dates.today()) {
     const known = Object.fromEntries(Object.entries(data.prices).map(([id, p]) => [id, Object.keys(p).sort()]));
     const fxDates = Object.keys(data.fx_history).sort();
     const dates = [...new Set(Object.values(known).flat())].filter(d => d >= from && d <= to).sort();
@@ -81,7 +75,7 @@ Object.assign(Core, (() => {
         const [open, close] = _asOf(data.prices[a.id], known[a.id], date);
         return { ...a, price: close ?? open };
       }),
-      cash: data.cash.map(c => ({ ...c, amount: round2(Number(c.amount)
+      cash: data.cash.map(c => ({ ...c, amount: Base.round2(Number(c.amount)
         - data.cash_log.filter(l => l.account_id === c.id && l.date > date).reduce((s, l) => s + Number(l.amount), 0)) })),
     }, date));
     _putSnapshots(data, snaps); // sorted once, not once a day
@@ -96,7 +90,7 @@ Object.assign(Core, (() => {
    * @returns {Array<{date:string, invested:number, value:number}>} from the first
    *   transaction to `to`; the last day uses the current prices and rates
    */
-  function portfolioHistory(data, category, to = today()) {
+  function portfolio(data, category, to = Dates.today()) {
     const assets = data.assets.filter(a => a.category === category);
     const byId = Object.fromEntries(assets.map(a => [a.id, a]));
     const moves = data.transactions.filter(t => t.asset_id in byId && t.date <= to)
@@ -111,7 +105,7 @@ Object.assign(Core, (() => {
     const rate = (currency, date) => {
       if(currency === "EUR") return 1;
       const day = date < to && fxDates.length ? _asOf(data.fx_history, fxDates, date) : null;
-      return Number(day?.[currency]) || fx(data, currency);
+      return Number(day?.[currency]) || Rates.of(data, currency);
     };
     const price = (a, date) => {
       if(date >= to || !known[a.id].length) return Number(a.price || 0);
@@ -140,53 +134,9 @@ Object.assign(Core, (() => {
         invested += h.cost;
         value += h.quantity * price(a, date) / rate(a.currency, date);
       }
-      return { date, invested: round2(invested), value: round2(value) };
+      return { date, invested: Base.round2(invested), value: Base.round2(value) };
     });
   }
 
-  // ---------------------------------------------------------------- charts over time
-
-  /** How far back a history chart looks. */
-  const RANGES = ["all", "year", "quarter", "month", "week"];
-
-  /** The first day of a range ending on `to`; null for the whole history. */
-  function rangeStart(range, to = today()) {
-    const months = { year: 12, quarter: 3, month: 1 }[range];
-    if(months) return addMonths(to, -months);
-    if(range !== "week") return null;
-    const [y, m, d] = to.split("-").map(Number);
-    return new Date(Date.UTC(y, m - 1, d - 7)).toISOString().slice(0, 10);
-  }
-
-  /**
-   * The points of a series from `from` on. The value that stood on the first day
-   * opens the line, carried from the last point before it.
-   * @param {Array<[string, number]>} points  by date, oldest first
-   */
-  function clipPoints(points, from) {
-    if(!from) return points;
-    const inside = points.filter(p => p[0] >= from);
-    const before = points.filter(p => p[0] < from).pop();
-    return before && inside[0]?.[0] !== from ? [[from, before[1]], ...inside] : inside;
-  }
-
-  /** An axis close around the values: round limits and four or so even steps. */
-  function axisRange(min, max) {
-    const raw = (max - min) / 4 || Math.max(Math.abs(max) / 100, 1);
-    const unit = Math.pow(10, Math.floor(Math.log10(raw)));
-    const step = [1, 2, 2.5, 5, 10].map(m => m * unit).find(s => s >= raw);
-    const lo = Math.floor(min / step) * step;
-    const hi = Math.max(Math.ceil(max / step) * step, lo + step);
-    const ticks = Array.from({ length: Math.round((hi - lo) / step) + 1 }, (_, i) => round2(lo + i * step));
-    return { lo, hi, step, ticks };
-  }
-
-  /** Nothing is held any more, and no percentage points at it. */
-  const soldOut = (data, asset) => !Number(asset.target_in_bucket || 0)
-    && data.transactions.some(t => t.asset_id === asset.id) && Math.abs(quantities(data)[asset.id]) < 1e-6;
-
-  return {
-    upsertSnapshot, addPrice, rebuildHistory, portfolioHistory, RANGES, rangeStart, clipPoints,
-    axisRange, soldOut,
-  };
-})());
+  return { upsertSnapshot, addPrice, rebuild, portfolio };
+})();

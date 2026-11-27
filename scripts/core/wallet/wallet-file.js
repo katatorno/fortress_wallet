@@ -1,13 +1,10 @@
-// scripts/core/wallet/4-file.js
+// scripts/core/wallet/wallet-file.js
 //
 // The wallet file: its format version and the migrations of older files, the keys
 // filled in, the checks of its values, and reading and writing it as JSON.
 
-Object.assign(Core, (() => {
-  const {
-    ROLES, MODES, TX_TYPES, CATEGORY_RENAME, tr, newId, setDefault, isReserved, isBlank, isNumeric,
-    summary,
-  } = Core;
+const WalletFile = (() => {
+  const CATEGORY_RENAME = { akcje: "equities", kruszce: "metals", obligacje: "bonds" };
 
   // ---------------------------------------------------------------- data file
 
@@ -30,17 +27,17 @@ Object.assign(Core, (() => {
     },
     // 3: the wallet carries the key of the price service (Alpha Vantage)
     2(data) {
-      setDefault(setDefault(data, "settings", {}), "price_api_key", "");
+      Base.setDefault(Base.setDefault(data, "settings", {}), "price_api_key", "");
     },
     // 4: price and exchange rate history, and each instrument's symbol at the price service
     3(data) {
-      setDefault(data, "prices", {});
-      setDefault(data, "fx_history", {});
-      for(const a of data.assets || []) setDefault(a, "price_symbol", "");
+      Base.setDefault(data, "prices", {});
+      Base.setDefault(data, "fx_history", {});
+      for(const a of data.assets || []) Base.setDefault(a, "price_symbol", "");
     },
     // 5: the chosen theme travels with the wallet, like the language
     4(data) {
-      setDefault(setDefault(data, "settings", {}), "theme", "system");
+      Base.setDefault(Base.setDefault(data, "settings", {}), "theme", "system");
     },
     // 6: what nothing reads any more goes: Yahoo symbols (prices now come through
     // price_symbol) and the number of salaries a year (no calculation used it)
@@ -56,7 +53,7 @@ Object.assign(Core, (() => {
   function _version(data) {
     const from = Number(data.version ?? 1);
     if(!Number.isInteger(from) || from < 1 || from > FORMAT) {
-      throw new Error(tr(data, "err_file_version", { version: String(data.version), supported: FORMAT }));
+      throw new Error(Texts.tr(data, "err_file_version", { version: String(data.version), supported: FORMAT }));
     }
     return from;
   }
@@ -72,65 +69,65 @@ Object.assign(Core, (() => {
     const shape = _shapeProblems(data);
     if(shape.length) throw new Error(_fileError(data, shape));
     migrate(data);
-    const s = setDefault(data, "settings", {});
-    setDefault(s, "language", I18N.DEFAULT);
-    setDefault(s, "theme", "system"); // "system", "light" or "dark"
-    setDefault(s, "price_api_key", ""); // private: it lives in your file, never in the repository
-    setDefault(s, "fx", { USD: 1.09, PLN: 4.3 });
-    setDefault(s, "emergency_target", 10000);
-    setDefault(s, "monthly_expenses", 1650);
-    setDefault(s, "net_income", 2600);
-    setDefault(s, "prepay_share_pct", 30);
-    setDefault(s, "min_prepayment", 1000);
-    setDefault(s, "alt_safe_yield_pct", 2.5);
-    setDefault(s, "drift_alert_pp", 2);
-    setDefault(s, "stale_days", 14);
-    setDefault(data, "categories", {
+    const s = Base.setDefault(data, "settings", {});
+    Base.setDefault(s, "language", I18N.DEFAULT);
+    Base.setDefault(s, "theme", "system"); // "system", "light" or "dark"
+    Base.setDefault(s, "price_api_key", ""); // private: it lives in your file, never in the repository
+    Base.setDefault(s, "fx", { USD: 1.09, PLN: 4.3 });
+    Base.setDefault(s, "emergency_target", 10000);
+    Base.setDefault(s, "monthly_expenses", 1650);
+    Base.setDefault(s, "net_income", 2600);
+    Base.setDefault(s, "prepay_share_pct", 30);
+    Base.setDefault(s, "min_prepayment", 1000);
+    Base.setDefault(s, "alt_safe_yield_pct", 2.5);
+    Base.setDefault(s, "drift_alert_pp", 2);
+    Base.setDefault(s, "stale_days", 14);
+    Base.setDefault(data, "categories", {
       equities: { target_pct: 75, buy: true },
       metals: { target_pct: 15, buy: false },
       bonds: { target_pct: 10, buy: false },
     });
-    setDefault(data, "buckets", {});
-    setDefault(data, "assets", []);
-    setDefault(data, "transactions", []);
-    setDefault(data, "cash", []);
-    setDefault(data, "cash_log", []);
-    const h = setDefault(data, "house", {});
-    setDefault(h, "purchase_price", 0);
-    setDefault(h, "value", h.purchase_price);
-    setDefault(h, "deposit_paid", 0);
-    setDefault(h, "deed_date", null);
-    const m = setDefault(data, "mortgage", {});
-    setDefault(m, "amount", 0);
-    setDefault(m, "rate_pct", 0);
-    setDefault(m, "term_months", 360);
-    setDefault(m, "first_payment_date", null);
-    setDefault(m, "bank_payment", null);
-    setDefault(m, "prepayment_fee_pct", 1);
-    setDefault(m, "default_mode", "reduce_term");
-    setDefault(m, "events", []);
-    setDefault(data, "history", []);
-    setDefault(data, "prices", {});     // asset id → date → [open or null, close]
-    setDefault(data, "fx_history", {}); // date → units per 1 EUR, like settings.fx
-    setDefault(data, "strategy_notes", "");
+    Base.setDefault(data, "buckets", {});
+    Base.setDefault(data, "assets", []);
+    Base.setDefault(data, "transactions", []);
+    Base.setDefault(data, "cash", []);
+    Base.setDefault(data, "cash_log", []);
+    const h = Base.setDefault(data, "house", {});
+    Base.setDefault(h, "purchase_price", 0);
+    Base.setDefault(h, "value", h.purchase_price);
+    Base.setDefault(h, "deposit_paid", 0);
+    Base.setDefault(h, "deed_date", null);
+    const m = Base.setDefault(data, "mortgage", {});
+    Base.setDefault(m, "amount", 0);
+    Base.setDefault(m, "rate_pct", 0);
+    Base.setDefault(m, "term_months", 360);
+    Base.setDefault(m, "first_payment_date", null);
+    Base.setDefault(m, "bank_payment", null);
+    Base.setDefault(m, "prepayment_fee_pct", 1);
+    Base.setDefault(m, "default_mode", "reduce_term");
+    Base.setDefault(m, "events", []);
+    Base.setDefault(data, "history", []);
+    Base.setDefault(data, "prices", {});     // asset id → date → [open or null, close]
+    Base.setDefault(data, "fx_history", {}); // date → units per 1 EUR, like settings.fx
+    Base.setDefault(data, "strategy_notes", "");
     for(const a of data.assets) {
-      setDefault(a, "id", newId());
-      setDefault(a, "ticker", "");
-      setDefault(a, "price_symbol", "");
-      setDefault(a, "opening_quantity", 0);
-      setDefault(a, "price", 0);
-      setDefault(a, "currency", "EUR");
-      setDefault(a, "target_in_bucket", 0);
-      setDefault(a, "alert_price", null);
-      setDefault(a, "price_updated", null);
-      setDefault(a, "unit", "pcs");
+      Base.setDefault(a, "id", Base.newId());
+      Base.setDefault(a, "ticker", "");
+      Base.setDefault(a, "price_symbol", "");
+      Base.setDefault(a, "opening_quantity", 0);
+      Base.setDefault(a, "price", 0);
+      Base.setDefault(a, "currency", "EUR");
+      Base.setDefault(a, "target_in_bucket", 0);
+      Base.setDefault(a, "alert_price", null);
+      Base.setDefault(a, "price_updated", null);
+      Base.setDefault(a, "unit", "pcs");
     }
     for(const c of data.cash) {
-      setDefault(c, "role", "other");
-      setDefault(c, "currency", "EUR");
-      setDefault(c, "amount", 0);
+      Base.setDefault(c, "role", "other");
+      Base.setDefault(c, "currency", "EUR");
+      Base.setDefault(c, "amount", 0);
     }
-    for(const t of data.transactions) setDefault(t, "id", newId());
+    for(const t of data.transactions) Base.setDefault(t, "id", Base.newId());
     _migrateCategories(data);
     return data;
   }
@@ -159,7 +156,7 @@ Object.assign(Core, (() => {
 
   /** The refusal of a file, naming the places to correct. */
   function _fileError(data, found) {
-    return tr(data, "err_file_invalid", { problems: problemList(found) });
+    return Texts.tr(data, "err_file_invalid", { problems: problemList(found) });
   }
 
   /**
@@ -167,28 +164,28 @@ Object.assign(Core, (() => {
    * and answers whether the value is fine. `maybe(kind)` lets an empty value pass.
    */
   function _checker(data, out) {
-    const bad = (where, what) => { out.push(`${where}: ${tr(data, "val_" + what)}`); return false; };
+    const bad = (where, what) => { out.push(`${where}: ${Texts.tr(data, "val_" + what)}`); return false; };
     const c = {
       object: (w, v) => _isObj(v) || bad(w, "object"),
       list: (w, v) => Array.isArray(v) || bad(w, "list"),
       text: (w, v) => typeof v === "string" || bad(w, "text"),
       label: (w, v) => typeof v === "string" || typeof v === "number" || bad(w, "text"),
-      name: (w, v) => (typeof v === "string" && v.trim() !== "" && !isReserved(v)) || bad(w, "name"),
-      number: (w, v) => isNumeric(v) || bad(w, "number"),
-      positive: (w, v) => (isNumeric(v) && Number(v) >= 0) || bad(w, "positive"),
-      rate: (w, v) => (isNumeric(v) && Number(v) > 0) || bad(w, "rate"),
+      name: (w, v) => (typeof v === "string" && v.trim() !== "" && !Base.isReserved(v)) || bad(w, "name"),
+      number: (w, v) => Base.isNumeric(v) || bad(w, "number"),
+      positive: (w, v) => (Base.isNumeric(v) && Number(v) >= 0) || bad(w, "positive"),
+      rate: (w, v) => (Base.isNumeric(v) && Number(v) > 0) || bad(w, "rate"),
       date: (w, v) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v.slice(0, 10))) || bad(w, "date"),
       choice: (list) => (w, v) => list.includes(v) || bad(w, "choice"),
-      maybe: (kind) => (w, v) => isBlank(v) || kind(w, v),
+      maybe: (kind) => (w, v) => Base.isBlank(v) || kind(w, v),
       /** A map's keys: none reserved. */
-      keys: (w, v) => Object.keys(v).every(k => !isReserved(k) || bad(`${w}.${k}`, "name")),
+      keys: (w, v) => Object.keys(v).every(k => !Base.isReserved(k) || bad(`${w}.${k}`, "name")),
     };
     return c;
   }
 
   /** Where the parts of a file are of the wrong kind: an object, a list, items that are objects. */
   function _shapeProblems(data) {
-    if(!_isObj(data)) return [`(file): ${tr(null, "val_object")}`];
+    if(!_isObj(data)) return [`(file): ${Texts.tr(null, "val_object")}`];
     const out = [];
     const c = _checker(data, out);
     const part = (name, kind, items) => {
@@ -249,7 +246,7 @@ Object.assign(Core, (() => {
 
     const ids = new Set();
     each(data.assets, "assets", (w, a) => {
-      if(c.name(`${w}.id`, a.id) && ids.has(a.id)) out.push(`${w}.id: ${tr(data, "val_unique")}`);
+      if(c.name(`${w}.id`, a.id) && ids.has(a.id)) out.push(`${w}.id: ${Texts.tr(data, "val_unique")}`);
       ids.add(a.id);
       c.label(`${w}.name`, a.name ?? "");
       for(const k of ["ticker", "price_symbol", "currency", "unit"]) c.text(`${w}.${k}`, a[k]);
@@ -265,7 +262,7 @@ Object.assign(Core, (() => {
       c.label(`${w}.id`, t.id);
       c.label(`${w}.asset_id`, t.asset_id);
       c.date(`${w}.date`, t.date);
-      c.choice(TX_TYPES)(`${w}.type`, t.type);
+      c.choice(Transactions.TYPES)(`${w}.type`, t.type);
       c.number(`${w}.quantity`, t.quantity);
       c.maybe(c.positive)(`${w}.price`, t.price);
       c.maybe(c.number)(`${w}.fee`, t.fee);
@@ -273,7 +270,7 @@ Object.assign(Core, (() => {
     each(data.cash, "cash", (w, a) => {
       c.label(`${w}.id`, a.id ?? "");
       c.label(`${w}.name`, a.name ?? "");
-      c.choice(ROLES)(`${w}.role`, a.role);
+      c.choice(Cash.ROLES)(`${w}.role`, a.role);
       c.text(`${w}.currency`, a.currency);
       c.maybe(c.number)(`${w}.amount`, a.amount);
     });
@@ -290,13 +287,13 @@ Object.assign(Core, (() => {
     c.maybe(c.number)("mortgage.rate_pct", m.rate_pct);
     c.maybe(c.date)("mortgage.first_payment_date", m.first_payment_date);
     c.maybe(c.number)("mortgage.bank_payment", m.bank_payment);
-    c.maybe(c.choice(MODES))("mortgage.default_mode", m.default_mode);
+    c.maybe(c.choice(Mortgage.MODES))("mortgage.default_mode", m.default_mode);
     each(m.events, "mortgage.events", (w, e) => {
       c.date(`${w}.date`, e.date);
       c.choice(["payment", "prepayment"])(`${w}.type`, e.type);
       c.number(`${w}.amount`, e.amount);
       for(const k of ["interest", "principal", "fee_pct"]) c.maybe(c.number)(`${w}.${k}`, e[k]);
-      c.maybe(c.choice(MODES))(`${w}.mode`, e.mode);
+      c.maybe(c.choice(Mortgage.MODES))(`${w}.mode`, e.mode);
     });
 
     each(data.history, "history", (w, snap) => {
@@ -308,7 +305,7 @@ Object.assign(Core, (() => {
       for(const [day, p] of Object.entries(days)) {
         const w = `prices.${id}.${day}`;
         if(!c.date(w, day)) continue;
-        if(!Array.isArray(p) || p.length !== 2) { out.push(`${w}: ${tr(data, "val_price_day")}`); continue; }
+        if(!Array.isArray(p) || p.length !== 2) { out.push(`${w}: ${Texts.tr(data, "val_price_day")}`); continue; }
         c.maybe(c.positive)(`${w}[0]`, p[0]);
         c.positive(`${w}[1]`, p[1]);
       }
@@ -324,14 +321,15 @@ Object.assign(Core, (() => {
   /** The places `problems` names; a wallet with none has to add up too, or this throws. */
   function _inspect(data) {
     const found = problems(data);
-    if(!found.length) summary(data); // throws on what the values cannot give, e.g. a currency without a rate
+    if(!found.length) Valuation.summary(data); // throws on what the values cannot give, e.g. a currency without a rate
     return found;
   }
 
   /**
    * Why a wallet, as it stands, would not open: its shape and version, which
-   * `normalize` holds a file to, then the places of `problems`, else what `summary`
-   * cannot work out. Changes nothing. `Store.changed` holds a change to this.
+   * `normalize` holds a file to, then the places of `problems`, else what
+   * `Valuation.summary` cannot work out. Changes nothing. `Store.changed` holds a
+   * change to this.
    * @returns {string[]} empty for a wallet that is fine
    */
   function check(data) {
@@ -359,7 +357,5 @@ Object.assign(Core, (() => {
     return data;
   }
 
-  return {
-    FORMAT, normalize, problems, check, problemList, serialize, parse,
-  };
-})());
+  return { FORMAT, normalize, problems, check, problemList, serialize, parse };
+})();

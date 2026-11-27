@@ -13,7 +13,7 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
-const { Core, open, save } = require("./wallet.cjs");
+const { Base, Dates, Valuation, WalletFile, WalletHistory, open, save } = require("./wallet.cjs");
 
 const CACHE = path.join(__dirname, "..", "data", "price-cache");
 const PAUSE_MS = 13000; // the free key allows only a few requests a minute
@@ -24,7 +24,7 @@ const METALS = { XAU: "GOLD", XAG: "SILVER" };
  * letters, digits, dots, dashes and underscores, so that a symbol from the wallet
  * never leads out of the cache folder.
  */
-function cachePath(params, day = Core.today(), dir = CACHE) {
+function cachePath(params, day = Dates.today(), dir = CACHE) {
   const part = (v) => String(v).replace(/[^A-Za-z0-9._-]/g, "_");
   const file = path.join(dir, `${part(day)}_${Object.values(params).map(part).join("_")}.json`);
   const inside = path.relative(dir, file);
@@ -44,7 +44,7 @@ async function main() {
   const key = data.settings.price_api_key;
   if(!key) { console.log("the wallet has no settings.price_api_key"); process.exit(1); }
   const since = args.find(a => a.startsWith("--since="))?.slice(8)
-    ?? data.transactions.map(t => t.date).sort()[0] ?? Core.addMonths(Core.today(), -12);
+    ?? data.transactions.map(t => t.date).sort()[0] ?? Dates.addMonths(Dates.today(), -12);
   if(!/^\d{4}-\d{2}-\d{2}$/.test(since)) { console.log(`--since takes a date YYYY-MM-DD, not ${since}`); process.exit(1); }
   const hide = (s) => String(s).split(key).join("***");
 
@@ -87,7 +87,7 @@ async function main() {
   }
 
   try {
-    const held = Core.positions(data);
+    const held = Valuation.positions(data);
     const wanted = held.filter(p => p.quantity > 1e-6).map(p => data.assets.find(a => a.id === p.id));
     for(const asset of wanted) {
       const metal = asset.category === "metals" && Object.hasOwn(METALS, asset.ticker) && METALS[asset.ticker];
@@ -97,9 +97,9 @@ async function main() {
         if(!body) continue;
         asset.price_symbol = metal;
         const rows = body.data.filter(r => r.date >= since).sort((a, b) => a.date.localeCompare(b.date));
-        for(const r of rows) Core.addPrice(data, asset.id, r.date, null, Core.round2(Number(r.price)));
+        for(const r of rows) WalletHistory.addPrice(data, asset.id, r.date, null, Base.round2(Number(r.price)));
         const last = rows.at(-1);
-        if(last) current(asset, last.date, Core.round2(Number(last.price)));
+        if(last) current(asset, last.date, Base.round2(Number(last.price)));
         console.log(`  ${asset.name}: ${rows.length} days, newest ${last?.date}`);
         continue;
       }
@@ -116,7 +116,7 @@ async function main() {
           continue;
         }
         // a week's opening belongs to its first day, so a weekly row keeps the close only
-        for(const [d, v] of rows) Core.addPrice(data, asset.id, d, isDaily ? Number(v["1. open"]) : null, Number(v["4. close"]));
+        for(const [d, v] of rows) WalletHistory.addPrice(data, asset.id, d, isDaily ? Number(v["1. open"]) : null, Number(v["4. close"]));
         const last = rows.at(-1);
         if(last) current(asset, last[0], Number(last[1]["4. close"]));
         console.log(`  ${asset.name}: ${rows.length} ${isDaily ? "days" : "weeks"}, newest ${last?.[0]}`
@@ -137,9 +137,9 @@ async function main() {
     }
     else console.log(`  exchange rates: HTTP ${res.status}`);
 
-    const days = Core.rebuildHistory(data, since);
-    Core.upsertSnapshot(data);
-    Core.parse(Core.serialize(data)); // the result must open
+    const days = WalletHistory.rebuild(data, since);
+    WalletHistory.upsertSnapshot(data);
+    WalletFile.parse(WalletFile.serialize(data)); // the result must open
     const backup = save(file, data);
     console.log(`requests used now: ${requests}${limited ? " (limit reached, run again tomorrow)" : ""}`);
     console.log(`history: ${days} days rebuilt since ${since}; previous version kept in ${backup}`);

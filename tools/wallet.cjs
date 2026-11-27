@@ -12,11 +12,18 @@ const APP = path.join(__dirname, "..");
 const CORE = path.join(APP, "scripts", "core");
 
 /**
- * The scripts of scripts/core the wallet logic needs: the texts, then the files of
- * scripts/core/wallet sorted by name, the order TonkaJSX loads them in.
+ * The scripts of scripts/core the wallet logic is made of, in the order the page loads
+ * them: those of scripts/core/wallet sorted by name, then those beside that folder
+ * which need no browser.
  */
-const CORE_FILES = ["i18n.js", ...fs.readdirSync(path.join(CORE, "wallet")).filter(f => f.endsWith(".js")).sort()
-  .map(f => `wallet/${f}`)];
+const CORE_FILES = [...fs.readdirSync(path.join(CORE, "wallet")).filter(f => f.endsWith(".js")).sort()
+  .map(f => `wallet/${f}`), "base.js", "chart-math.js", "dates.js", "i18n.js"];
+
+/** The global a script of scripts/core makes, named after its file: wallet-file.js → WalletFile. */
+const moduleName = (file) => {
+  const name = path.basename(file, ".js");
+  return name === "i18n" ? "I18N" : name.replace(/(^|-)([a-z])/g, (m, dash, letter) => letter.toUpperCase());
+};
 
 /**
  * Runs scripts of scripts/core in one fresh context, as the page does: plain
@@ -35,17 +42,20 @@ function loadScripts(files, globals = {}) {
  * The wallet logic with the app's texts, plus any further scripts of scripts/core.
  * @param {string[]} [more]  further scripts, loaded after the core ones
  * @param {object} [globals]
+ * @returns {{ctx: object, run: (code:string) => any}} and every module of CORE_FILES, by its name
  */
 function loadCore(more = [], globals = {}) {
   const loaded = loadScripts([...CORE_FILES, ...more], globals);
-  const I18N = loaded.run("I18N");
+  const modules = Object.fromEntries(CORE_FILES.map(moduleName).map(name => [name, loaded.run(name)]));
+  const { I18N } = modules;
   I18N.use(I18N.parseToml(fs.readFileSync(path.join(APP, "locales", "translations.toml"), "utf8")));
-  return { ...loaded, Core: loaded.run("Core"), I18N };
+  return { ...loaded, ...modules };
 }
 
-const { Core } = loadCore();
+const { ctx, run, ...modules } = loadCore(); // the tools' and the tests' own copy
+const { WalletFile } = modules;
 
-const open = (file) => Core.parse(fs.readFileSync(file, "utf8"));
+const open = (file) => WalletFile.parse(fs.readFileSync(file, "utf8"));
 
 /** The name of a copy of `file` made now: "<name>.backup-<time><extension>", never the file itself. */
 function backupName(file, now = new Date()) {
@@ -66,9 +76,9 @@ function save(file, data) {
   if(path.resolve(backup) === path.resolve(file)) throw new Error(`No name for a copy of ${file}`);
   fs.copyFileSync(file, backup);
   const temp = `${file}.tmp-${process.pid}`;
-  fs.writeFileSync(temp, Core.serialize(data));
+  fs.writeFileSync(temp, WalletFile.serialize(data));
   fs.renameSync(temp, file);
   return backup;
 }
 
-module.exports = { APP, CORE_FILES, loadScripts, loadCore, Core, open, save, backupName };
+module.exports = { APP, CORE_FILES, moduleName, loadScripts, loadCore, ...modules, open, save, backupName };

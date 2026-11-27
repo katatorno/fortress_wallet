@@ -16,15 +16,15 @@ function ok(name, cond, detail = "") {
 function service(answer, status = 200) {
   const asked = [];
   const fetch = async (url, opts) => { asked.push({ url, opts }); return { ok: status === 200, status, json: async () => answer }; };
-  const { run, Core } = loadCore(["online.js"], { fetch });
-  return { Online: run("Online"), Core, asked };
+  const { run, Dates, WalletFile } = loadCore(["online.js"], { fetch });
+  return { Online: run("Online"), Dates, WalletFile, asked };
 }
-const wallet = (Core, fx) => Core.normalize({ version: Core.FORMAT, settings: { fx } });
+const wallet = (WalletFile, fx) => WalletFile.normalize({ version: WalletFile.FORMAT, settings: { fx } });
 
 (async () => {
   {
-    const { Online, Core, asked } = service({ date: "2026-11-27", rates: { USD: 1.1, PLN: 0 } });
-    const d = wallet(Core, { USD: 1, PLN: 4.3, "X&a=b": 2, "my savings": 3 });
+    const { Online, WalletFile, asked } = service({ date: "2026-11-27", rates: { USD: 1.1, PLN: 0 } });
+    const d = wallet(WalletFile, { USD: 1, PLN: 4.3, "X&a=b": 2, "my savings": 3 });
     const before = JSON.stringify({ ...d, settings: { ...d.settings, fx: null } });
     const res = await Online.fetchFx(d);
     const url = new URL(asked[0].url);
@@ -39,20 +39,20 @@ const wallet = (Core, fx) => Core.normalize({ version: Core.FORMAT, settings: { 
     ok("the answer's date is used", res.date === "2026-11-27");
   }
   {
-    const { Online, Core } = service({ rates: { USD: "abc" }, date: "<b>" });
-    const d = wallet(Core, { USD: 1 });
+    const { Online, Dates, WalletFile } = service({ rates: { USD: "abc" }, date: "<b>" });
+    const d = wallet(WalletFile, { USD: 1 });
     const res = await Online.fetchFx(d);
-    ok("a rate that is no number is not taken, nor a date that is none", d.settings.fx.USD === 1 && res.date === Core.today());
+    ok("a rate that is no number is not taken, nor a date that is none", d.settings.fx.USD === 1 && res.date === Dates.today());
   }
   {
-    const { Online, Core } = service({}, 503);
+    const { Online, WalletFile } = service({}, 503);
     let message = "";
-    try { await Online.fetchFx(wallet(Core, { USD: 1 })); } catch(e) { message = e.message; }
+    try { await Online.fetchFx(wallet(WalletFile, { USD: 1 })); } catch(e) { message = e.message; }
     ok("a refusal is reported", message === "HTTP 503");
   }
   {
-    const { Online, Core, asked } = service({});
-    await Online.fetchFx(wallet(Core, {}));
+    const { Online, WalletFile, asked } = service({});
+    await Online.fetchFx(wallet(WalletFile, {}));
     ok("a wallet in euros asks nothing", !asked.length);
   }
   console.log(`\n${pass} passed, ${fail} failed`);

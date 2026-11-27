@@ -10,7 +10,7 @@ const os = require("node:os");
 const path = require("node:path");
 const zlib = require("node:zlib");
 const { spawnSync } = require("node:child_process");
-const { APP, Core, save, backupName } = require("../tools/wallet.cjs");
+const { APP, WalletFile, save, backupName } = require("../tools/wallet.cjs");
 const { readXlsx, unzip } = require("../tools/xlsx.cjs");
 const { cachePath } = require("../tools/fetch-prices.cjs");
 const { currencyOf } = require("../tools/import-xtb.cjs");
@@ -79,7 +79,7 @@ try {
   // -------------------------------------------------------------- the copy before a write
   const example = fs.readFileSync(path.join(APP, "data", "wallet.example.json"), "utf8");
   const wallet = put("my.json", example);
-  const data = Core.parse(example);
+  const data = WalletFile.parse(example);
   data.strategy_notes = "changed";
   const backup = save(wallet, data);
   ok("the copy holds the file as it was", fs.readFileSync(backup, "utf8") === example);

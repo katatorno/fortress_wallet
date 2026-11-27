@@ -7,7 +7,7 @@
 // download the updated file.
 //
 // Every change passes through `changed`, which holds it to the check an opened
-// file gets (`Core.check`). One after which the wallet would not open is undone:
+// file gets (`WalletFile.check`). One after which the wallet would not open is undone:
 // the wallet goes back to how it was last accepted, on opening or by `changed`.
 //
 // Each change raises a counter, and the file holds the counter of its last save:
@@ -58,7 +58,7 @@ const Store = (() => {
   function _open(newData, newSource, newHandle = null, newStamp = null) {
     clearTimeout(timer);
     data = newData;
-    accepted = Core.serialize(data);
+    accepted = WalletFile.serialize(data);
     source = newSource;
     handle = newHandle;
     stamp = newStamp;
@@ -70,12 +70,12 @@ const Store = (() => {
 
   async function openExample(lang) {
     const res = await fetch("data/wallet.example.json", { cache: "no-cache" });
-    const d = Core.parse(await res.text());
+    const d = WalletFile.parse(await res.text());
     if(lang) d.settings.language = lang;
     _open(d, { kind: "example", name: "" });
   }
 
-  const _openFile = (f) => _open(Core.parse(f.text), { kind: "local", name: f.name }, f.handle, f.stamp || null);
+  const _openFile = (f) => _open(WalletFile.parse(f.text), { kind: "local", name: f.name }, f.handle, f.stamp || null);
 
   async function openLocal() {
     const f = await LocalFile.open();
@@ -109,16 +109,16 @@ const Store = (() => {
    * add up to no number.
    */
   function _against() {
-    const found = Core.check(data); // first: a broken wallet may have no snapshot to make
+    const found = WalletFile.check(data); // first: a broken wallet may have no snapshot to make
     if(found.length) return found;
-    Core.upsertSnapshot(data);
-    return Core.check(data);
+    WalletHistory.upsertSnapshot(data);
+    return WalletFile.check(data);
   }
 
   /**
    * The one way in for a change: call after every change of the data. A refused
    * change is undone and nothing is saved; `get()` then gives a new object.
-   * @returns {string[]} why it was refused (see `Core.check`); empty: accepted
+   * @returns {string[]} why it was refused (see `WalletFile.check`); empty: accepted
    */
   function changed() {
     const found = _against();
@@ -126,7 +126,7 @@ const Store = (() => {
       data = JSON.parse(accepted);
       return found;
     }
-    accepted = Core.serialize(data);
+    accepted = WalletFile.serialize(data);
     rev += 1;
     if(status !== "conflict") status = "dirty";
     emit();
@@ -152,7 +152,7 @@ const Store = (() => {
     if(!canSaveInPlace()) { if(unsaved()) _setStatus("dirty"); return false; }
     if(!unsaved() && status === "saved") return true;
     if(status === "conflict" && !force) return false;
-    const at = rev, text = Core.serialize(data), h = handle;
+    const at = rev, text = WalletFile.serialize(data), h = handle;
     try {
       _setStatus("saving");
       if(!(await LocalFile.permit(h, "write"))) {
@@ -180,7 +180,7 @@ const Store = (() => {
 
   /** Downloads the wallet as a file (the way to save on phones and for the example). */
   function download() {
-    LocalFile.download(Core.serialize(data), source.name || "fortress-wallet.json");
+    LocalFile.download(WalletFile.serialize(data), source.name || "fortress-wallet.json");
     if(!canSaveInPlace()) {
       savedRev = rev;
       _setStatus("saved");
@@ -191,7 +191,7 @@ const Store = (() => {
   async function saveAsLocal() {
     clearTimeout(timer);
     const at = rev;
-    const res = await LocalFile.saveAs(Core.serialize(data), source.name || "fortress-wallet.json");
+    const res = await LocalFile.saveAs(WalletFile.serialize(data), source.name || "fortress-wallet.json");
     if(!res) return false;
     if(res.handle) {
       source = { kind: "local", name: res.name };

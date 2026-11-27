@@ -242,7 +242,7 @@ const _LineChart = ({ series, lang, marker, height = 260, markers, zoom }, W) =>
   const x0 = Math.min(...xs), x1 = Math.max(...xs, x0 + 86400000);
   const values = pts.map(p => p[1]);
   const full = _niceMax(Math.max(...values, 1));
-  const axis = zoom ? Core.axisRange(Math.min(...values), Math.max(...values))
+  const axis = zoom ? ChartMath.axisRange(Math.min(...values), Math.max(...values))
     : { lo: 0, hi: full, ticks: [0, 0.25, 0.5, 0.75, 1].map(f => f * full) };
   // short money ("19k") only where the steps are whole thousands
   const label = (v) => !zoom || axis.step % 1000 === 0 ? _compactMoney(lang, v) : I18N.number(lang, v, 0) + " €";
@@ -265,7 +265,7 @@ const _LineChart = ({ series, lang, marker, height = 260, markers, zoom }, W) =>
     const first = new Date(x0);
     for(let m = first.getUTCMonth() + 1; Date.UTC(y0, m, 1) <= x1; m += every) months.push(Date.UTC(y0, m, 1));
   }
-  const monthLabel = (t) => Core.monthYear(new Date(t).toISOString().slice(0, 10));
+  const monthLabel = (t) => Dates.monthYear(new Date(t).toISOString().slice(0, 10));
 
   const cursor = <line y1={top} y2={h - bottom} class="chart-cursor" visibility="hidden" />;
   const dots = series.map(s => <circle r="4" class={["chart-dot", "s-" + s.cls]} visibility="hidden" />);
@@ -278,7 +278,7 @@ const _LineChart = ({ series, lang, marker, height = 260, markers, zoom }, W) =>
       </g>)}
       {showDays
         ? series[0].points.filter((p, i, all) => i % Math.ceil(all.length / 8) === 0)
-          .map(p => <text x={X(_ts(p[0]))} y={h - 8} text-anchor="middle" class="chart-axis">{Core.dayMonthYear(p[0]).slice(0, 5)}</text>)
+          .map(p => <text x={X(_ts(p[0]))} y={h - 8} text-anchor="middle" class="chart-axis">{Dates.dayMonthYear(p[0]).slice(0, 5)}</text>)
         : byMonth
           ? months.map(t => <text x={X(t)} y={h - 8} text-anchor="middle" class="chart-axis">{monthLabel(t)}</text>)
           : years.map(y => <text x={X(Date.UTC(y, 0, 1))} y={h - 8} text-anchor="middle" class="chart-axis">{y}</text>)}
@@ -320,7 +320,7 @@ const _LineChart = ({ series, lang, marker, height = 260, markers, zoom }, W) =>
       dots[i].setAttribute("visibility", "visible");
     });
     tip.replaceChildren(
-      <strong>{showDays || byMonth ? Core.dayMonthYear(ref[0]) : Core.monthYear(ref[0])}</strong>,
+      <strong>{showDays || byMonth ? Dates.dayMonthYear(ref[0]) : Dates.monthYear(ref[0])}</strong>,
       ...series.map((s, i) => hits[i] ? <inline gap="xs"><span class={["chart-key", s.cls]}></span>{s.name}: <b>{I18N.money(lang, hits[i][1])}</b></inline> : null).filter(Boolean),
     );
     tip.hidden = false;
@@ -355,15 +355,15 @@ const _chartRanges = {};
 const RangeChart = ({ app, id, series }) => {
   const slot = <div></div>;
   function draw(range) {
-    const from = Core.rangeStart(range);
-    const shown = series.map(s => ({ ...s, points: Core.clipPoints(s.points, from) }));
+    const from = ChartMath.rangeStart(range);
+    const shown = series.map(s => ({ ...s, points: ChartMath.clipPoints(s.points, from) }));
     slot.replaceChildren(<LineChart lang={app.L} series={shown} zoom={range !== "all"}
       markers={shown.every(s => s.points.length < 40)} />);
   }
   const chosen = _chartRanges[id] || "all";
   const pick = (
     <Toggle size="sm" value={chosen} onChange={(range) => { _chartRanges[id] = range; draw(range); }}>
-      {Core.RANGES.map(r => <ToggleBtn value={r} label={app.T("range_" + r)} />)}
+      {ChartMath.RANGES.map(r => <ToggleBtn value={r} label={app.T("range_" + r)} />)}
     </Toggle>
   );
   draw(chosen);
