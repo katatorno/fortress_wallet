@@ -560,6 +560,11 @@ en = "“Sell alert” reminds you when the price reaches it (e.g. for precious 
 pl = "„Próg sprzedaży” – aplikacja przypomni, gdy cena go osiągnie (np. dla kruszców)."
 pt = "O “Alerta de venda” avisa quando o preço o atingir (p. ex. metais preciosos)."
 
+[err_file_version]
+en = "This wallet file has format version {version}, and the app reads versions up to {supported}. Update the app."
+pl = "Ten plik portfela ma wersję formatu {version}, a aplikacja obsługuje wersje do {supported}. Zaktualizuj aplikację."
+pt = "Este ficheiro tem a versão de formato {version} e a aplicação lê versões até {supported}. Atualize a aplicação."
+
 [plan_skip_bucket]
 en = "{name} – bucket “{bucket}” gets nothing this time"
 pl = "{name} – tym razem koszyk „{bucket}” nic nie dostaje"

@@ -151,10 +151,14 @@ pt = "Amortização antecipada de {amount} registada."
 
 ## The wallet file
 
-Plain JSON that you can read, diff and back up. The main keys:
+Plain JSON that you can read, diff and back up. Keep your own file in `data/`: git ignores everything there except the example.
+
+The main keys:
 
 | Key | Contents |
 |---|---|
+| `version` | the version of this format (now 3; a file without it is 1) |
+| `settings.price_api_key` | your own [Alpha Vantage](https://www.alphavantage.co/support/#api-key) key. It is private: keep it in your file only, never in the example |
 | `settings` | language, exchange rates (`fx`: units per 1 EUR), emergency fund target, income, % for prepayment, thresholds |
 | `categories` | `equities`, `metals`, `bonds`: target % and `buy` (false = frozen: never bought, never sold) |
 | `buckets` | groups inside a category, each with its share (`target_pct_in_category`) and an optional `max_pct_in_category` limit. Shares in a category and instrument targets in a bucket must add up to 100%, or be all 0 (you pick the instrument yourself); the calculator splits money by both |
@@ -164,7 +168,13 @@ Plain JSON that you can read, diff and back up. The main keys:
 | `house`, `mortgage` | the home (price, value, deposit, deed date) and the loan (amount, rate, payments, fee, events) |
 | `history` | daily net-worth snapshots |
 
-Files from the earlier Python version (with Polish category ids) are migrated automatically when opened.
+Older files, including those of the earlier Python version (with Polish category ids), are migrated automatically when opened. A file of a newer version than the app knows is refused rather than guessed at.
+
+**Changing the format** (a key added, removed or given a new meaning):
+
+1. Raise `FORMAT` in `scripts/core/core.js`.
+2. Add a step to `MIGRATIONS` that turns the previous version into the new one.
+3. Update `SHAPE` and `VERSION` in `.tests/format.test.cjs`, and `version` in `data/wallet.example.json`.
 
 ## How it calculates
 
@@ -179,7 +189,7 @@ Prices of stocks, ETFs and metals are entered by hand: there is no free price so
 ## Tests
 
 ```bash
-tonka test fortress-wallet          # or: node .tests/core.test.cjs && node .tests/market.test.cjs && node .tests/privacy.test.cjs && node .tests/translations.test.cjs
+tonka test fortress-wallet          # or: node .tests/core.test.cjs && node .tests/format.test.cjs && node .tests/market.test.cjs && node .tests/privacy.test.cjs && node .tests/translations.test.cjs
 ```
 
 `market.test.cjs` holds the market view's rules: percentages in a bucket are 100% or all 0%, bucket shares are 100%, moves and deletions keep that, the "what to buy" calculator and no sell alerts for equities.

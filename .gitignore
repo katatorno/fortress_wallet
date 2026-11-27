@@ -7,7 +7,9 @@ index.html.br
 *.wallet.json
 my-wallet*.json
 wallet.json
-data/wallet.mine.json
+# data/ holds your own files: only the example belongs to the repository
+data/*
+!data/wallet.example.json
 
 # tests
 .tests/.run/

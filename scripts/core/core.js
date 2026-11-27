@@ -77,11 +77,45 @@ const Core = (() => {
 
   // ---------------------------------------------------------------- data file
 
-  /** Fill in missing keys and migrate older files (old Polish category ids). */
+  /**
+   * The version of the data file's format, kept in the file as `version`.
+   * Whenever the format changes: raise it, add the step to MIGRATIONS and update
+   * .tests/format.test.cjs. A file without a version is version 1.
+   */
+  const FORMAT = 3;
+
+  /** MIGRATIONS[n] turns a file of version n into version n + 1. */
+  const MIGRATIONS = {
+    // 2: instruments are always bought fractionally, buckets are no longer automatic or manual
+    1(data) {
+      for(const b of Object.values(data.buckets || {})) {
+        if(b.auto === false) delete b.target_pct_in_category; // never counted for a manual bucket
+        delete b.auto;
+      }
+      for(const a of data.assets || []) delete a.fractional;
+    },
+    // 3: the wallet carries the key of the price service (Alpha Vantage)
+    2(data) {
+      setDefault(setDefault(data, "settings", {}), "price_api_key", "");
+    },
+  };
+
+  function migrate(data) {
+    const from = Number(data.version ?? 1);
+    if(!Number.isInteger(from) || from < 1 || from > FORMAT) {
+      throw new Error(tr(data, "err_file_version", { version: String(data.version), supported: FORMAT }));
+    }
+    for(let v = from; v < FORMAT; v++) MIGRATIONS[v](data);
+    data.version = FORMAT;
+  }
+
+  /** Migrate an older file (see MIGRATIONS, old Polish category ids) and fill in missing keys. */
   function normalize(data) {
     data = data || {};
+    migrate(data);
     const s = setDefault(data, "settings", {});
     setDefault(s, "language", I18N.DEFAULT);
+    setDefault(s, "price_api_key", ""); // private: it lives in your file, never in the repository
     setDefault(s, "fx", { USD: 1.09, PLN: 4.3 });
     setDefault(s, "emergency_target", 10000);
     setDefault(s, "monthly_expenses", 1650);
@@ -152,8 +186,8 @@ const Core = (() => {
     }
   }
 
-  /** The text written to a data file: pretty JSON, stable order. */
-  const serialize = (data) => JSON.stringify(data, null, 2) + "\n";
+  /** The text written to a data file: pretty JSON, stable order, the version first. */
+  const serialize = ({ version = FORMAT, ...rest }) => JSON.stringify({ version, ...rest }, null, 2) + "\n";
 
   /** Parses a data file (JSON). */
   function parse(text) {
@@ -889,7 +923,7 @@ const Core = (() => {
     targetSum, badTargets, badShares, rebalance, saveTargets, saveInstruments, sumList, clamp,
     lang, tr, money, num, categoryLabel, roleLabel, modeLabel, txLabel,
     round2, newId, clone, today, parseDate, addMonths, daysBetween, monthYear, dayMonthYear,
-    normalize, serialize, parse,
+    FORMAT, normalize, serialize, parse,
     fx, toEur, quantities, positions, categoryValues, bucketValues, cashByRole, cashAccount,
     houseState, summary, allocationPct,
     annuity, impliedRate, firstPaymentDate, initialPayment, runMortgage, mortgageState,
