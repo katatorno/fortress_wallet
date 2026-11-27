@@ -82,7 +82,7 @@ const Core = (() => {
    * Whenever the format changes: raise it, add the step to MIGRATIONS and update
    * .tests/format.test.cjs. A file without a version is version 1.
    */
-  const FORMAT = 4;
+  const FORMAT = 5;
 
   /** MIGRATIONS[n] turns a file of version n into version n + 1. */
   const MIGRATIONS = {
@@ -104,6 +104,10 @@ const Core = (() => {
       setDefault(data, "fx_history", {});
       for(const a of data.assets || []) setDefault(a, "price_symbol", "");
     },
+    // 5: the chosen theme travels with the wallet, like the language
+    4(data) {
+      setDefault(setDefault(data, "settings", {}), "theme", "system");
+    },
   };
 
   function migrate(data) {
@@ -121,6 +125,7 @@ const Core = (() => {
     migrate(data);
     const s = setDefault(data, "settings", {});
     setDefault(s, "language", I18N.DEFAULT);
+    setDefault(s, "theme", "system"); // "system", "light" or "dark"
     setDefault(s, "price_api_key", ""); // private: it lives in your file, never in the repository
     setDefault(s, "fx", { USD: 1.09, PLN: 4.3 });
     setDefault(s, "emergency_target", 10000);

@@ -17,6 +17,7 @@ const App = () => {
   const data = Store.get();
   const L = Core.lang(data);
   document.documentElement.lang = L;
+  Theme.set(data.settings.theme);
   const T = (key, vars) => I18N.t(L, key, vars);
   const money = (x, dec = 0) => I18N.money(L, x, dec);
 
@@ -133,8 +134,14 @@ const App = () => {
   );
 
   // ---------------------------------------------------------- theme
+  // the choice is kept in the wallet file; a theme click alone never asks for a download
+  function chooseTheme() {
+    Theme.toggle();
+    data.settings.theme = Theme.choice();
+    if(Store.state().canSaveInPlace) Store.changed();
+  }
   // the icon names what is showing, the tooltip what a click brings
-  const themeBtn = <IconBtn icon="light_mode" title={T("theme_dark")} onClick={() => Theme.toggle()} />;
+  const themeBtn = <IconBtn icon="light_mode" title={T("theme_dark")} onClick={() => chooseTheme()} />;
   function showTheme() {
     const dark = Theme.isDark();
     themeBtn.icon = dark ? "dark_mode" : "light_mode";

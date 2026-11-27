@@ -25,12 +25,12 @@ function ok(name, cond, detail = "") {
 }
 
 // ---------------------------------------------------------------- the current format
-const VERSION = 4;
+const VERSION = 5;
 const words = (s) => s.split(" ");
 const SHAPE = {
   file: words("version settings categories buckets assets transactions cash cash_log house mortgage history strategy_notes "
     + "prices fx_history"),
-  settings: words("language price_api_key fx fx_yahoo emergency_target monthly_expenses net_income salaries_per_year "
+  settings: words("language theme price_api_key fx fx_yahoo emergency_target monthly_expenses net_income salaries_per_year "
     + "prepay_share_pct min_prepayment alt_safe_yield_pct drift_alert_pp stale_days"),
   category: words("target_pct buy"),
   bucket: words("category target_pct_in_category max_pct_in_category"),
@@ -107,6 +107,9 @@ ok("the example carries no price service key", JSON.parse(text).settings.price_a
   ok("opening a migrated file changes nothing more", Core.serialize(again) === Core.serialize(d));
   ok("the version is written first", Core.serialize(d).startsWith(`{\n  "version": ${VERSION},`));
   ok("an older file gets an empty place for the key", d.settings.price_api_key === "");
+  ok("an older file follows the system's theme", d.settings.theme === "system");
+  const dark = Core.parse(JSON.stringify({ ...old(), version: 4, settings: { theme: "dark" } }));
+  ok("a chosen theme survives opening and saving", Core.parse(Core.serialize(dark)).settings.theme === "dark");
   const keyed = Core.parse(JSON.stringify({ ...old(), version: 2, settings: { price_api_key: "abc" } }));
   ok("a key survives opening and saving", Core.parse(Core.serialize(keyed)).settings.price_api_key === "abc");
   const current = { ...old(), version: VERSION };

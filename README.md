@@ -41,13 +41,13 @@ A spreadsheet stopped being enough once a mortgage joined the portfolio. Fortres
 
 Also:
 - 🌐 English / Polish / Portuguese, switchable at any time, remembered in your wallet file,
-- 🌗 light and dark theme,
+- 🌗 light and dark theme, remembered in your wallet file too,
 - 📱 works on a phone (the layout adapts; you download the changed file),
 - 📸 a net-worth snapshot on every change, which feeds the history chart.
 
 ## Where your data lives
 
-In one file on your device. **File → Open a file.** In Chrome and Edge on a computer the app saves straight back into that file after every change; after a reload you open it again. In other browsers (phones, Firefox, Safari) you **download** the updated file. The file is not encrypted.
+In one file on your device. **File → Open a file.** In Chrome and Edge on a computer the app saves straight back into that file after every change; after a reload you open it again. In other browsers (phones, Firefox, Safari) you **download** the updated file. The file holds everything: money, settings, theme, language and the price service key. It is not encrypted.
 
 Nothing of it is sent to the server that hosts the page.
 
