@@ -32,7 +32,7 @@ else {
   ok("JSX is compiled: no Babel in the page", !/babel/i.test(html.match(/<head[\s\S]*?<\/head>/i)?.[0] || "")
     && !/type=["']?text\/babel/i.test(html));
   const spare = (rule["script-src"] || "").split(" ").filter(v => /^https:/.test(v));
-  if(spare.length) console.log(`  (info) the built policy still allows scripts from ${spare.join(", ")}: send the header from README → Security`);
+  if(spare.length) console.log(`  (info) the policy also names ${spare.join(", ")} for \`tonka serve\`; this page fetches nothing from them (above)`);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

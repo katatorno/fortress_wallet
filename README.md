@@ -67,18 +67,9 @@ All of this is in `scripts/core/remember.js`. `privacy.test.cjs` reads every sou
 - The page requests data from its own server only, and from the exchange rate service (`api.frankfurter.dev`) after a click. The Content Security Policy in `app.html` says so and the browser enforces it. It makes leaking harder; it cannot protect against someone who controls the server, because they control the page and its policy. It covers requests, not leaving the page: a clicked link goes where it leads, so links in the notes of a wallet file work only towards web pages and e-mail addresses (`scripts/core/links.js`).
 - **Give the app an address of its own** (`wallet.example.com`, not `example.com/wallet`). Browser storage and file permissions belong to the whole address, so every page of a shared one has them.
 - Build with `-i -f`, so that no code or font is fetched from elsewhere; `.tests/build.test.cjs` checks a built `index.html` for it. A file over the size limit stays linked, and **Data & privacy** lists every server the page has fetched from.
-- **Send the header below; it is not optional.** The built page keeps the policy of `app.html`, which still allows scripts from `unpkg.com` and `lib.tonkajsx.com` and fonts from `font.tonkajsx.com` for `tonka serve`. The header allows code and fonts written inside the page only, and the browser obeys both policies, so with it those servers are refused, a file that stayed linked included. It also refuses being shown inside another site's frame, which a policy in the page cannot.
+- **The whole policy is in `app.html`**, and the build carries it into `index.html`: the page brings its rules along, and the server needs no configuration for them. The same policy serves `tonka serve`, so it names the servers the libraries and fonts come from while developing (`unpkg.com`, `lib.tonkajsx.com`, `font.tonkajsx.com`); a page built with `-i -f` has them inside and fetches nothing from those servers. What a page cannot set for itself (refusing to be shown inside another site's frame, HTTPS only) is the server's: most hosting does it already.
 - **Keep your wallet outside the project folder**, for example in your documents. `tonka serve` hands out the folder's files and may be reachable from your network. Git ignores `data/` (all but the example) and the tools' copies (`*.backup-*`) as a second line of defence, not as a place for the wallet.
 - Upload the built files only, never the project folder.
-- Send these headers from the server (the policy in the page stays in force beside them):
-
-  ```
-  Content-Security-Policy: default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; font-src data:; img-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
-  Strict-Transport-Security: max-age=31536000
-  X-Content-Type-Options: nosniff
-  Referrer-Policy: no-referrer
-  Permissions-Policy: camera=(), microphone=(), geolocation=()
-  ```
 
 ## Quick start
 
@@ -273,7 +264,7 @@ What the suites cannot reach, as they run in Node: worth a look before a release
 3. **A tool meanwhile:** with the file open, run `fetch-prices` on it, then change something in the app: the same.
 4. **Firefox:** change something, download, cancel the download: the message says nothing was saved; download again.
 5. **Notes:** a note with `[x](javascript:alert(1))` shows *x* as plain text, and a note with `[x](https://example.com)` as a link.
-6. **Built page:** after `tonka build … -i -f`, `tonka test` checks `index.html`; open it from the server with the header from [Security](#security) and look in **Data & privacy** at the servers fetched from: this page's own and nothing else.
+6. **Built page:** after `tonka build … -i -f`, `tonka test` checks `index.html`; open it from the server and look in **Data & privacy** at the servers fetched from: this page's own and nothing else.
 
 ## Disclaimer
 

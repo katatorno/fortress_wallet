@@ -2,8 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <!-- data may be requested from this server and the exchange rate service only; the
-       outside script and font hosts serve `tonka serve`, a build carries them inside -->
+  <!-- the page's whole security policy, kept here and nowhere else (the build carries it
+       into index.html): data may be requested from this server and the exchange rate
+       service only; the outside script and font hosts serve `tonka serve`, a build with
+       -i -f carries the scripts and fonts inside -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://unpkg.com https://lib.tonkajsx.com; style-src 'self' 'unsafe-inline'; font-src 'self' data: https://font.tonkajsx.com; img-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; base-uri 'none'; form-action 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="color-scheme" content="light dark">
