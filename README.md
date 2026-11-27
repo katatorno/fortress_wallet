@@ -127,18 +127,18 @@ fortress_wallet/
 │   │   ├── wallet/           # the wallet logic, a module a file:
 │   │   │   ├── texts.js      #   texts in the wallet's language
 │   │   │   ├── rules.js      #   the refusal of a save, checks of typed numbers and dates
-│   │   │   ├── rates.js      #   exchange rates, amounts in EUR
+│   │   │   ├── rates.js      #   exchange rates, the currencies, amounts in EUR
 │   │   │   ├── cash.js       #   cash accounts, their movements and table
-│   │   │   ├── transactions.js #  buy, sell, adjust; quantities
-│   │   │   ├── buckets.js    #   bucket percentages and their saves
-│   │   │   ├── instruments.js #   the instrument table's save, sold out ones
+│   │   │   ├── transactions.js #  buy, sell, adjust, remove; quantities
+│   │   │   ├── buckets.js    #   a category's buckets, their percentages and saves
+│   │   │   ├── instruments.js #   adding one, their table's save, sold out ones
 │   │   │   ├── mortgage.js   #   the schedule, what prepaying is worth, every change of the loan
 │   │   │   ├── valuation.js  #   positions, worth in EUR, net worth
-│   │   │   ├── plan.js       #   contribution calculator
+│   │   │   ├── plan.js       #   contribution calculator and recording its plan
 │   │   │   ├── settings.js   #   the settings view's save
 │   │   │   ├── wallet-history.js # snapshots, stored prices, the history
 │   │   │   ├── advice.js     #   recommendations
-│   │   │   └── wallet-file.js #   format version, migrations, checks, JSON
+│   │   │   └── wallet-file.js #   format version, migrations, a new instrument, checks, JSON
 │   │   ├── base.js           # small helpers: rounding, blanks, numbers, ids
 │   │   ├── dates.js          # ISO dates
 │   │   ├── chart-math.js     # ranges and axes of the history charts
@@ -174,7 +174,7 @@ Each of those files is one **module**:
 
 A new module of the wallet goes into `wallet/`; one that knows nothing of the wallet goes beside it and into `CORE_FILES` in `tools/wallet.cjs`. Either way list it in `.tests/core.test.cjs` with the modules it reaches: the suite holds the files to these rules, the list and the sources to each other, and every `Module.name` written in the app and the tools to a name the module gives.
 
-A save refused by a rule throws `Rules.RuleError(key, vars)`, which the view shows as a message, and leaves the wallet as it was.
+A view changes the wallet through a function of the logic: it collects the fields, calls and shows the result. The function checks everything first; refusing, it throws `Rules.RuleError(key, vars)`, which the view shows as a message, and leaves the wallet as it was. Only the language, the theme, the strategy notes and, for now, the exchange rates typed in the market view are assigned by their views.
 
 ## Translations
 
@@ -197,6 +197,8 @@ pt = "Amortização antecipada de {amount} registada."
 Plain JSON that you can read, diff and back up. Keep your own file outside the project folder (see [Security](#security)).
 
 A file whose values the app cannot use (text where a number belongs, a negative price, an exchange rate of 0, an id such as `__proto__`) is refused, with the places to correct named; nothing in it is repaired without you.
+
+Instruments, transactions, events of the mortgage and cash movements are told apart by their `id`; one that has none gets it when the file is opened.
 
 A change made in the app passes the same check of its values: one after which the wallet would not open, or which cannot be checked or written, is undone, with the reasons named, and nothing of it is saved.
 
@@ -249,6 +251,7 @@ Best close the wallet in the app before running them. If it stays open, the app 
 - **Mortgage:** annuity, interest = balance × rate / 12. A prepayment either *shortens the term* (same payment, ends earlier) or *lowers the payment* (recalculated over the remaining term). It costs its amount plus the fee on it. One larger than the balance on its day (after the events recorded up to that day) is refused, and so is one taken from the prepayment pot when the pot does not cover the cost.
 - **Net prepayment gain** = interest saved compared with no prepayments, minus fees.
 - **Net worth** = investments + cash + (before the deed: deposit | after the deed: home value − mortgage balance).
+- **Quantities** = opening quantity + transactions. A sale of more than is held that day or later is refused, and so is deleting transactions after which an instrument would be held below 0 (and lower than before) at the end of some day.
 
 In the app, prices of stocks, ETFs and metals are entered by hand; `tools/fetch-prices.cjs` fills them in from your computer (see above). Exchange rates come from the ECB via the free [Frankfurter API](https://frankfurter.dev).
 
@@ -262,8 +265,8 @@ tonka test fortress_wallet          # or one suite: node .tests/<name>.test.cjs
 |---|---|
 | `core` | the module rules (each file loads alone, reaches exactly what is listed, every `Module.name` exists), valuation, the contribution calculator, the mortgage, recommendations, the file |
 | `market` | the market view's rules: percentages in a bucket are 100% or all 0%, bucket shares are 100%, moves and deletions keep that, one save of the buckets for both views, the "what to buy" calculator, no sell alerts for equities |
-| `rules` | the saves of the settings, cash, mortgage and transactions views and the changes of the loan: everything checked first, a refusal changes nothing; what a transaction does to a quantity; the loan's yearly totals, payment on a day and prepayment effect |
-| `format` | the file's version and keys, migrations, files refused for values the app cannot use |
+| `rules` | the saves of the settings, cash, mortgage and transactions views, the changes of the loan and of the instruments, transactions removed, a cash movement and a plan recorded: everything checked first, a refusal changes nothing, what is accepted leaves a wallet which opens; what a transaction does to a quantity; the loan's yearly totals, payment on a day and prepayment effect |
+| `format` | the file's version and keys, a new instrument's keys, ids given on opening, migrations, files refused for values the app cannot use |
 | `history` | stored prices, the history built from them, the XTB import |
 | `store` | saving: the autosave, changes during a save, a file changed elsewhere, downloads; a change the wallet would not open with, or one that throws, is refused and undone |
 | `online` | the exchange rates: what is sent and what of the answer is taken |

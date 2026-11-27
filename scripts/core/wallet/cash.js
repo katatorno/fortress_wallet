@@ -1,7 +1,7 @@
 // scripts/core/wallet/cash.js
 //
-// Cash accounts: their roles, their movements in the cash log, and the save of the
-// cash table.
+// Cash accounts: their roles, their movements in the cash log (as they come, or
+// checked as the form sends one), and the save of the cash table.
 
 const Cash = (() => {
   const ROLES = ["emergency", "prepay", "home", "other"];
@@ -23,13 +23,29 @@ const Cash = (() => {
   }
 
   /**
+   * A deposit or, below 0, a withdrawal from the form, checked: an amount other than 0,
+   * and the account and the date as `add` checks them. Throws Rules.RuleError and
+   * leaves the data as it was.
+   * @param {{accountId:string, amount:any, date?:string, note?:string}} movement  an empty date is today
+   */
+  function record(data, { accountId, amount, date = null, note = "" }) {
+    if(!Base.isNumeric(amount) || !Number(amount)) throw new Rules.RuleError("warn_amount_zero");
+    // an amount so large that, in cents, it or the balance with it is no number
+    const held = Number(data.cash.find(c => c.id === accountId)?.amount || 0);
+    if(![Number(amount), held + Number(amount)].every(x => Number.isFinite(Base.round2(x)))) {
+      throw new Rules.RuleError("err_value_number", { field: Texts.tr(data, "field_amount_signed") });
+    }
+    add(data, accountId, amount, note, date);
+  }
+
+  /**
    * The cash table: names, roles, currencies and balances. A changed balance goes
    * to the cash log as a correction with `note`.
    * @param {Array<{id:string, name:string, role:string, currency:string, amount:any}>} rows
    */
   function save(data, rows, note = "", on = null) {
     const date = Rules.date(data, on, "field_date");
-    const currencies = ["EUR", ...Object.keys(data.settings.fx)];
+    const currencies = Rates.currencies(data);
     const next = rows.map(r => {
       const acc = _existing(data, r.id);
       const name = String(r.name ?? "").trim();
@@ -46,5 +62,5 @@ const Cash = (() => {
     }
   }
 
-  return { ROLES, account, add, save };
+  return { ROLES, account, add, record, save };
 })();

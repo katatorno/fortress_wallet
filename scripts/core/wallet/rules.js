@@ -12,9 +12,9 @@ const Rules = (() => {
     constructor(key, vars = {}) { super(key); this.key = key; this.vars = vars; }
   }
 
-  /** A number typed into a form, held between limits; `key` is the label's key. */
-  function number(data, v, key, min = -Infinity, max = Infinity) {
-    const field = Texts.tr(data, key);
+  /** A number typed into a form, held between limits; `key` is the label's key, `row` names a table's row. */
+  function number(data, v, key, min = -Infinity, max = Infinity, row = "") {
+    const field = row ? `${row} · ${Texts.tr(data, key)}` : Texts.tr(data, key);
     if(!Base.isNumeric(v)) throw new RuleError("err_value_number", { field });
     const x = Number(v);
     if(x < min || x > max) {

@@ -39,7 +39,7 @@ const MarketView = (app) => {
   const equitiesOnly = () => ({ ...data, categories: { equities: data.categories.equities || { buy: false } } });
 
   // ---------------------------------------------------------- shares vs targets
-  const buckets = bucketsOf(data, "equities");
+  const buckets = Buckets.of(data, "equities");
   const shares = [
     portfolioPanel(app),
     <BucketShares app={app} positions={pos} category="equities" title={T("bucket_shares_title")}
@@ -56,7 +56,12 @@ const MarketView = (app) => {
   const record = (
     <Button variant="primary" icon="check" onClick={() => {
       const spent = plan.lines.filter(l => l.kind === "buy").reduce((a, l) => a + l.eur, 0);
-      Plan.apply(data, plan, date.value);
+      try { Plan.apply(data, plan, date.value); }
+      catch(e) {
+        if(!(e instanceof Rules.RuleError)) throw e;
+        Alert.err(T(e.key, e.vars));
+        return;
+      }
       app.commit(T("flash_purchases_recorded", { amount: money(spent, 2) }));
     }}>{T("btn_record_purchases")}</Button>
   );

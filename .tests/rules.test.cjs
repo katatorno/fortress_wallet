@@ -1,17 +1,20 @@
 // .tests/rules.test.cjs
 //
 // The saves of the settings, cash, mortgage and transactions views (Settings.save,
-// Cash.save, Mortgage.save, Transactions.record) and the changes of the loan
-// (payments and prepayments booked and deleted): everything is checked first, and a
-// refusal names its reason and changes nothing. Also: the numbers the loan's view
-// shows, and that an instrument takes the category of its bucket.
+// Cash.save, Mortgage.save, Transactions.record), the changes of the loan (payments
+// and prepayments booked and deleted), of the instruments (added, their table saved),
+// transactions removed, a cash movement and a plan recorded: everything is checked
+// first, a refusal names its reason and changes nothing, and what is accepted leaves a
+// wallet which opens. Also: the numbers the loan's view shows, and that an instrument
+// takes the category of its bucket.
 // Run: tonka test fortress_wallet   (or: node .tests/rules.test.cjs)
 
 const { readFileSync } = require("node:fs");
 const path = require("node:path");
 const { APP, loadCore } = require("../tools/wallet.cjs");
 
-const { Advice, Buckets, Cash, Dates, Instruments, Mortgage, Rules, Settings, Transactions, WalletFile } = loadCore();
+const { Advice, Buckets, Cash, Dates, Instruments, Mortgage, Plan, Rates, Rules, Settings, Transactions, WalletFile }
+  = loadCore();
 const example = () => WalletFile.parse(readFileSync(path.join(APP, "data", "wallet.example.json"), "utf8"));
 
 let pass = 0, fail = 0;
@@ -316,6 +319,185 @@ function refusal(fn, start = example) {
   ok("a purchase adds", change("buy", 2) === 2 && change("buy", "2.5") === 2.5);
   ok("a sale takes away", change("sell", 2) === -2);
   ok("an adjustment adds its quantity, which may be below 0", change("adjust", 3) === 3 && change("adjust", -3) === -3);
+}
+
+/** What keeps the wallet from opening: nothing, after a change which was accepted. */
+const opens = (d) => !WalletFile.check(d).length;
+
+// ---------------------------------------------------------------- a new instrument
+{
+  const fields = { name: " Platinum ", ticker: "XPT", bucket: "metals", currency: "USD", opening_quantity: "2", price: 31.5,
+    unit: "oz" };
+  const add = (d, change) => Instruments.add(d, { ...fields, ...change }, "2026-11-27");
+  const why = (change) => refusal(d => add(d, change));
+  {
+    const d = example();
+    const redone = add(d);
+    const { id, ...rest } = d.assets.at(-1);
+    ok("an instrument is added complete, in its bucket's category, at 0%", !!id && !redone.length
+      && JSON.stringify(rest) === JSON.stringify({ name: "Platinum", ticker: "XPT", category: "metals", bucket: "metals",
+        currency: "USD", opening_quantity: 2, price: 31.5, unit: "oz", price_updated: "2026-11-27", price_symbol: "",
+        target_in_bucket: 0, alert_price: null }), JSON.stringify(rest));
+    ok("the wallet with it opens", opens(d), WalletFile.check(d).join("; "));
+  }
+  {
+    const d = example();
+    add(d, { ticker: undefined, opening_quantity: null, price: null, unit: "", currency: "EUR" });
+    const a = d.assets.at(-1);
+    ok("empty numbers are 0, an empty unit pcs", a.opening_quantity === 0 && a.price === 0 && a.unit === "pcs"
+      && a.ticker === "" && opens(d), JSON.stringify(a));
+  }
+  {
+    const d = example();
+    asset(d, "gold").target_in_bucket = 70;
+    const redone = add(d);
+    ok("a bucket whose targets do not add up is recalculated, and named", redone.join() === "metals"
+      && Buckets.isWhole(Buckets.targetSum(d.assets, "metals")) && opens(d), redone.join());
+  }
+  for(const [what, name] of [["without a name", ""], ["with a name of spaces", "  "], ["with no name given", null]]) {
+    ok(`an instrument ${what} is refused`, why({ name }) === "warn_name_required");
+  }
+  for(const [what, bucket] of [["without a bucket", ""], ["of a bucket that is none", "nope"],
+    ["of a bucket named like an object's own part", "constructor"]]) {
+    ok(`an instrument ${what} is refused`, why({ bucket }) === "warn_bucket_required");
+  }
+  ok("a currency the wallet has no rate for is refused", why({ currency: "GBP" }) === "err_value_choice");
+  ok("a price of -5 is refused by the form", why({ price: -5 }) === "err_value_min");
+  ok("so is an opening quantity below 0", why({ opening_quantity: -1 }) === "err_value_min");
+  ok("a price that is no number is refused", why({ price: "x" }) === "err_value_number");
+  ok("so is an opening quantity that is none", why({ opening_quantity: "x" }) === "err_value_number");
+  ok("a new instrument with a date that is none is refused",
+    refusal(d => Instruments.add(d, fields, "soon")) === "err_value_choice");
+  ok("the wallet's currencies are the euro and those with a rate", Rates.currencies(example()).join() === "EUR,USD,PLN");
+  ok("a category's buckets come in their order", Buckets.of(example(), "equities").join() === "fortress,sandbox"
+    && !Buckets.of(example(), "nope").length);
+}
+
+// ---------------------------------------------------------------- the instrument table
+{
+  const rows = (d, change = {}) => d.assets.map(a => ({ ...a, delete: false, ...(change[a.id] || {}) }));
+  /** The first row's price changes too: a refusal further down must leave it as well. */
+  const why = (change) => refusal(d => Instruments.save(d, rows(d, { webg: { price: 20 }, ...change })));
+  for(const id of ["nope", "__proto__", undefined]) {
+    ok(`a row of an instrument that is none (${id}) refuses the table`, refusal(d => Instruments.save(d,
+      [...rows(d, { webg: { price: 20 } }), { ...rows(d)[1], id }])) === "err_value_choice");
+  }
+  ok("so does such a row marked for deletion", refusal(d => Instruments.save(d,
+    [...rows(d), { id: "nope", delete: true }])) === "err_value_choice");
+  ok("a row without a name is refused", why({ gold: { name: " " } }) === "warn_name_required");
+  ok("so is a row whose name is no text", why({ gold: { name: NaN } }) === "warn_name_required"
+    && why({ gold: { name: {} } }) === "warn_name_required");
+  ok("a row of a bucket that is none is refused", why({ gold: { bucket: "nope" } }) === "warn_bucket_required");
+  ok("a row in a currency without a rate is refused", why({ gold: { currency: "GBP" } }) === "err_value_choice");
+  ok("a negative price in the table is refused", why({ gold: { price: -1 } }) === "err_value_min");
+  ok("so is a price that is no number", why({ gold: { price: "x" } }) === "err_value_number");
+  ok("a negative sell alert is refused", why({ gold: { alert_price: -1 } }) === "err_value_min");
+  ok("so is a sell alert that is no number", why({ gold: { alert_price: "x" } }) === "err_value_number");
+  ok("a table saved with a date that is none is refused",
+    refusal(d => Instruments.save(d, rows(d), "soon")) === "err_value_choice");
+  let field = null;
+  try { Instruments.save(example(), rows(example(), { gold: { price: -1 } })); } catch(e) { field = e.vars.field; }
+  ok("a refused number names its row and column", field === `${asset(example(), "gold").name} · Price`, field);
+  {
+    const d = example();
+    Instruments.save(d, rows(d, { gold: { alert_price: 5000, price: null }, silver: { alert_price: 0 },
+      edo0134: { alert_price: null } }));
+    ok("a sell alert is empty or a price, an empty price 0", asset(d, "gold").alert_price === 5000
+      && asset(d, "gold").price === 0 && asset(d, "silver").alert_price === null && opens(d));
+  }
+  {
+    const d = example();
+    Instruments.save(d, rows(d, { gold: { delete: true, name: "", price: -1, bucket: "nope" } }));
+    ok("what a row marked for deletion holds is not looked at", !asset(d, "gold") && opens(d));
+  }
+}
+
+// ---------------------------------------------------------------- removing transactions
+{
+  /** The example with the transactions given as [id, day of November, type, quantity, instrument] and 0 of it before. */
+  const traded = (...list) => () => {
+    const d = example();
+    asset(d, "galp").opening_quantity = 0;
+    for(const [id, day, type, quantity, assetId = "galp"] of list) {
+      d.transactions.push({ id, date: `2026-11-${day}`, asset_id: assetId, type, quantity, price: 20, fee: 0 });
+    }
+    return d;
+  };
+  const why = (ids, start) => refusal(d => Transactions.remove(d, ids), start);
+  const sold = traded(["buy", "01", "buy", 5], ["sell", "10", "sell", 4], ["more", "20", "buy", 9], ["other", "05", "buy", 1, "webg"]);
+  ok("a purchase a later sale needs is not removed, though more is bought after it",
+    why(["buy"], sold) === "warn_delete_oversells");
+  let named = null;
+  try { Transactions.remove(sold(), ["buy"]); } catch(e) { named = e.vars.name; }
+  ok("and the refusal names the instrument", named === asset(example(), "galp").name, named);
+  ok("one instrument refused holds the whole removal back", why(["other", "buy"], sold) === "warn_delete_oversells");
+  {
+    const d = sold();
+    Transactions.remove(d, new Set(["buy", "sell"]));
+    ok("the purchase goes together with that sale", d.transactions.map(t => t.id).join() === "more,other"
+      && Transactions.heldOn(d, "galp") === 9 && opens(d));
+  }
+  ok("the sale alone goes", why(["sell"], sold) === null);
+  ok("so does a purchase nothing draws on", why(["other", "more"], sold) === null);
+  ok("a positive adjustment a sale needs is not removed",
+    why(["adj"], traded(["adj", "01", "adjust", 2], ["sell", "10", "sell", 2])) === "warn_delete_oversells");
+  ok("a negative one is", why(["adj"], traded(["buy", "01", "buy", 2], ["adj", "10", "adjust", -2])) === null);
+  ok("only the end of a day counts", why(["early"],
+    traded(["early", "01", "buy", 1], ["sell", "20", "sell", 2], ["buy", "20", "buy", 2])) === null);
+  ok("fractions which add up to 0 are not below it", why(["early"],
+    traded(["early", "01", "buy", 1], ["a", "02", "buy", 0.3], ["b", "03", "sell", 0.1], ["c", "04", "sell", 0.2])) === null);
+  ok("a removal which corrects a quantity below 0 passes", why(["sell"], traded(["sell", "10", "sell", 6])) === null);
+  const short = traded(["sell", "01", "sell", 1], ["buy", "05", "buy", 5], ["last", "10", "buy", 1]);
+  ok("a day already below 0 which the removal does not lower does not stop it", why(["last"], short) === null);
+  ok("a quantity already below 0 is not taken lower",
+    why(["buy"], traded(["buy", "01", "buy", 1], ["sell", "05", "sell", 3])) === "warn_delete_oversells");
+  {
+    const d = traded(["lost", "01", "sell", 3, "gone"], ["buy", "02", "buy", 1])();
+    const price = asset(d, "galp").price;
+    Transactions.remove(d, ["nope"]);
+    ok("an id that is none removes nothing", d.transactions.length === 2);
+    Transactions.remove(d, ["lost", "buy"]);
+    ok("a transaction of an instrument that is gone goes too, and no price changes",
+      !d.transactions.length && asset(d, "galp").price === price && opens(d));
+  }
+}
+
+// ---------------------------------------------------------------- a cash movement of the form
+{
+  const movement = { accountId: "emergency", amount: 25.5, date: "2026-11-20", note: "gift" };
+  const why = (change) => refusal(d => Cash.record(d, { ...movement, ...change }));
+  {
+    const d = example();
+    const held = Cash.account(d, "emergency").amount;
+    Cash.record(d, movement);
+    const { id, ...entry } = d.cash_log.at(-1);
+    ok("a deposit is booked on its account and in the log", !!id && Cash.account(d, "emergency").amount === held + 25.5
+      && JSON.stringify(entry) === JSON.stringify({ date: "2026-11-20", account_id: "emergency", amount: 25.5, note: "gift" })
+      && opens(d), JSON.stringify(entry));
+    Cash.record(d, { accountId: "emergency", amount: "-25.5" });
+    ok("a withdrawal, without a date today's", Cash.account(d, "emergency").amount === held
+      && d.cash_log.at(-1).amount === -25.5 && d.cash_log.at(-1).date === Dates.today() && opens(d));
+  }
+  for(const [what, amount] of [["of 0", 0], ["of a written 0", "0"], ["left empty", null], ["that is no number", "x"],
+    ["beyond any number", Infinity]]) {
+    ok(`a cash movement ${what} is refused`, why({ amount }) === "warn_amount_zero");
+  }
+  ok("so is one too large to be counted in cents", why({ amount: 1e308 }) === "err_value_number");
+  ok("a cash movement on an account that is none is refused", why({ accountId: "nope" }) === "err_value_choice");
+  ok("so is one with a date that is none", why({ date: "soon" }) === "err_value_choice");
+}
+
+// ---------------------------------------------------------------- recording a plan
+{
+  ok("a plan recorded with a date that is none is refused",
+    refusal(d => Plan.apply(d, Plan.contribution(d, 5000), "soon")) === "err_value_choice");
+  const d = example();
+  Plan.apply(d, Plan.contribution(d, 5000), "2026-11-20");
+  ok("a plan is recorded on its date", d.transactions.length > 0 && d.cash_log.length > 0
+    && [...d.transactions, ...d.cash_log].every(x => x.date === "2026-11-20") && opens(d));
+  const e = example();
+  Plan.apply(e, Plan.contribution(e, 5000), "");
+  ok("without a date it is today's", e.transactions.every(t => t.date === Dates.today()) && opens(e));
 }
 
 // ---------------------------------------------------------------- category from the bucket

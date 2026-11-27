@@ -5,7 +5,7 @@
 
 const CashView = (app) => {
   const { data, T } = app;
-  const currencies = ["EUR", ...Object.keys(data.settings.fx)];
+  const currencies = Rates.currencies(data);
   const cashGrid = (
     <EditGrid rows={data.cash} columns={[
       { key: "name", label: T("col_account"), width: "14rem" },

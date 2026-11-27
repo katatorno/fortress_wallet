@@ -73,8 +73,7 @@ const TransactionsView = (app) => {
         {formRow(T("field_date"), cDate)}
         {formRow(T("field_note"), cNote)}
         <row><Button variant="primary" icon="save" onClick={() => {
-          if(!amount.value || !Number.isFinite(Number(amount.value))) { Alert.wrn(T("warn_amount_zero")); return; }
-          try { Cash.add(data, account.value, amount.value, cNote.value, cDate.value); }
+          try { Cash.record(data, { accountId: account.value, amount: amount.value, date: cDate.value, note: cNote.value }); }
           catch(e) {
             if(!(e instanceof Rules.RuleError)) throw e;
             Alert.wrn(T(e.key, e.vars));
@@ -110,7 +109,12 @@ const TransactionsView = (app) => {
         <row><Button variant="danger" icon="delete" onClick={() => {
           const gone = new Set(grid.rows.filter(r => r.delete).map(r => r.id));
           if(!gone.size) return;
-          data.transactions = data.transactions.filter(t => !gone.has(t.id));
+          try { Transactions.remove(data, gone); }
+          catch(e) {
+            if(!(e instanceof Rules.RuleError)) throw e;
+            Alert.wrn(T(e.key, e.vars));
+            return;
+          }
           app.commit(T("flash_transactions_deleted", { count: gone.size }));
         }}>{T("btn_delete_transactions")}</Button></row>
       </stack>

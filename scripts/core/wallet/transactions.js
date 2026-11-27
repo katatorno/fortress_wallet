@@ -1,7 +1,7 @@
 // scripts/core/wallet/transactions.js
 //
-// Transactions: their types, the quantities they give, and recording one, as it comes
-// or checked as the form sends it.
+// Transactions: their types, the quantities they give, recording one, as it comes or
+// checked as the form sends it, and removing them.
 
 const Transactions = (() => {
   const TYPES = ["buy", "sell", "adjust"];
@@ -65,5 +65,29 @@ const Transactions = (() => {
     add(data, assetId, type, q, p, f, day, note, updatePrice);
   }
 
-  return { TYPES, change, quantities, heldOn, add, record };
+  /**
+   * Removes the transactions of the ids given. Refused when, without them, an instrument
+   * of theirs would at the end of some day be held in a quantity below 0 and lower than
+   * with them: a removal which corrects what is held passes. The instrument's price
+   * stays as it is. Throws Rules.RuleError and leaves the data as it was.
+   */
+  function remove(data, ids) {
+    const gone = new Set(ids);
+    const touched = new Set(data.transactions.filter(t => gone.has(t.id)).map(t => t.asset_id));
+    for(const a of data.assets.filter(x => touched.has(x.id))) {
+      const own = data.transactions.filter(t => t.asset_id === a.id)
+        .map(t => ({ day: Dates.parse(t.date), by: change(t), stays: !gone.has(t.id) }))
+        .sort((x, y) => x.day.localeCompare(y.day));
+      let before = Number(a.opening_quantity || 0), after = before;
+      for(const [i, t] of own.entries()) {
+        before += t.by;
+        if(t.stays) after += t.by;
+        if(own[i + 1]?.day === t.day) continue; // only the end of a day counts
+        if(after < -1e-9 && after < before - 1e-9) throw new Rules.RuleError("warn_delete_oversells", { name: a.name });
+      }
+    }
+    data.transactions = data.transactions.filter(t => !gone.has(t.id));
+  }
+
+  return { TYPES, change, quantities, heldOn, add, record, remove };
 })();

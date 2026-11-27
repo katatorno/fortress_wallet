@@ -4,10 +4,6 @@
 // shares, and each instrument vs its target inside a bucket with the editor of
 // those targets.
 
-/** The names of a category's buckets, in their order. */
-const bucketsOf = (data, category) =>
-  Object.keys(data.buckets).filter(b => data.buckets[b].category === category);
-
 /** A total of percentages as text: "100%", "73,68%". */
 const totalText = (data, sum) => Buckets.sumList(data, [{ name: "", sum }]).trim();
 
@@ -18,7 +14,7 @@ const totalText = (data, sum) => Buckets.sumList(data, [{ name: "", sum }]).trim
  */
 const BucketShares = ({ app, positions, category, title, footer }) => {
   const { data, T } = app;
-  const names = bucketsOf(data, category);
+  const names = Buckets.of(data, category);
   const values = names.map(b => positions.filter(p => p.bucket === b).reduce((a, p) => a + p.value_eur, 0));
   const total = values.reduce((a, b) => a + b, 0);
   const planned = names.map(b => Number(data.buckets[b].target_pct_in_category || 0));
@@ -131,7 +127,7 @@ function targetEditor(app, bucket) {
 function bucketEditor(app, category) {
   const { data, T, money } = app;
   const pos = Valuation.positions(data);
-  const rows = () => bucketsOf(data, category).map(b => {
+  const rows = () => Buckets.of(data, category).map(b => {
     const members = pos.filter(p => p.bucket === b && !Instruments.soldOut(data, p));
     return {
       old: b, name: b, share: Number(data.buckets[b].target_pct_in_category || 0),

@@ -1,7 +1,8 @@
 // scripts/core/wallet/wallet-file.js
 //
 // The wallet file: its format version and the migrations of older files, the keys
-// filled in, the checks of its values, and reading and writing it as JSON.
+// filled in (those of a new instrument too), the checks of its values, and reading and
+// writing it as JSON.
 
 const WalletFile = (() => {
   const CATEGORY_RENAME = { akcje: "equities", kruszce: "metals", obligacje: "bonds" };
@@ -63,6 +64,28 @@ const WalletFile = (() => {
     data.version = FORMAT;
   }
 
+  /** Fills in what an instrument lacks, an id too; its name, category and bucket have no default. */
+  function _completeAsset(a) {
+    Base.setDefault(a, "id", Base.newId());
+    Base.setDefault(a, "ticker", "");
+    Base.setDefault(a, "price_symbol", "");
+    Base.setDefault(a, "opening_quantity", 0);
+    Base.setDefault(a, "price", 0);
+    Base.setDefault(a, "currency", "EUR");
+    Base.setDefault(a, "target_in_bucket", 0);
+    Base.setDefault(a, "alert_price", null);
+    Base.setDefault(a, "price_updated", null);
+    Base.setDefault(a, "unit", "pcs");
+    return a;
+  }
+
+  /**
+   * A complete instrument made of the fields given, with a new id unless they bring one.
+   * It checks nothing: see `Instruments.add` and `problems`.
+   * @returns {object} a new object, the id its first key
+   */
+  const instrument = (fields) => _completeAsset({ id: Base.newId(), ...fields });
+
   /** Migrate an older file (see MIGRATIONS, old Polish category ids) and fill in missing keys. */
   function normalize(data) {
     data = data || {};
@@ -110,24 +133,15 @@ const WalletFile = (() => {
     Base.setDefault(data, "prices", {});     // asset id → date → [open or null, close]
     Base.setDefault(data, "fx_history", {}); // date → units per 1 EUR, like settings.fx
     Base.setDefault(data, "strategy_notes", "");
-    for(const a of data.assets) {
-      Base.setDefault(a, "id", Base.newId());
-      Base.setDefault(a, "ticker", "");
-      Base.setDefault(a, "price_symbol", "");
-      Base.setDefault(a, "opening_quantity", 0);
-      Base.setDefault(a, "price", 0);
-      Base.setDefault(a, "currency", "EUR");
-      Base.setDefault(a, "target_in_bucket", 0);
-      Base.setDefault(a, "alert_price", null);
-      Base.setDefault(a, "price_updated", null);
-      Base.setDefault(a, "unit", "pcs");
-    }
+    for(const a of data.assets) _completeAsset(a);
     for(const c of data.cash) {
       Base.setDefault(c, "role", "other");
       Base.setDefault(c, "currency", "EUR");
       Base.setDefault(c, "amount", 0);
     }
     for(const t of data.transactions) Base.setDefault(t, "id", Base.newId());
+    // deleting goes by id: without one, an event could not be told from the others
+    for(const x of [...m.events, ...data.cash_log]) if(Base.isBlank(x.id)) x.id = Base.newId();
     _migrateCategories(data);
     return data;
   }
@@ -358,5 +372,5 @@ const WalletFile = (() => {
     return data;
   }
 
-  return { FORMAT, normalize, problems, check, problemList, serialize, parse };
+  return { FORMAT, instrument, normalize, problems, check, problemList, serialize, parse };
 })();

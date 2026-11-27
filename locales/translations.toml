@@ -2232,6 +2232,11 @@ en = "{name}: only {held} held on that day or later, so no more can be sold."
 pl = "{name}: tego dnia lub później w portfelu jest tylko {held}, więc więcej nie da się sprzedać."
 pt = "{name}: nesse dia ou depois só existem {held}, por isso não se pode vender mais."
 
+[warn_delete_oversells]
+en = "{name}: without these transactions fewer than 0 would be held on some day. Delete the sales and adjustments which need them too."
+pl = "{name}: bez tych transakcji któregoś dnia ilość byłaby ujemna. Usuń razem z nimi sprzedaże i korekty, które ich potrzebują."
+pt = "{name}: sem estas transações, num dos dias a quantidade ficaria negativa. Elimine também as vendas e os ajustes que dependem delas."
+
 [rec_category_mismatch_t]
 en = "{name} is in a bucket of another category"
 pl = "{name} jest w koszyku innej kategorii"

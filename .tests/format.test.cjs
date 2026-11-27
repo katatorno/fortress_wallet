@@ -70,7 +70,10 @@ ok("the example carries no price service key", JSON.parse(text).settings.price_a
   Mortgage.bookStatement(d, { amount: 1000, interest: 700, principal: 300 });
   Mortgage.bookPrepayment(d, { amount: 1000, feePct: 1, mode: "reduce_term", fromPot: true });
   Mortgage.deleteEvents(d, [d.mortgage.events[0].id]);
+  Instruments.add(d, { name: "New", bucket: "fortress", currency: "EUR" });
   Instruments.save(d, d.assets.map(a => ({ ...a, delete: false })));
+  Cash.record(d, { accountId: "home", amount: 5 });
+  Transactions.remove(d, [d.transactions.at(-1).id]);
   Buckets.save(d, "equities", [{ old: "fortress", name: "fortress", share: 90 }, { old: "sandbox", name: "sandbox", share: 10 }]);
   WalletHistory.upsertSnapshot(d);
   ok("saving adds only known keys", !unknown(d).length, `${unknown(d).join(", ")} – ${HOW}`);
@@ -78,6 +81,29 @@ ok("the example carries no price service key", JSON.parse(text).settings.price_a
   ok("a new wallet holds only known keys", !unknown(fresh).length, `${unknown(fresh).join(", ")} – ${HOW}`);
   const missing = SHAPE.asset.filter(k => k !== "maturity" && d.assets.some(a => !(k in a)));
   ok("every instrument has every key of the format", !missing.length, missing.join(", "));
+  const made = WalletFile.instrument({ name: "New", category: "equities", bucket: "fortress" });
+  const keys = SHAPE.asset.filter(k => k !== "maturity");
+  ok("a new instrument is made with every key of the format and no other",
+    Object.keys(made).sort().join() === keys.sort().join(), Object.keys(made).join(", "));
+}
+
+// ---------------------------------------------------------------- ids of what is deleted by them
+{
+  const raw = JSON.parse(text);
+  const paid = (amount, id) => ({ ...(id === undefined ? {} : { id }), date: "2027-03-01", type: "payment", amount });
+  raw.mortgage.events = [paid(1), paid(2), paid(3, null), paid(4, ""), paid(5, "kept")];
+  const moved = { date: "2026-11-01", account_id: "home", amount: 1 };
+  raw.cash_log = [moved, { ...moved, id: "mine" }, moved];
+  const d = WalletFile.parse(JSON.stringify(raw));
+  const ids = [...d.mortgage.events, ...d.cash_log].map(x => x.id);
+  ok("an event of the loan or a cash movement without an id gets one on opening",
+    ids.every(id => typeof id === "string" && id) && new Set(ids).size === ids.length, JSON.stringify(ids));
+  ok("the ids a file has stay", d.mortgage.events[4].id === "kept" && d.cash_log[1].id === "mine");
+  ok("and stay through saving and opening",
+    WalletFile.serialize(WalletFile.parse(WalletFile.serialize(d))) === WalletFile.serialize(d));
+  Mortgage.deleteEvents(d, [d.mortgage.events[0].id]);
+  ok("deleting one such event deletes it alone", d.mortgage.events.map(e => e.amount).join() === "2,3,4,5",
+    d.mortgage.events.map(e => e.amount).join());
 }
 
 // ---------------------------------------------------------------- older and newer files

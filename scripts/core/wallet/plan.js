@@ -137,8 +137,13 @@ const Plan = (() => {
     return { amount: Number(amount), lines, notes, before_pct: Valuation.allocationPct(cats), after_pct: Valuation.allocationPct(catsAfter) };
   }
 
+  /**
+   * Records a plan: its cash into the accounts, its purchases as transactions. A date
+   * that is none is refused (Rules.RuleError) before anything changes.
+   * @param {string} [on]  an empty date is today
+   */
   function apply(data, plan, on = null) {
-    const date = Dates.parse(on) || Dates.today();
+    const date = Rules.date(data, on, "field_date") || Dates.today();
     const note = Texts.tr(data, "note_from_calculator");
     for(const ln of plan.lines) {
       if(ln.kind === "cash" && ln.account_id) Cash.add(data, ln.account_id, ln.eur, note, date);

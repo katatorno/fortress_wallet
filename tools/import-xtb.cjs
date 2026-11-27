@@ -86,8 +86,8 @@ function importInto(data, x) {
       const bond = BOND_FUNDS.includes(ticker);
       const category = bond ? "bonds" : "equities";
       const buckets = Object.keys(data.buckets).filter(b => data.buckets[b].category === category);
-      asset = WalletFile.normalize({ assets: [{ id, name: x.names[ticker], category, bucket: buckets[buckets.length - 1],
-        currency: currencyOf(ticker) }] }).assets[0];
+      asset = WalletFile.instrument({ id, name: x.names[ticker], category, bucket: buckets[buckets.length - 1],
+        currency: currencyOf(ticker), price_symbol: known?.symbol || "" });
       data.assets.push(asset);
     }
     if(asset.currency !== currencyOf(ticker)) throw new Error(`${ticker}: the wallet has it in ${asset.currency}`);

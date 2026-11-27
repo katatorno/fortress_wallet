@@ -65,7 +65,12 @@ const CalculatorView = (app) => {
             {applyDate}
             <Button variant="primary" icon="check" onClick={() => {
               if(!plan?.lines.length) return;
-              Plan.apply(data, plan, applyDate.value);
+              try { Plan.apply(data, plan, applyDate.value); }
+              catch(e) {
+                if(!(e instanceof Rules.RuleError)) throw e;
+                Alert.err(T(e.key, e.vars));
+                return;
+              }
               app.commit(T("flash_plan_applied", { amount: money(plan.amount) }));
             }}>{T("btn_apply_plan")}</Button>
           </row>

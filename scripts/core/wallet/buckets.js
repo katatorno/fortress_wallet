@@ -1,9 +1,13 @@
 // scripts/core/wallet/buckets.js
 //
-// Buckets and their percentages: instrument targets that add up to 100 or are all 0,
-// bucket shares that add up to 100, and the saves of the bucket tables.
+// Buckets and their percentages: those of each category, instrument targets that add
+// up to 100 or are all 0, bucket shares that add up to 100, and the saves of the bucket
+// tables.
 
 const Buckets = (() => {
+  /** The names of a category's buckets, in their order. */
+  const of = (data, category) => Object.keys(data.buckets).filter(b => data.buckets[b].category === category);
+
   const isWhole = (sum) => Math.abs(sum - 100) < 0.001;
   const percentText = (data, x) => Texts.num(data, x, Math.abs(x - Math.round(x)) < 0.001 ? 0 : 2) + "%";
 
@@ -150,7 +154,7 @@ const Buckets = (() => {
   }
 
   return {
-    isWhole, targetSum, badTargets, badShares, rebalance, saveTargets, sumList, save, plan,
-    apply,
+    of, isWhole, targetSum, badTargets, badShares, rebalance, saveTargets, sumList, save,
+    plan, apply,
   };
 })();

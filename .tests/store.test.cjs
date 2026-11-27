@@ -67,15 +67,15 @@ function world({ withHandle = true } = {}) {
 const notes = (text) => JSON.parse(text).strategy_notes;
 const change = (w, note) => { w.Store.get().strategy_notes = note; return w.Store.changed(); };
 
-/** An instrument added as the form of Instruments.jsx adds one, and what `changed` answers. */
+/** An instrument put into the wallet past the rules of its form, and what `changed` answers. */
 function addInstrument(w, fields) {
-  const { Base, Buckets, Dates, Store, WalletFile } = w;
+  const { Buckets, Dates, Store, WalletFile } = w;
   const data = Store.get();
   const bucket = Object.keys(data.buckets)[0];
-  const asset = WalletFile.normalize({ assets: [{
-    id: Base.newId(), name: "New", ticker: "", category: data.buckets[bucket].category, bucket,
+  const asset = WalletFile.instrument({
+    name: "New", ticker: "", category: data.buckets[bucket].category, bucket,
     currency: "EUR", opening_quantity: 0, price: 0, unit: "pcs", price_updated: Dates.today(), ...fields,
-  }] }).assets[0];
+  });
   data.assets.push(asset);
   Buckets.rebalance(data, bucket);
   return Store.changed();

@@ -5,7 +5,7 @@
 // instrument is moved to another bucket here; quantities change through
 // transactions. Targets are set in the bucket itself and recalculated to 100% when
 // its instruments change. An instrument's category is its bucket's: choosing the
-// bucket chooses the category.
+// bucket chooses the category. Every change of an instrument is `Instruments`'.
 
 /**
  * @param {object} app
@@ -14,8 +14,8 @@
  */
 function instrumentPanels(app, categories) {
   const { data, T, money } = app;
-  const currencies = ["EUR", ...Object.keys(data.settings.fx)];
-  const bucketNames = categories.flatMap(c => bucketsOf(data, c));
+  const currencies = Rates.currencies(data);
+  const bucketNames = categories.flatMap(c => Buckets.of(data, c));
   // listed bucket by bucket, in the buckets' order
   const pos = Valuation.positions(data).filter(p => categories.includes(p.category) && !Instruments.soldOut(data, p))
     .sort((a, b) => bucketNames.indexOf(a.bucket) - bucketNames.indexOf(b.bucket));
@@ -24,8 +24,19 @@ function instrumentPanels(app, categories) {
   const bucketOptions = bucketNames.map(b => [b, several ? `${b} (${Texts.categoryLabel(data, data.buckets[b].category)})` : b]);
   const alerts = !categories.includes("equities"); // equities are only bought: no sell alerts
 
-  /** Saves and says in which buckets the percentages were recalculated. */
-  function commitWith(redone, message) {
+  /**
+   * Makes a change of the instruments, commits it and says in which buckets the
+   * percentages were recalculated; a refusal is shown and nothing changes.
+   */
+  function change(make, message) {
+    let redone;
+    try { redone = make(); }
+    catch(e) {
+      if(!(e instanceof Rules.RuleError)) throw e;
+      const say = e.key.startsWith("warn_") ? Alert.wrn : Alert.err;
+      say(T(e.key, e.vars));
+      return;
+    }
     app.commit(redone.length ? `${message} ${T("flash_rebalanced", { buckets: redone.join(", ") })}` : message);
   }
 
@@ -56,7 +67,7 @@ function instrumentPanels(app, categories) {
         {confirm}
         <row><Button variant="primary" icon="save" onClick={() => {
           if(grid.rows.some(r => r.delete) && !confirm.checked) { Alert.wrn(T("warn_confirm_delete")); return; }
-          commitWith(Instruments.save(data, grid.rows), T("flash_instruments_saved"));
+          change(() => Instruments.save(data, grid.rows), T("flash_instruments_saved"));
         }}>{T("btn_save_instruments")}</Button></row>
       </stack>
     </Panel>
@@ -79,21 +90,10 @@ function instrumentPanels(app, categories) {
         {formRow(T("col_bucket"), f.bucket, f.currency)}
         {formRow(T("field_opening_quantity"), f.qty, f.unit)}
         {formRow(T("field_unit_price"), f.price)}
-        <row><Button variant="primary" icon="add" onClick={() => {
-          const name = f.name.value.trim();
-          if(!name) { Alert.wrn(T("warn_name_required")); return; }
-          const bucket = data.buckets[f.bucket.value];
-          if(!bucket) { Alert.wrn(T("warn_bucket_required")); return; }
-          const asset = WalletFile.normalize({ assets: [{
-            id: Base.newId(), name, ticker: f.ticker.value,
-            category: bucket.category, bucket: f.bucket.value,
-            currency: f.currency.value, opening_quantity: f.qty.value || 0, price: f.price.value || 0,
-            unit: f.unit.value || "pcs",
-            price_updated: Dates.today(),
-          }] }).assets[0];
-          data.assets.push(asset);
-          commitWith([asset.bucket].filter(b => Buckets.rebalance(data, b)), T("flash_instrument_added", { name }));
-        }}>{T("btn_add")}</Button></row>
+        <row><Button variant="primary" icon="add" onClick={() => change(() => Instruments.add(data, {
+          name: f.name.value, ticker: f.ticker.value, bucket: f.bucket.value, currency: f.currency.value,
+          opening_quantity: f.qty.value, price: f.price.value, unit: f.unit.value,
+        }), T("flash_instrument_added", { name: f.name.value.trim() }))}>{T("btn_add")}</Button></row>
       </stack>
     </Expander>
   );
@@ -107,7 +107,7 @@ const OtherAssetsView = (app) => {
   const pos = Valuation.positions(app.data);
   return (
     <stack gap="md">
-      {categories.flatMap(c => bucketsOf(app.data, c))
+      {categories.flatMap(c => Buckets.of(app.data, c))
         .filter(b => pos.some(p => p.bucket === b))
         .map(b => <BucketPanel app={app} positions={pos} bucket={b} footer={targetEditor(app, b)} />)}
       {instrumentPanels(app, categories)}
