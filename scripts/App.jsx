@@ -178,7 +178,10 @@ const App = () => {
       }
       footer={<Footer left={<inline><Icon name="savings" size="sm" />{footerWorth}</inline>}
         center={<inline><Icon name="description" size="sm" />{footerSource}</inline>}
-        right={<span tone="meta">Fortress Wallet {CONFIG.version.includes("{{") ? "" : CONFIG.version}</span>} />}>
+        right={<span tone="meta">
+          <span class="foot-name">Fortress Wallet {CONFIG.version.includes("{{") ? "" : CONFIG.version} · </span>
+          Built with <a href="https://tonkajsx.com" target="_blank" rel="noopener noreferrer">TonkaJSX</a>
+        </span>} />}>
       {content}
     </Shell>
   );

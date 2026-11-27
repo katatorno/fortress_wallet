@@ -135,5 +135,8 @@ select.cell-input { min-width: 8.5rem; border-color: var(--border); cursor: poin
 .table.facts th, .table.facts td { text-align: left; white-space: normal; }
 .stored-value { overflow-wrap: anywhere; }
 
+/* ---------------------------------------------------------------- footer: on a phone the note alone */
+@media (max-width: 480px) { .foot-name { display: none; } }
+
 /* ---------------------------------------------------------------- notes and markdown */
 .note .panel-main span { color: var(--text2); }

@@ -51,8 +51,9 @@ for(const [what, pattern] of Object.entries(KEEPER_ONLY)) {
   ok(`${what} only in ${KEEPER}`, !found.length, found.join(", "));
 }
 
-// every address the sources name: the exchange rate service, and a namespace that is no request
-const ALLOWED = ["https://api.frankfurter.dev", "http://www.w3.org"];
+// every address the sources name: the exchange rate service, and two that are no
+// request: a namespace, and the footer's link, followed only on a click
+const ALLOWED = ["https://api.frankfurter.dev", "http://www.w3.org", "https://tonkajsx.com"];
 const SERVED = ["https://unpkg.com", "https://lib.tonkajsx.com", "https://font.tonkajsx.com"]; // named by the policy
 const addresses = files.flatMap(f => [...readFileSync(f, "utf8").matchAll(/(?:https?|wss?):\/\/[a-z0-9.-]+/gi)]
   .map(m => m[0]).filter(a => !ALLOWED.includes(a) && !(f.endsWith("app.html") && SERVED.includes(a)))
