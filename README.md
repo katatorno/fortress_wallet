@@ -127,14 +127,14 @@ fortress_wallet/
 │   │   ├── wallet/           # the wallet logic, a module a file:
 │   │   │   ├── texts.js      #   texts in the wallet's language
 │   │   │   ├── rules.js      #   the refusal of a save, checks of typed numbers and dates
-│   │   │   ├── rates.js      #   exchange rates, the currencies, amounts in EUR
+│   │   │   ├── rates.js      #   exchange rates and their save, the currencies, EUR and back
 │   │   │   ├── cash.js       #   cash accounts, their movements and table
 │   │   │   ├── transactions.js #  buy, sell, adjust, remove; quantities
 │   │   │   ├── buckets.js    #   a category's buckets, their percentages and saves
 │   │   │   ├── instruments.js #   adding one, their table's save, sold out ones
-│   │   │   ├── mortgage.js   #   the schedule, what prepaying is worth, every change of the loan
+│   │   │   ├── mortgage.js   #   the schedule, what prepaying is worth, changes of the loan, new entries checked
 │   │   │   ├── valuation.js  #   positions, worth in EUR, net worth
-│   │   │   ├── plan.js       #   contribution calculator and recording its plan
+│   │   │   ├── plan.js       #   contribution calculator, recording its plan, every line checked
 │   │   │   ├── settings.js   #   the settings view's save
 │   │   │   ├── wallet-history.js # snapshots, stored prices, the history
 │   │   │   ├── advice.js     #   recommendations
@@ -147,7 +147,7 @@ fortress_wallet/
 │   │   ├── files.js          # local files (File System Access API / download)
 │   │   ├── remember.js       # the only place that keeps anything in the browser
 │   │   ├── links.js          # where a link in the wallet's notes may lead
-│   │   ├── online.js         # ECB exchange rates
+│   │   ├── online.js         # ECB exchange rates, into the wallet still open
 │   │   └── config.js         # values from app.ini
 │   ├── ui/                   # TonkaUI kit (copy, never edited here)
 │   ├── App.jsx               # shell, navigation, file status, banners
@@ -174,7 +174,7 @@ Each of those files is one **module**:
 
 A new module of the wallet goes into `wallet/`; one that knows nothing of the wallet goes beside it and into `CORE_FILES` in `tools/wallet.cjs`. Either way list it in `.tests/core.test.cjs` with the modules it reaches: the suite holds the files to these rules, the list and the sources to each other, and every `Module.name` written in the app and the tools to a name the module gives.
 
-A view changes the wallet through a function of the logic: it collects the fields, calls and shows the result. The function checks everything first; refusing, it throws `Rules.RuleError(key, vars)`, which the view shows as a message, and leaves the wallet as it was. Only the language, the theme, the strategy notes and, for now, the exchange rates typed in the market view are assigned by their views.
+A view changes the wallet through a function of the logic: it collects the fields, calls and shows the result. The function checks everything first; refusing, it throws `Rules.RuleError(key, vars)`, which the view shows as a message, and leaves the wallet as it was. Only the language, the theme and the strategy notes are assigned by their views.
 
 ## Translations
 
@@ -198,7 +198,7 @@ Plain JSON that you can read, diff and back up. Keep your own file outside the p
 
 A file whose values the app cannot use (text where a number belongs, a negative price, an exchange rate of 0, an id such as `__proto__`) is refused, with the places to correct named; nothing in it is repaired without you.
 
-Instruments, transactions, events of the mortgage and cash movements are told apart by their `id`; one that has none gets it when the file is opened.
+Instruments, transactions, cash accounts and their movements, and events of the mortgage are told apart by their `id`. A transaction, account, movement or event with none, or an empty one, gets it when the file is opened, as an instrument without the key does.
 
 A change made in the app passes the same check of its values: one after which the wallet would not open, or which cannot be checked or written, is undone, with the reasons named, and nothing of it is saved.
 
@@ -238,7 +238,7 @@ node tools/fetch-prices.cjs ~/Documents/fortress/wallet.json --daily    # also o
 
 Before writing, each keeps the file as it was beside it, as `<name>.backup-<time>.json` (git ignores these; remove old ones yourself), and writes through a temporary file, so a broken run never leaves half a file.
 
-`import-xtb` replaces what an earlier import brought in (transactions and cash operations whose ids start with `xtb-`) and sets the opening quantity of every imported instrument to 0, as the export holds all of its lots. A ticker of a market it does not know (London, for one, quotes in pence) is refused: add the market's currency to `MARKETS` in the script.
+`import-xtb` replaces what an earlier import brought in (transactions and cash operations whose ids start with `xtb-`) and sets the opening quantity of every imported instrument to 0, as the export holds all of its lots. An instrument new to the wallet goes into the last bucket of its category; a category without a bucket stops the import. A ticker of a market it does not know (London, for one, quotes in pence) is refused: add the market's currency to `MARKETS` in the script.
 
 `fetch-prices` uses your [Alpha Vantage](https://www.alphavantage.co/support/#api-key) key from `settings.price_api_key` (free: 25 requests a day; answers are cached for the day in `data/price-cache/`, with the key blanked out) and the ECB rates, then rebuilds the net-worth history. Anything without a history, such as a home deposit or an instrument without a price symbol, counts as it is today.
 
@@ -246,9 +246,9 @@ Best close the wallet in the app before running them. If it stays open, the app 
 
 ## How it calculates
 
-- **Base currency: EUR.** Every position is converted with `settings.fx`.
+- **Base currency: EUR.** Every position is converted with `settings.fx`; a rate is a number above 0.
 - **The contribution calculator** uses *water-filling*: it tops up the most underweight positions first until they reach a common level, then splits the rest by target. It never sells. Frozen categories are only diluted by new money.
-- **Mortgage:** annuity, interest = balance × rate / 12. A prepayment either *shortens the term* (same payment, ends earlier) or *lowers the payment* (recalculated over the remaining term). It costs its amount plus the fee on it. One larger than the balance on its day (after the events recorded up to that day) is refused, and so is one taken from the prepayment pot when the pot does not cover the cost.
+- **Mortgage:** annuity, interest = balance × rate / 12. A prepayment either *shortens the term* (same payment, ends earlier) or *lowers the payment* (recalculated over the remaining term). It costs its amount plus the fee on it, taken from a prepayment pot in another currency at the wallet's rate. A new payment or prepayment is refused when the schedule could not then count every event in full: a prepayment larger than the balance on its day (after the events recorded up to that day), a capital part larger than what is left, a payment on a loan paid off, or an entry dated back so that a later one would no longer fit. So is a prepayment from the pot when the pot, in EUR, does not cover the cost. A file whose events already do not fit opens and is counted as it was.
 - **Net prepayment gain** = interest saved compared with no prepayments, minus fees.
 - **Net worth** = investments + cash + (before the deed: deposit | after the deed: home value − mortgage balance).
 - **Quantities** = opening quantity + transactions. A sale of more than is held that day or later is refused, and so is deleting transactions after which an instrument would be held below 0 (and lower than before) at the end of some day.
@@ -265,15 +265,15 @@ tonka test fortress_wallet          # or one suite: node .tests/<name>.test.cjs
 |---|---|
 | `core` | the module rules (each file loads alone, reaches exactly what is listed, every `Module.name` exists), valuation, the contribution calculator, the mortgage, recommendations, the file |
 | `market` | the market view's rules: percentages in a bucket are 100% or all 0%, bucket shares are 100%, moves and deletions keep that, one save of the buckets for both views, the "what to buy" calculator, no sell alerts for equities |
-| `rules` | the saves of the settings, cash, mortgage and transactions views, the changes of the loan and of the instruments, transactions removed, a cash movement and a plan recorded: everything checked first, a refusal changes nothing, what is accepted leaves a wallet which opens; what a transaction does to a quantity; the loan's yearly totals, payment on a day and prepayment effect |
+| `rules` | the saves of the settings, cash, mortgage and transactions views, the changes of the loan and of the instruments, transactions removed, a cash movement, a plan and exchange rates recorded: everything checked first, a refusal changes nothing, what is accepted leaves a wallet which opens; the loan's schedule counts every event booked in full, and the pot pays its cost in its currency; what a transaction does to a quantity; the loan's yearly totals, payment on a day and prepayment preview |
 | `format` | the file's version and keys, a new instrument's keys, ids given on opening, migrations, files refused for values the app cannot use |
 | `history` | stored prices, the history built from them, the XTB import |
 | `store` | saving: the autosave, changes during a save, a file changed elsewhere, downloads; a change the wallet would not open with, or one that throws, is refused and undone |
-| `online` | the exchange rates: what is sent and what of the answer is taken |
+| `online` | the exchange rates: what is sent, what of the answer is taken, and that a wallet replaced meanwhile gets nothing |
 | `links` | which links in the notes keep their address |
 | `remember` | what the app keeps in the browser |
 | `privacy` | a lint of the sources and the page's policy |
-| `tools` | the .xlsx reader, the copies the tools keep, what git ignores, the price cache's names |
+| `tools` | the .xlsx reader, the copies the tools keep, what git ignores, the price cache's names, the markets and buckets of an import |
 | `translations` | every key in every language, placeholders, number formats |
 | `build` | the built `index.html`, when there is one |
 

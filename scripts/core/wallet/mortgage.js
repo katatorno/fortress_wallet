@@ -51,11 +51,13 @@ const Mortgage = (() => {
   /**
    * Books the recorded events (payments and prepayments), then projects to the end.
    * extraEvents: hypothetical prepayments ({date, amount, mode, fee_pct}) for simulations.
+   * onEvent(e, left, given) is told of each recorded event before it is booked: what is
+   * left to repay then, and what the event repays, of which no more than that is counted.
    * Row kinds: payment, prepayment, payment_plan, prepayment_plan.
    * @returns {{rows: object[], info: object}} throws Rules.RuleError for a payment
    *   which does not cover the interest, so the loan is never paid off
    */
-  function run(m, extraEvents = [], project = true) {
+  function run(m, extraEvents = [], project = true, onEvent = null) {
     const rate = Number(m.rate_pct || 0);
     const i = rate / 1200;
     const term = Number(m.term_months || 0);
@@ -84,6 +86,7 @@ const Mortgage = (() => {
       if(e.type === "payment") {
         const interest = Base.isBlank(e.interest) ? Base.round2(bal * i) : Number(e.interest);
         let principal = Base.isBlank(e.principal) ? Number(e.amount) - interest : Number(e.principal);
+        onEvent?.(e, bal, principal);
         principal = Math.min(principal, bal);
         bal = Base.round2(bal - principal);
         k += 1;
@@ -91,6 +94,7 @@ const Mortgage = (() => {
         rows.push(_row(d, "payment", Number(e.amount), interest, principal, 0, 0, bal, true, k));
       }
       else if(e.type === "prepayment") {
+        onEvent?.(e, bal, Number(e.amount));
         const [amt, fee] = prepay(e.amount, e.fee_pct ?? defaultFee, e.mode || defaultMode, k);
         feesPaid += fee;
         prepaid += amt;
@@ -199,19 +203,18 @@ const Mortgage = (() => {
 
   /**
    * What a prepayment would change, as a preview: the interest saved, the fee, what is
-   * gained net of it, and the end and the payment before and after.
+   * gained net of it, and the end and the payment before and after. A prepayment which
+   * `bookPrepayment` would refuse, the pot aside, is refused here the same way.
    * @param {{amount:any, date?:string, feePct?:any, mode:string}} prepayment  an empty date is today
    * @returns {{saved:number, fee:number, net:number, end_date:string, old_end_date:string,
-   *   payment:number, old_payment:number}|null} null without an amount above 0
+   *   payment:number, old_payment:number}}
    */
-  function prepaymentEffect(data, { amount, date = null, feePct = 0, mode }) {
-    if(!(Number(amount) > 0)) return null;
+  function prepaymentEffect(data, prepayment) {
     const m = data.mortgage;
-    const day = Rules.date(data, date, "field_date") || Dates.today();
-    const event = { id: "preview", date: day, type: "prepayment", amount: Number(amount), fee_pct: feePct || 0, mode };
+    const event = _prepayment(data, prepayment);
     const before = run(m).info, after = run({ ...m, events: [...m.events, event] }).info;
     const saved = before.future_interest - after.future_interest;
-    const { fee } = prepaymentCost(amount, feePct || 0);
+    const { fee } = prepaymentCost(event.amount, event.fee_pct);
     return {
       saved, fee, net: saved - fee, end_date: after.end_date, old_end_date: before.end_date,
       payment: after.payment, old_payment: before.payment,
@@ -239,53 +242,106 @@ const Mortgage = (() => {
   const _balanceOn = (m, day) =>
     run({ ...m, events: m.events.filter(e => Dates.parse(e.date) <= day) }, [], false).info.balance;
 
+  /**
+   * The check every new payment and prepayment passes: with it among them, the schedule
+   * counts each recorded event in full, no prepayment and no capital of a payment cut to
+   * what is left, and a new payment finds something left to repay. Throws Rules.RuleError.
+   */
+  function _checkCounted(data, event) {
+    const m = data.mortgage;
+    let left = 0, cut = null;
+    // to the cent: what differs by less than that is not cut
+    run({ ...m, events: [...m.events, event] }, [], false, (e, balance, given) => {
+      if(e === event) left = balance;
+      if(!cut && Base.round2(given) > Base.round2(balance)) cut = e;
+    });
+    if(event.type === "payment" && left <= 0) throw new Rules.RuleError("warn_mortgage_paid_off");
+    if(cut === event) {
+      const key = event.type === "payment" ? "warn_capital_over_balance" : "warn_prepayment_over_balance";
+      throw new Rules.RuleError(key, { balance: Texts.money(data, left, 2) });
+    }
+    if(cut) throw new Rules.RuleError("warn_event_cut", { date: Dates.dayMonthYear(Dates.parse(cut.date)) });
+  }
+
+  /** A prepayment of the form, checked but for the pot: the event to book. */
+  function _prepayment(data, { amount, date = null, feePct = null, mode }) {
+    if(!Base.isNumeric(amount) || Number(amount) <= 0) throw new Rules.RuleError("warn_prepayment_amount");
+    const sum = Number(amount);
+    const day = Rules.date(data, date, "field_date") || Dates.today();
+    const percent = Base.isBlank(feePct) ? 0 : Rules.number(data, feePct, "field_fee_pct", 0, 100);
+    if(!MODES.includes(mode)) throw new Rules.RuleError("err_value_choice", { field: Texts.tr(data, "field_mode") });
+    const balance = _balanceOn(data.mortgage, day);
+    if(sum > balance + 1e-9) {
+      throw new Rules.RuleError("warn_prepayment_over_balance", { balance: Texts.money(data, balance, 2) });
+    }
+    const event = { id: Base.newId(), date: day, type: "prepayment", amount: sum, fee_pct: percent, mode, note: "" };
+    _checkCounted(data, event);
+    return event;
+  }
+
+  /**
+   * The prepayment pot, the cash account of that role, with what it holds in EUR; null
+   * without one.
+   * @returns {{id:string, currency:string, eur:number}|null}
+   */
+  function prepaymentPot(data) {
+    const account = Cash.account(data, "prepay");
+    if(!account) return null;
+    const currency = account.currency || "EUR";
+    return { id: account.id, currency, eur: Rates.toEur(data, account.amount || 0, currency) };
+  }
+
   /** Books the next payment of the schedule; refused once the loan is paid off. */
   function bookPayment(data) {
     const m = data.mortgage;
     if(paidOff(m)) throw new Rules.RuleError("warn_mortgage_paid_off");
-    m.events.push(nextPaymentEvent(m));
+    const event = nextPaymentEvent(m);
+    _checkCounted(data, event);
+    m.events.push(event);
   }
 
   /**
    * Books a payment as the bank statement gives it. An empty date is the day the next
-   * payment is due, an empty amount or part counts as 0.
+   * payment is due, an empty amount or part counts as 0. Refused when nothing is left to
+   * repay at its turn, and when the schedule could not count every event in full.
    * @param {{date?:string, amount?:any, interest?:any, principal?:any}} statement
    */
   function bookStatement(data, { date = null, amount = null, interest = null, principal = null }) {
     const m = data.mortgage;
     const day = Rules.date(data, date, "field_date") || run(m, [], false).info.next_due;
     const part = (v, key) => Base.isBlank(v) ? 0 : Rules.number(data, v, key, 0);
-    m.events.push({ id: Base.newId(), date: day, type: "payment", amount: part(amount, "field_payment_eur"),
+    const event = { id: Base.newId(), date: day, type: "payment", amount: part(amount, "field_payment_eur"),
       interest: part(interest, "field_interest_part"), principal: part(principal, "field_principal_part"),
-      note: Texts.tr(data, "note_from_statement") });
+      note: Texts.tr(data, "note_from_statement") };
+    _checkCounted(data, event);
+    m.events.push(event);
   }
 
   /**
    * Books a prepayment and, with `fromPot`, takes it with its fee from the prepayment
-   * pot: both or neither. Refused above the balance of its day, and when the pot does
+   * pot, converted into the pot's currency: both or neither. Refused above the balance of
+   * its day, when the schedule could not count every event in full, and when the pot does
    * not hold the cost.
    * @param {{amount:any, date?:string, feePct?:any, mode:string, fromPot?:boolean}} prepayment
    *   an empty date is today, an empty fee 0
    */
-  function bookPrepayment(data, { amount, date = null, feePct = null, mode, fromPot = false }) {
-    const m = data.mortgage;
-    if(!Base.isNumeric(amount) || Number(amount) <= 0) throw new Rules.RuleError("warn_prepayment_amount");
-    const sum = Number(amount);
-    const day = Rules.date(data, date, "field_date") || Dates.today();
-    const percent = Base.isBlank(feePct) ? 0 : Rules.number(data, feePct, "field_fee_pct", 0, 100);
-    if(!MODES.includes(mode)) throw new Rules.RuleError("err_value_choice", { field: Texts.tr(data, "field_mode") });
-    const balance = _balanceOn(m, day);
-    if(sum > balance + 1e-9) {
-      throw new Rules.RuleError("warn_prepayment_over_balance", { balance: Texts.money(data, balance, 2) });
+  function bookPrepayment(data, { fromPot = false, ...prepayment }) {
+    const event = _prepayment(data, prepayment);
+    const { cost } = prepaymentCost(event.amount, event.fee_pct);
+    const pot = fromPot ? prepaymentPot(data) : null;
+    if(fromPot && (!pot || pot.eur + 1e-9 < cost)) {
+      throw new Rules.RuleError("warn_pot_too_small",
+        { pot: Texts.money(data, pot?.eur || 0, 2), cost: Texts.money(data, cost, 2) });
     }
-    const { cost } = prepaymentCost(sum, percent);
-    const pot = fromPot ? Cash.account(data, "prepay") : null;
-    const held = Number(pot?.amount || 0);
-    if(fromPot && (!pot || held + 1e-9 < cost)) {
-      throw new Rules.RuleError("warn_pot_too_small", { pot: Texts.money(data, held, 2), cost: Texts.money(data, cost, 2) });
+    if(pot) {
+      // in cents before it is booked, so that the balance moves by what the log says
+      const taken = Base.round2(Rates.fromEur(data, cost, pot.currency));
+      if(!Cash.countable(Cash.account(data, "prepay").amount || 0, -taken)) {
+        throw new Rules.RuleError("err_value_number", { field: Texts.tr(data, "col_amount") });
+      }
+      Cash.add(data, pot.id, -taken, Texts.tr(data, "note_prepayment_with_fee"), event.date);
     }
-    if(pot) Cash.add(data, pot.id, -cost, Texts.tr(data, "note_prepayment_with_fee"), day);
-    m.events.push({ id: Base.newId(), date: day, type: "prepayment", amount: sum, fee_pct: percent, mode, note: "" });
+    data.mortgage.events.push(event);
   }
 
   /** Removes the recorded events of the ids given. */
@@ -324,7 +380,7 @@ const Mortgage = (() => {
   return {
     MODES, annuity, impliedRate, firstPaymentDate, initialPayment, prepaymentCost, run, state,
     report, yearlyPrepayments, prepaymentBreakEvenMonths, yearlyTotals, paymentOn,
-    prepaymentEffect, nextPaymentEvent, paidOff, bookPayment, bookStatement, bookPrepayment,
-    deleteEvents, save,
+    prepaymentEffect, nextPaymentEvent, paidOff, prepaymentPot, bookPayment, bookStatement,
+    bookPrepayment, deleteEvents, save,
   };
 })();

@@ -139,9 +139,10 @@ const WalletFile = (() => {
       Base.setDefault(c, "currency", "EUR");
       Base.setDefault(c, "amount", 0);
     }
-    for(const t of data.transactions) Base.setDefault(t, "id", Base.newId());
-    // deleting goes by id: without one, an event could not be told from the others
-    for(const x of [...m.events, ...data.cash_log]) if(Base.isBlank(x.id)) x.id = Base.newId();
+    // deleting and booking go by id: without one, an item could not be told from the others
+    for(const x of [...data.transactions, ...data.cash, ...data.cash_log, ...m.events]) {
+      if(Base.isBlank(x.id)) x.id = Base.newId();
+    }
     _migrateCategories(data);
     return data;
   }
@@ -188,7 +189,7 @@ const WalletFile = (() => {
       name: (w, v) => (typeof v === "string" && v.trim() !== "" && !Base.isReserved(v)) || bad(w, "name"),
       number: (w, v) => Base.isNumeric(v) || bad(w, "number"),
       positive: (w, v) => (Base.isNumeric(v) && Number(v) >= 0) || bad(w, "positive"),
-      rate: (w, v) => (Base.isNumeric(v) && Number(v) > 0) || bad(w, "rate"),
+      rate: (w, v) => Rates.isRate(v) || bad(w, "rate"),
       date: (w, v) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v.slice(0, 10))) || bad(w, "date"),
       choice: (list) => (w, v) => list.includes(v) || bad(w, "choice"),
       maybe: (kind) => (w, v) => Base.isBlank(v) || kind(w, v),

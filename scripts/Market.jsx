@@ -97,7 +97,8 @@ const MarketView = (app) => {
         const btn = e.currentTarget;
         btn.loading = true;
         try {
-          const res = await Online.fetchFx(data);
+          const res = await Online.fetchFx(data, Store.get);
+          if(res.replaced) return; // another wallet is open now: nothing was written
           app.commit(T("flash_fx_updated", { names: res.updated.join(", "), date: Dates.dayMonthYear(res.date) }));
           if(res.skipped.length) Alert.wrn(T("warn_fx_skipped", { names: res.skipped.join(", ") }));
         }
@@ -109,7 +110,12 @@ const MarketView = (app) => {
           {fxInputs.map(([cur, input]) => <inline gap="sm"><strong>EUR/{cur}</strong>{input}</inline>)}
         </row>
         <row><Button variant="primary" icon="save" onClick={() => {
-          for(const [cur, input] of fxInputs) if(input.value > 0) s.fx[cur] = input.value;
+          try { Rates.save(data, Object.fromEntries(fxInputs.map(([cur, input]) => [cur, input.value]))); }
+          catch(e) {
+            if(!(e instanceof Rules.RuleError)) throw e;
+            Alert.err(T(e.key, e.vars));
+            return;
+          }
           app.commit(T("flash_fx_saved"));
         }}>{T("btn_save_fx")}</Button></row>
       </stack>

@@ -105,6 +105,22 @@ ok("the example carries no price service key", JSON.parse(text).settings.price_a
   ok("deleting one such event deletes it alone", d.mortgage.events.map(e => e.amount).join() === "2,3,4,5",
     d.mortgage.events.map(e => e.amount).join());
 }
+{
+  const raw = JSON.parse(text);
+  const bought = (quantity, id) => ({ ...(id === undefined ? {} : { id }), date: "2026-11-01", asset_id: "webg", type: "buy",
+    quantity, price: 1 });
+  raw.transactions = [bought(1, ""), bought(2, null), bought(3), bought(4, "twice"), bought(5, "twice")];
+  raw.cash.push({ name: "none" }, { id: "", name: "empty" }, { id: null, name: "null" }, { id: "emergency", name: "twice" });
+  const d = WalletFile.parse(JSON.stringify(raw));
+  const ids = [...d.transactions.slice(0, 3), ...d.cash.slice(3, 6)].map(x => x.id);
+  ok("a transaction with an empty id and a cash account without one get one on opening",
+    ids.every(id => typeof id === "string" && id) && new Set(ids).size === ids.length, JSON.stringify(ids));
+  ok("ids which are there twice stay as they are", d.transactions[3].id === "twice" && d.transactions[4].id === "twice"
+    && d.cash[0].id === "emergency" && d.cash[6].id === "emergency");
+  Transactions.remove(d, [d.transactions[0].id]);
+  ok("removing one such transaction removes it alone", d.transactions.map(t => t.quantity).join() === "2,3,4,5",
+    d.transactions.map(t => t.quantity).join());
+}
 
 // ---------------------------------------------------------------- older and newer files
 {

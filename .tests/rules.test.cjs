@@ -3,17 +3,18 @@
 // The saves of the settings, cash, mortgage and transactions views (Settings.save,
 // Cash.save, Mortgage.save, Transactions.record), the changes of the loan (payments
 // and prepayments booked and deleted), of the instruments (added, their table saved),
-// transactions removed, a cash movement and a plan recorded: everything is checked
-// first, a refusal names its reason and changes nothing, and what is accepted leaves a
-// wallet which opens. Also: the numbers the loan's view shows, and that an instrument
-// takes the category of its bucket.
+// transactions removed, a cash movement, a plan and exchange rates recorded: everything
+// is checked first, a refusal names its reason and changes nothing, and what is accepted
+// leaves a wallet which opens; the loan's schedule counts every event booked in full.
+// Also: the numbers the loan's view shows, and that an instrument takes the category of
+// its bucket.
 // Run: tonka test fortress_wallet   (or: node .tests/rules.test.cjs)
 
 const { readFileSync } = require("node:fs");
 const path = require("node:path");
 const { APP, loadCore } = require("../tools/wallet.cjs");
 
-const { Advice, Buckets, Cash, Dates, Instruments, Mortgage, Plan, Rates, Rules, Settings, Transactions, WalletFile }
+const { Advice, Base, Buckets, Cash, Dates, Instruments, Mortgage, Plan, Rates, Rules, Settings, Transactions, WalletFile }
   = loadCore();
 const example = () => WalletFile.parse(readFileSync(path.join(APP, "data", "wallet.example.json"), "utf8"));
 
@@ -23,6 +24,8 @@ function ok(name, cond, detail = "") {
   console.log(`  ${cond ? "ok  " : "FAIL"} ${name}${cond ? "" : "\n       " + detail}`);
 }
 const asset = (d, id) => d.assets.find(a => a.id === id);
+/** Whether the wallet would open: nothing against it, after a change which was accepted. */
+const opens = (d) => !WalletFile.check(d).length;
 
 /** The refusal's key of `fn` on a fresh example, or null when it saved; a refusal must change nothing. */
 function refusal(fn, start = example) {
@@ -202,7 +205,8 @@ function refusal(fn, start = example) {
   };
   ok("the balance counted is that of the day, the day's own events included",
     why({ date: "2027-03-01", amount: 600.01 }, partly) === "warn_prepayment_over_balance"
-    && why({ date: "2027-03-01", amount: 600 }, partly) === null && why({ date: "2027-02-28", amount: 1000 }, partly) === null);
+    && why({ date: "2027-03-01", amount: 600 }, partly) === null && why({ date: "2027-02-28", amount: 600 }, partly) === null
+    && why({ date: "2027-02-28", amount: 1000 }, partly) === "warn_event_cut");
   ok("a pot short of the amount with its fee is refused", why({ amount: 1000 }, () => owing(1000, 1009.99)) === "warn_pot_too_small");
   ok("one holding just the cost pays it", why({ amount: 1000 }, () => owing(1000, 1010)) === null);
   ok("a balance written as text is read as a number", why({ amount: 1000 }, () => owing(1000, "1010")) === null);
@@ -242,6 +246,137 @@ function refusal(fn, start = example) {
     Mortgage.deleteEvents(d, ["nope"]);
     ok("an id that is none deletes nothing", events(d).length === 1);
   }
+
+  // -------------------------------------------------------------- every event counted in full
+  /** Whether each event repays in the schedule what it records, to the cent. */
+  const counted = (d) => {
+    const { rows } = Mortgage.run(d.mortgage, [], false);
+    const list = (items, key) => items.map(x => Base.round2(Number(x[key]))).sort().join();
+    const recorded = (type) => events(d).filter(e => e.type === type);
+    const shown = (type) => rows.filter(r => r.kind === type);
+    return list(recorded("prepayment"), "amount") === list(shown("prepayment"), "prepayment")
+      && list(recorded("payment"), "principal") === list(shown("payment"), "principal");
+  };
+  /** What a refusal says besides its key. */
+  const said = (fn) => { try { fn(); return null; } catch(e) { return e.vars; } };
+  /** 800 of the 1000 prepaid on 2027-01-10. */
+  const early = () => {
+    const d = owing();
+    prepay(d, { amount: 800 });
+    return d;
+  };
+  ok("a back-dated prepayment which would cut a later one is refused",
+    why({ amount: 500, date: "2027-01-05" }, early) === "warn_event_cut");
+  const later = said(() => prepay(early(), { amount: 500, date: "2027-01-05" }));
+  ok("and the refusal names the day of the one it would cut", later?.date === "10.01.2027", JSON.stringify(later));
+  {
+    const d = early();
+    prepay(d, { amount: 200, date: "2027-01-05" });
+    ok("one which leaves the later one whole is booked", events(d).length === 2 && counted(d) && Mortgage.paidOff(d.mortgage));
+  }
+  ok("so is a payment of the statement refused which would cut a later prepayment",
+    refusal(d => Mortgage.bookStatement(d, { date: "2027-01-05", principal: 300 }), early) === "warn_event_cut");
+  ok("a capital part above the balance is refused", booked({ principal: 1000.01 }) === "warn_capital_over_balance"
+    && booked({ amount: 1002.92, principal: 1000 }) === null);
+  const over = said(() => Mortgage.bookStatement(owing(), { ...statement, principal: 5000 }));
+  ok("and the refusal names the balance it meets", over?.balance === "€1,000.00", JSON.stringify(over));
+  const after = (change) => refusal(d => Mortgage.bookStatement(d, { ...statement, ...change }), paid);
+  ok("a loan paid off takes no payment of the statement", after({}) === "warn_mortgage_paid_off"
+    && after({ principal: 0 }) === "warn_mortgage_paid_off" && after({ date: null }) === "warn_mortgage_paid_off");
+  ok("one of a day before it was paid off, repaying nothing, is booked", after({ date: "2027-01-05", principal: 0 }) === null);
+  {
+    const d = owing(1000.005);
+    d.mortgage.bank_payment = 2000;
+    Mortgage.bookPayment(d); // it records 1000.01 of capital
+    ok("a last payment rounded past a balance in parts of a cent is booked", events(d).length === 1 && Mortgage.paidOff(d.mortgage));
+  }
+  {
+    const d = owing();
+    while(!Mortgage.paidOff(d.mortgage)) Mortgage.bookPayment(d);
+    ok("the payments of the schedule, to the last, are counted in full", events(d).length >= 12 && counted(d), events(d).length);
+  }
+  {
+    let n = 7, taken = 0, whole = true, paidRight = true;
+    const rnd = () => (n = n * 48271 % 2147483647) / 2147483647;
+    const d = owing(1000, 100000);
+    for(let i = 0; i < 600; i++) {
+      const date = `2027-0${1 + Math.floor(rnd() * 9)}-1${Math.floor(rnd() * 10)}`, x = Math.round(rnd() * 30000) / 100;
+      const op = Math.floor(rnd() * 4), held = pot(d);
+      try {
+        if(op === 0) Mortgage.bookPayment(d);
+        else if(op === 1) Mortgage.bookStatement(d, { date, amount: x, principal: x });
+        else if(op === 2) prepay(d, { date, amount: x });
+        else Mortgage.deleteEvents(d, [events(d)[Math.floor(rnd() * events(d).length)]?.id]);
+        taken++;
+        if(op === 2) paidRight &&= d.cash_log.at(-1).amount === Base.round2(-Mortgage.prepaymentCost(x, 1).cost)
+          && pot(d) === Base.round2(held + d.cash_log.at(-1).amount);
+      }
+      catch(e) { if(!(e instanceof Rules.RuleError)) throw e; }
+      whole &&= counted(d);
+    }
+    ok("through 600 changes, taken or refused, every event is counted as recorded", whole && taken > 200 && opens(d), taken);
+    ok("and the pot pays each prepayment's cost", paidRight);
+  }
+  /** A file in which the second prepayment is more than the first one left. */
+  const cut = () => {
+    const d = owing();
+    const one = { type: "prepayment", fee_pct: 1, mode: "reduce_term" };
+    events(d).push({ ...one, id: "a", date: "2027-01-10", amount: 800 }, { ...one, id: "b", date: "2027-01-12", amount: 500 });
+    return WalletFile.parse(WalletFile.serialize(d));
+  };
+  const [, second] = Mortgage.run(cut().mortgage, [], false).rows;
+  ok("a file whose schedule cuts an event opens and counts as before", second.prepayment === 200 && second.fee === 2);
+  ok("it takes no change which leaves that so", why({ date: "2027-02-01" }, cut) === "warn_prepayment_over_balance"
+    && refusal(d => Mortgage.bookStatement(d, { date: "2027-01-05", amount: 3 }), cut) === "warn_event_cut");
+  {
+    const d = cut();
+    Mortgage.deleteEvents(d, ["b"]);
+    prepay(d, { date: "2027-02-01" });
+    ok("and takes changes again once that event is gone", events(d).length === 2 && counted(d));
+  }
+
+  // -------------------------------------------------------------- a pot in another currency
+  const zloty = (held) => () => {
+    const d = owing(2000, held);
+    Cash.account(d, "prepay").currency = "PLN";
+    return d;
+  };
+  {
+    const d = zloty(5000)();
+    prepay(d, { amount: 1000 });
+    const move = d.cash_log.at(-1);
+    ok("a pot in zloty pays the cost converted into zloty", move.amount === -4524.8 && pot(d) === 475.2
+      && events(d)[0].amount === 1000 && opens(d), JSON.stringify(move));
+  }
+  ok("1500 zloty do not pay a prepayment of 1000 EUR", why({ amount: 1000 }, zloty(1500)) === "warn_pot_too_small");
+  const short = said(() => prepay(zloty(1500)(), { amount: 1000 }));
+  ok("and both are told in EUR", short?.pot === "€334.82" && short?.cost === "€1,010.00", JSON.stringify(short));
+  ok("the cost to the grosz pays, a grosz less does not", why({ amount: 1000 }, zloty(4524.8)) === null
+    && why({ amount: 1000 }, zloty(4524.79)) === "warn_pot_too_small");
+  {
+    const d = owing(2000);
+    prepay(d, { amount: 100.5 }); // its cost, 101.505, ends in half a cent
+    ok("the balance of the pot moves by just what the log says", d.cash_log.at(-1).amount === -101.51 && pot(d) === 4898.49,
+      `${d.cash_log.at(-1).amount} ${pot(d)}`);
+  }
+  ok("a pot too large to be counted in cents is refused", why({}, () => owing(1000, 1e308)) === "err_value_number");
+  ok("the pot is worth its balance in EUR", Math.abs(Mortgage.prepaymentPot(zloty(4480)()).eur - 1000) < 1e-9
+    && Mortgage.prepaymentPot({ ...example(), cash: [] }) === null);
+
+  // -------------------------------------------------------------- the preview
+  const form = { amount: 100, date: "2027-01-10", feePct: 1, mode: "reduce_term" };
+  const shown = (change, start = owing) => refusal(d => Mortgage.prepaymentEffect(d, { ...form, ...change }), start);
+  for(const [what, change, start = owing] of [["of 0", { amount: 0 }], ["above the balance", { amount: 3000 }],
+    ["with a fee above 100", { feePct: 101 }], ["with a mode that is none", { mode: "fast" }],
+    ["with a date that is none", { date: "soon" }], ["which cuts a later event", { amount: 500, date: "2027-01-05" }, early],
+    ["of a loan paid off", {}, paid]]) {
+    const reason = said(() => Mortgage.prepaymentEffect(start(), { ...form, ...change }));
+    const booking = said(() => prepay(start(), { ...change, fromPot: false }));
+    ok(`a preview ${what} gives the reason booking it gives`, shown(change, start) !== null
+      && shown(change, start) === why({ ...change, fromPot: false }, start) && JSON.stringify(reason) === JSON.stringify(booking),
+      `${shown(change, start)} ${JSON.stringify(reason)}`);
+  }
+  ok("a preview does not look at the pot", shown({}, () => owing(1000, 0)) === null);
 }
 
 // ---------------------------------------------------------------- what the loan's view shows
@@ -276,7 +411,8 @@ function refusal(fn, start = example) {
   ok("one lowering the payment: the new payment, the same end", near(less.saved, 7361.94) && near(less.net, 7211.94)
     && near(less.payment, 1074.5556) && near(less.old_payment, 1115.8847) && less.end_date === less.old_end_date,
     JSON.stringify(less));
-  ok("no effect without an amount above 0", effect("reduce_term", 0) === null && effect("reduce_term", null) === null);
+  ok("no effect without an amount above 0: refused as booking it is", [0, null].every(amount => refusal(d =>
+    Mortgage.prepaymentEffect(d, { amount, feePct: 1.5, mode: "reduce_term" })) === "warn_prepayment_amount"));
   ok("a preview changes nothing", JSON.stringify(d) === before);
 }
 
@@ -320,9 +456,6 @@ function refusal(fn, start = example) {
   ok("a sale takes away", change("sell", 2) === -2);
   ok("an adjustment adds its quantity, which may be below 0", change("adjust", 3) === 3 && change("adjust", -3) === -3);
 }
-
-/** What keeps the wallet from opening: nothing, after a change which was accepted. */
-const opens = (d) => !WalletFile.check(d).length;
 
 // ---------------------------------------------------------------- a new instrument
 {
@@ -483,6 +616,13 @@ const opens = (d) => !WalletFile.check(d).length;
     ok(`a cash movement ${what} is refused`, why({ amount }) === "warn_amount_zero");
   }
   ok("so is one too large to be counted in cents", why({ amount: 1e308 }) === "err_value_number");
+  ok("a movement of less than half a cent is refused like 0",
+    why({ amount: 0.004 }) === "warn_amount_zero" && why({ amount: "-0.004" }) === "warn_amount_zero");
+  {
+    const d = example();
+    Cash.record(d, { ...movement, amount: -0.005 });
+    ok("one of half a cent is a cent", d.cash_log.at(-1).amount === -0.01 && opens(d), d.cash_log.at(-1).amount);
+  }
   ok("a cash movement on an account that is none is refused", why({ accountId: "nope" }) === "err_value_choice");
   ok("so is one with a date that is none", why({ date: "soon" }) === "err_value_choice");
 }
@@ -498,6 +638,50 @@ const opens = (d) => !WalletFile.check(d).length;
   const e = example();
   Plan.apply(e, Plan.contribution(e, 5000), "");
   ok("without a date it is today's", e.transactions.every(t => t.date === Dates.today()) && opens(e));
+
+  /** A plan of the example as it was, applied to a wallet which has changed since. */
+  const stale = (change) => {
+    const plan = Plan.contribution(example(), 100000);
+    return refusal(d => Plan.apply(d, plan), () => { const d = example(); change(d); return d; });
+  };
+  ok("a plan whose account has gone is refused, the movements before it unbooked",
+    stale(d => { d.cash = d.cash.filter(c => c.role !== "prepay"); }) === "err_value_choice");
+  ok("so is one whose instrument has gone", stale(d => { d.assets = d.assets.filter(a => a.id !== "webg"); }) === "err_value_choice");
+  ok("a plan of an amount beyond counting is refused",
+    refusal(d => Plan.apply(d, Plan.contribution(d, 1e308))) === "err_value_number");
+  const lines = (...list) => refusal(d => Plan.apply(d, { lines: [{ kind: "cash", account_id: "home", eur: 5 }, ...list] }));
+  const buy = { kind: "buy", asset_id: "webg", eur: 10, units: 1, price: 10 };
+  for(const [what, line] of [["an amount that is none", { kind: "cash", account_id: "home", eur: "x" }],
+    ["units beyond any number", { ...buy, units: Infinity }], ["units no number can round", { ...buy, units: 1e308 }],
+    ["a price that is none", { ...buy, price: NaN }], ["a price below 0", { ...buy, price: -1 }]]) {
+    ok(`a plan with ${what} is refused whole`, lines(line) === "err_value_number");
+  }
+  ok("two movements which only together overflow an account are refused",
+    lines(...[1, 2].map(() => ({ kind: "cash", account_id: "home", eur: 1e306 }))) === "err_value_number");
+  ok("a cash line without an account is passed over, as before",
+    lines({ kind: "cash", account_id: null, eur: 5 }, buy) === null);
+}
+
+// ---------------------------------------------------------------- exchange rates
+{
+  const why = (rates) => refusal(d => Rates.save(d, rates));
+  {
+    const d = example();
+    Rates.save(d, { USD: 1.2, PLN: "4.3" });
+    ok("rates are saved as numbers, one written as text too", d.settings.fx.USD === 1.2 && d.settings.fx.PLN === 4.3 && opens(d));
+  }
+  for(const [what, rate] of [["of 0", 0], ["below 0", -1], ["that is text", "x"], ["left empty", ""], ["of no value", null],
+    ["that is missing", undefined], ["that is yes", true], ["beyond any number", Infinity]]) {
+    ok(`a rate ${what} is refused, the one before it unsaved too`, why({ USD: 1.5, PLN: rate }) === "err_rate");
+  }
+  let named = null;
+  try { Rates.save(example(), { PLN: 0 }); } catch(e) { named = e.vars.currency; }
+  ok("and the refusal names the currency", named === "PLN", named);
+  ok("a currency the wallet has no rate for is refused", why({ USD: 1.5, GBP: 0.8 }) === "err_value_choice"
+    && why(JSON.parse('{"__proto__": 2}')) === "err_value_choice");
+  const near = (a, b) => Math.abs(a - b) < 1e-9;
+  ok("an amount goes from EUR into a currency and back", near(Rates.fromEur(example(), 100, "PLN"), 448)
+    && near(Rates.toEur(example(), 448, "PLN"), 100) && Rates.fromEur(example(), 5, "EUR") === 5);
 }
 
 // ---------------------------------------------------------------- category from the bucket

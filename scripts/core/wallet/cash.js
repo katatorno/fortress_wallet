@@ -22,17 +22,19 @@ const Cash = (() => {
     data.cash_log.push({ id: Base.newId(), date, account_id: accountId, amount: Base.round2(Number(amount)), note });
   }
 
+  /** Whether `add` of an amount on a balance gives numbers: in cents, one so large gives none. */
+  const countable = (balance, amount) =>
+    [Number(amount), Number(balance) + Number(amount)].every(x => Number.isFinite(Base.round2(x)));
+
   /**
-   * A deposit or, below 0, a withdrawal from the form, checked: an amount other than 0,
-   * and the account and the date as `add` checks them. Throws Rules.RuleError and
-   * leaves the data as it was.
+   * A deposit or, below 0, a withdrawal from the form, checked: an amount which in cents
+   * is not 0, and the account and the date as `add` checks them. Throws Rules.RuleError
+   * and leaves the data as it was.
    * @param {{accountId:string, amount:any, date?:string, note?:string}} movement  an empty date is today
    */
   function record(data, { accountId, amount, date = null, note = "" }) {
-    if(!Base.isNumeric(amount) || !Number(amount)) throw new Rules.RuleError("warn_amount_zero");
-    // an amount so large that, in cents, it or the balance with it is no number
-    const held = Number(data.cash.find(c => c.id === accountId)?.amount || 0);
-    if(![Number(amount), held + Number(amount)].every(x => Number.isFinite(Base.round2(x)))) {
+    if(!Base.isNumeric(amount) || !Base.round2(Number(amount))) throw new Rules.RuleError("warn_amount_zero");
+    if(!countable(data.cash.find(c => c.id === accountId)?.amount || 0, amount)) {
       throw new Rules.RuleError("err_value_number", { field: Texts.tr(data, "field_amount_signed") });
     }
     add(data, accountId, amount, note, date);
@@ -62,5 +64,5 @@ const Cash = (() => {
     }
   }
 
-  return { ROLES, account, add, record, save };
+  return { ROLES, account, add, countable, record, save };
 })();

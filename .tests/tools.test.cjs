@@ -2,7 +2,8 @@
 //
 // The tools in tools/: the .xlsx reader on a small export made here (and on broken
 // and oversized ones), the copy kept before a wallet is written, the names git
-// keeps out, the price cache's file names and the currencies of the markets.
+// keeps out, the price cache's file names, the currencies of the markets and where an
+// import puts a new instrument.
 // Run: tonka test fortress_wallet   (or: node .tests/tools.test.cjs)
 
 const fs = require("node:fs");
@@ -13,7 +14,7 @@ const { spawnSync } = require("node:child_process");
 const { APP, WalletFile, save, backupName } = require("../tools/wallet.cjs");
 const { readXlsx, unzip } = require("../tools/xlsx.cjs");
 const { cachePath } = require("../tools/fetch-prices.cjs");
-const { currencyOf } = require("../tools/import-xtb.cjs");
+const { currencyOf, importInto } = require("../tools/import-xtb.cjs");
 
 let pass = 0, fail = 0;
 function ok(name, cond, detail = "") {
@@ -113,6 +114,17 @@ try {
   ok("a market's currency comes from the ticker", currencyOf("NKE.US") === "USD" && currencyOf("WEBN.DE") === "EUR"
     && currencyOf("CDR.PL") === "PLN");
   ok("an unknown market is refused, not taken for euros", throws(() => currencyOf("VOD.UK"), /\.UK/));
+
+  // -------------------------------------------------------------- a new instrument's bucket
+  const equities = () => WalletFile.normalize({ version: WalletFile.FORMAT,
+    buckets: { first: { category: "equities" }, last: { category: "equities" } } });
+  const bought = (ticker) => ({ date: "2026-03-01", names: { [ticker]: ticker }, closed: [], cash: [],
+    lots: [{ id: "1", ticker, side: "BUY", volume: 1, openPrice: 10, openDate: "2026-01-05", price: 12 }] });
+  const taken = equities();
+  importInto(taken, bought("NEW.DE"));
+  ok("a new instrument goes into the last bucket of its category", taken.assets[0].bucket === "last");
+  ok("one of a category without a bucket is refused, saying so",
+    throws(() => importInto(equities(), bought("LYQ2.DE")), /LYQ2\.DE.*no bucket of bonds/));
 }
 finally {
   fs.rmSync(tmp, { recursive: true, force: true });

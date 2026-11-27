@@ -188,6 +188,11 @@ en = "Exchange rates saved."
 pl = "Zapisano kursy walut."
 pt = "Taxas de câmbio guardadas."
 
+[err_rate]
+en = "{currency}: enter an exchange rate above 0."
+pl = "{currency}: wpisz kurs większy od 0."
+pt = "{currency}: indique uma taxa de câmbio acima de 0."
+
 [flash_instruments_saved]
 en = "Instruments saved."
 pl = "Zapisano instrumenty."
@@ -1202,6 +1207,16 @@ pt = "O capital em dívida nesse dia é {balance}, por isso a amortização não
 en = "The mortgage is paid off: there is no payment left to book."
 pl = "Kredyt jest spłacony: nie ma już raty do zaksięgowania."
 pt = "O crédito está pago: não há mais prestações a registar."
+
+[warn_capital_over_balance]
+en = "The mortgage balance on that day is {balance}, so the principal part of a payment cannot be larger."
+pl = "Saldo kredytu w tym dniu to {balance}, więc część kapitałowa raty nie może być większa."
+pt = "O capital em dívida nesse dia é {balance}, por isso a parte de capital da prestação não pode ser maior."
+
+[warn_event_cut]
+en = "With this one, the event of {date} could no longer be counted in full: less would be left to repay than it records."
+pl = "Po tym wpisie zdarzenia z {date} nie dałoby się policzyć w całości: do spłaty zostałoby mniej, niż ono zapisuje."
+pt = "Com este registo, o movimento de {date} deixaria de poder ser contado por inteiro: ficaria em dívida menos do que ele regista."
 
 [note_prepayment_with_fee]
 en = "mortgage prepayment + fee"

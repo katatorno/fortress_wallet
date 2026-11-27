@@ -149,7 +149,7 @@ const MortgageView = (app) => {
   );
 
   // ---------------------------------------------------------- prepayment
-  const pot = Cash.account(data, "prepay");
+  const pot = Mortgage.prepaymentPot(data); // in EUR, whatever the account's currency
   const pp = {
     amount: <NumberInput value={1000} min="0" step="100" onChange={() => preview()} />,
     date: <DatePicker format="%Y-%m-%d" value={Dates.today()} onChange={() => preview()} />,
@@ -157,16 +157,22 @@ const MortgageView = (app) => {
     mode: <Toggle value={m.default_mode || "reduce_term"} onChange={() => preview()}>
       {modeOptions.map(([v, label]) => <ToggleBtn value={v} label={label} />)}
     </Toggle>,
-    fromPot: <Checkbox label={pot ? T("take_from_pot", { amount: money(pot.amount) }) : T("take_from_pot_none")}
-      checked={!!pot && pot.amount >= 1000} disabled={!pot} />,
+    fromPot: <Checkbox label={pot ? T("take_from_pot", { amount: money(pot.eur) }) : T("take_from_pot_none")}
+      checked={!!pot && pot.eur >= 1000} disabled={!pot} />,
   };
   const effect = <span></span>;
   /** The fields of the prepayment form, as `Mortgage` takes them. */
   const prepayment = () => ({ amount: pp.amount.value, date: pp.date.value, feePct: pp.fee.value, mode: pp.mode.value });
+  /** What the prepayment typed would change, or why it would be refused. */
   function preview() {
     const mode = pp.mode.value;
-    const gain = Mortgage.prepaymentEffect(data, prepayment());
-    if(!gain) { effect.textContent = ""; return; }
+    let gain;
+    try { gain = Mortgage.prepaymentEffect(data, prepayment()); }
+    catch(e) {
+      if(!(e instanceof Rules.RuleError)) throw e;
+      effect.textContent = T(e.key, e.vars);
+      return;
+    }
     const what = mode === "reduce_term"
       ? T("effect_term", { new: Dates.monthYear(gain.end_date), old: Dates.monthYear(gain.old_end_date) })
       : T("effect_payment", { new: money(gain.payment, 2), old: money(gain.old_payment, 2) });

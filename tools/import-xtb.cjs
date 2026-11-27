@@ -7,7 +7,7 @@
 //
 //   node tools/import-xtb.cjs <export.xlsx> <wallet.json> [--dry-run]
 
-const { Base, Transactions, WalletFile, WalletHistory, open, save } = require("./wallet.cjs");
+const { Base, Buckets, Transactions, WalletFile, WalletHistory, open, save } = require("./wallet.cjs");
 const { readXlsx } = require("./xlsx.cjs");
 
 // XTB ticker → the instrument it is in the wallet, and its symbol at the price service
@@ -85,7 +85,10 @@ function importInto(data, x) {
     if(!asset) {
       const bond = BOND_FUNDS.includes(ticker);
       const category = bond ? "bonds" : "equities";
-      const buckets = Object.keys(data.buckets).filter(b => data.buckets[b].category === category);
+      const buckets = Buckets.of(data, category);
+      if(!buckets.length) {
+        throw new Error(`${ticker}: the wallet has no bucket of ${category} for it; add one in the app (Settings → Buckets) and import again`);
+      }
       asset = WalletFile.instrument({ id, name: x.names[ticker], category, bucket: buckets[buckets.length - 1],
         currency: currencyOf(ticker), price_symbol: known?.symbol || "" });
       data.assets.push(asset);

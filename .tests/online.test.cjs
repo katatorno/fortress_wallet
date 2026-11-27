@@ -1,7 +1,8 @@
 // .tests/online.test.cjs
 //
 // The exchange rates (scripts/core/online.js) with the service stood in for: what
-// is sent (the currency codes only), and what of the answer is taken.
+// is sent (the currency codes only), what of the answer is taken, and which wallet
+// takes it.
 // Run: tonka test fortress_wallet   (or: node .tests/online.test.cjs)
 
 const { loadCore } = require("../tools/wallet.cjs");
@@ -54,6 +55,26 @@ const wallet = (WalletFile, fx) => WalletFile.normalize({ version: WalletFile.FO
     const { Online, WalletFile, asked } = service({});
     await Online.fetchFx(wallet(WalletFile, {}));
     ok("a wallet in euros asks nothing", !asked.length);
+  }
+  for(const replaced of [true, false]) {
+    const { Online, WalletFile } = service({ date: "2026-11-27", rates: { USD: 1.1 } });
+    const d = wallet(WalletFile, { USD: 1 }), other = wallet(WalletFile, { USD: 2 });
+    let open = d;
+    const asked = Online.fetchFx(d, () => open);
+    if(replaced) open = other; // while the answer is on its way
+    const res = await asked;
+    if(replaced) {
+      ok("a wallet replaced while the rates were fetched gets none, nor does the one in its place",
+        res.replaced === true && !res.updated.length && d.settings.fx.USD === 1 && other.settings.fx.USD === 2, JSON.stringify(res));
+    }
+    else ok("the wallet still open gets them", !res.replaced && d.settings.fx.USD === 1.1, JSON.stringify(res));
+  }
+  {
+    const { Online, WalletFile } = service({ rates: { USD: "1.25", PLN: true, CHF: [2] } });
+    const d = wallet(WalletFile, { USD: 1, PLN: 4, CHF: 1 });
+    const res = await Online.fetchFx(d);
+    ok("a rate is what the file takes for one: a number above 0, written as text too", d.settings.fx.USD === 1.25
+      && d.settings.fx.PLN === 4 && d.settings.fx.CHF === 1 && res.updated.join() === "EUR/USD", JSON.stringify(d.settings.fx));
   }
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

@@ -31,11 +31,11 @@ const near = (a, b, tol = 0.01) => Math.abs(a - b) <= tol;
     "chart-math.js": ["Base", "Dates"],
     "wallet/texts.js": ["I18N"],
     "wallet/rules.js": ["Base", "Dates", "Texts"],
-    "wallet/rates.js": ["Texts"],
+    "wallet/rates.js": ["Base", "Rules", "Texts"],
     "wallet/cash.js": ["Base", "Dates", "Rates", "Rules", "Texts"],
     "wallet/transactions.js": ["Base", "Dates", "Rules", "Texts"],
     "wallet/buckets.js": ["Base", "Texts", "Rules"],
-    "wallet/mortgage.js": ["Base", "Cash", "Dates", "Rules", "Texts"],
+    "wallet/mortgage.js": ["Base", "Cash", "Dates", "Rates", "Rules", "Texts"],
     "wallet/instruments.js": ["Dates", "Buckets", "Transactions", "Rates", "Rules", "Texts", "WalletFile"],
     "wallet/valuation.js": ["Dates", "Rates", "Cash", "Transactions", "Mortgage"],
     "wallet/plan.js": ["Base", "Dates", "Rules", "Texts", "Valuation", "Cash"],
@@ -43,7 +43,7 @@ const near = (a, b, tol = 0.01) => Math.abs(a - b) <= tol;
     "wallet/wallet-history.js": ["Base", "Dates", "Rates", "Transactions", "Valuation"],
     "wallet/advice.js": ["Base", "Dates", "Texts", "Mortgage", "Valuation"],
     // I18N: the language of a wallet that names none
-    "wallet/wallet-file.js": ["Base", "Texts", "Cash", "Mortgage", "Transactions", "Valuation", "I18N"],
+    "wallet/wallet-file.js": ["Base", "Texts", "Cash", "Mortgage", "Rates", "Transactions", "Valuation", "I18N"],
   };
   const files = CORE_FILES.filter(f => f !== "i18n.js");
   const names = CORE_FILES.map(moduleName);
