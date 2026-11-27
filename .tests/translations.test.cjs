@@ -55,6 +55,7 @@ for(const p of ["cat_equities", "cat_metals", "cat_bonds", "role_emergency", "ro
   "status_saved", "status_dirty", "status_saving", "status_error", "status_auth", "status_conflict",
   "plan_kind_cash", "plan_kind_buy", "plan_kind_skip", "plan_kind_unassigned",
   "file_local_help_write", "file_local_help_download",
+  "range_all", "range_year", "range_quarter", "range_month", "range_week",
   "event_payment", "event_prepayment", "source_drive", "source_local", "rec_prepay_wins", "rec_prepay_loses",
   "rec_drift_above_t", "rec_drift_below_t"]) used.add(p);
 const unknown = [...used].filter(k => !(k in strings)).sort();

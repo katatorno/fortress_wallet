@@ -51,7 +51,7 @@ const DashboardView = (app) => {
   const history = (
     <Panel title={T("chart_history")} icon="show_chart">
       {hist.length >= 2
-        ? <LineChart lang={app.L} markers={hist.length < 40} series={[
+        ? <RangeChart app={app} id="worth" series={[
           { name: T("net_worth"), cls: "c1", points: hist.map(h => [h.date, h.net_worth]) },
           { name: T("investments"), cls: "c2", points: hist.map(h => [h.date, h.investments]) },
           { name: T("cash"), cls: "c3", points: hist.map(h => [h.date, h.cash]) },

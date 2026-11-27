@@ -85,6 +85,28 @@ const wallet = () => Core.normalize({
   ok("another category has no history", !Core.portfolioHistory(d, "metals").length);
 }
 
+// ---------------------------------------------------------------- chart ranges
+{
+  const to = "2026-11-27";
+  ok("the ranges start where they should", Core.rangeStart("all", to) === null
+    && Core.rangeStart("year", to) === "2025-11-27" && Core.rangeStart("quarter", to) === "2026-08-27"
+    && Core.rangeStart("month", to) === "2026-10-27" && Core.rangeStart("week", to) === "2026-11-20");
+  ok("a week reaches back over a year's end", Core.rangeStart("week", "2027-01-03") === "2026-12-27");
+  ok("a month ago from a long month's end", Core.rangeStart("month", "2027-03-31") === "2027-02-28");
+  const points = [["2026-11-01", 1], ["2026-11-15", 2], ["2026-11-22", 3], ["2026-11-27", 4]];
+  ok("the whole history keeps every point", Core.clipPoints(points, null) === points);
+  const week = Core.clipPoints(points, "2026-11-20");
+  ok("a range opens with the value of its first day", week.length === 3 && week[0][0] === "2026-11-20" && week[0][1] === 2);
+  ok("a point on the first day is not doubled", Core.clipPoints(points, "2026-11-15").length === 3);
+  ok("a history shorter than the range stays whole", Core.clipPoints(points, "2025-01-01").length === 4);
+  const axis = Core.axisRange(18966, 20350);
+  ok("a zoomed axis holds the values closely", axis.lo <= 18966 && axis.hi >= 20350 && axis.lo > 18000 && axis.hi < 21500);
+  ok("its steps are even and end at the limits", axis.ticks[0] === axis.lo && axis.ticks.at(-1) === axis.hi
+    && axis.ticks.every((t, i) => !i || near(t - axis.ticks[i - 1], axis.step)));
+  const flat = Core.axisRange(500, 500);
+  ok("a flat line still gets an axis", flat.hi > flat.lo);
+}
+
 // ---------------------------------------------------------------- the import
 {
   const d = wallet();

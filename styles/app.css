@@ -127,5 +127,8 @@ select.cell-input { min-width: 8.5rem; border-color: var(--border); cursor: poin
 .tbar-target { top: 0; bottom: 0; opacity: var(--pale); }
 .tbar-current { top: 6px; bottom: 6px; min-width: 2px; }
 
+/* the chart's range buttons scroll on a very narrow screen */
+.range-pick { overflow-x: auto; }
+
 /* ---------------------------------------------------------------- notes and markdown */
 .note .panel-main span { color: var(--text2); }

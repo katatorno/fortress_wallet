@@ -20,7 +20,7 @@ function portfolioPanel(app) {
             <Metric label={T("legend_value")} value={money(last.value)} />
             <Metric label={T("market_gain")} value={`${gain >= 0 ? "+" : ""}${money(gain)}${percent}`} />
           </div>
-          <LineChart lang={app.L} series={[
+          <RangeChart app={app} id="portfolio" series={[
             { name: T("legend_value"), cls: "c1", points: days.map(d => [d.date, d.value]) },
             { name: T("legend_invested"), cls: "cn", dash: true, points: days.map(d => [d.date, d.invested]) },
           ]} />

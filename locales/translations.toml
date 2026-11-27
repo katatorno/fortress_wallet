@@ -520,6 +520,31 @@ en = "The chart appears once there are transactions on at least two days."
 pl = "Wykres pojawi się, gdy będą transakcje z co najmniej dwóch dni."
 pt = "O gráfico aparece quando houver transações em pelo menos dois dias."
 
+[range_all]
+en = "All"
+pl = "Wszystko"
+pt = "Tudo"
+
+[range_year]
+en = "1 year"
+pl = "Rok"
+pt = "1 ano"
+
+[range_quarter]
+en = "3 months"
+pl = "3 miesiące"
+pt = "3 meses"
+
+[range_month]
+en = "1 month"
+pl = "Miesiąc"
+pt = "1 mês"
+
+[range_week]
+en = "1 week"
+pl = "Tydzień"
+pt = "1 semana"
+
 [btn_record_purchases]
 en = "Record the purchases"
 pl = "Zapisz zakupy"

@@ -222,19 +222,25 @@ const _StackedBars = ({ xs, series, lang }, W) => {
 /**
  * Lines over time with a crosshair read-out that follows the pointer.
  * @param {{series:Array<{name:string, cls:string, dash?:boolean, points:Array<[string, number]>}>,
- *   lang:string, marker?:string, height?:number, markers?:boolean}} props
- *   points are [isoDate, value]; `marker` an ISO date drawn as a dotted line (today)
+ *   lang:string, marker?:string, height?:number, markers?:boolean, zoom?:boolean}} props
+ *   points are [isoDate, value]; `marker` an ISO date drawn as a dotted line (today);
+ *   `zoom` fits the value axis around the points instead of starting at zero
  */
 const LineChart = (props) => responsiveChart((W) => _LineChart(props, W));
-const _LineChart = ({ series, lang, marker, height = 260, markers }, W) => {
+const _LineChart = ({ series, lang, marker, height = 260, markers, zoom }, W) => {
   const h = height, left = 56, bottom = 26, top = 12, right = 12;
   const pts = series.flatMap(s => s.points);
   if(!pts.length) return <Empty icon="show_chart" />;
   const xs = pts.map(p => _ts(p[0]));
   const x0 = Math.min(...xs), x1 = Math.max(...xs, x0 + 86400000);
-  const max = _niceMax(Math.max(...pts.map(p => p[1]), 1));
+  const values = pts.map(p => p[1]);
+  const full = _niceMax(Math.max(...values, 1));
+  const axis = zoom ? Core.axisRange(Math.min(...values), Math.max(...values))
+    : { lo: 0, hi: full, ticks: [0, 0.25, 0.5, 0.75, 1].map(f => f * full) };
+  // short money ("19k") only where the steps are whole thousands
+  const label = (v) => !zoom || axis.step % 1000 === 0 ? _compactMoney(lang, v) : I18N.number(lang, v, 0) + " €";
   const X = (t) => left + (t - x0) / (x1 - x0) * (W - left - right);
-  const Y = (v) => top + (1 - v / max) * (h - top - bottom);
+  const Y = (v) => top + (1 - (v - axis.lo) / (axis.hi - axis.lo)) * (h - top - bottom);
   const path = (points) => points.map((p, i) => `${i ? "L" : "M"}${X(_ts(p[0])).toFixed(1)} ${Y(p[1]).toFixed(1)}`).join(" ");
   // ticks: days for a couple of months, then months, then years
   const y0 = new Date(x0).getUTCFullYear(), y1 = new Date(x1).getUTCFullYear();
@@ -259,9 +265,9 @@ const _LineChart = ({ series, lang, marker, height = 260, markers }, W) => {
   const tip = <div class="chart-tip" hidden></div>;
   const svg = (
     <svg viewBox={`0 0 ${W} ${h}`} class="chart" role="img">
-      {[0, 0.25, 0.5, 0.75, 1].map(f => <g>
-        <line x1={left} x2={W - right} y1={Y(f * max)} y2={Y(f * max)} class="chart-grid" />
-        <text x={left - 6} y={Y(f * max) + 4} text-anchor="end" class="chart-axis">{_compactMoney(lang, f * max)}</text>
+      {axis.ticks.map(v => <g>
+        <line x1={left} x2={W - right} y1={Y(v)} y2={Y(v)} class="chart-grid" />
+        <text x={left - 6} y={Y(v) + 4} text-anchor="end" class="chart-axis">{label(v)}</text>
       </g>)}
       {showDays
         ? series[0].points.filter((p, i, all) => i % Math.ceil(all.length / 8) === 0)
@@ -328,6 +334,33 @@ const _LineChart = ({ series, lang, marker, height = 260, markers }, W) => {
       <div class="chart-wrap">{svg}{tip}</div>
     </stack>
   );
+};
+
+// the range chosen for each history chart, for as long as the page is open
+const _chartRanges = {};
+
+/**
+ * A history chart with the choice of how far back it looks: the whole history to
+ * start with, or the last year, three months, month or week.
+ * @param {{app:object, id:string, series:Array<{name:string, cls:string, dash?:boolean,
+ *   points:Array<[string, number]>}>}} props
+ */
+const RangeChart = ({ app, id, series }) => {
+  const slot = <div></div>;
+  function draw(range) {
+    const from = Core.rangeStart(range);
+    const shown = series.map(s => ({ ...s, points: Core.clipPoints(s.points, from) }));
+    slot.replaceChildren(<LineChart lang={app.L} series={shown} zoom={range !== "all"}
+      markers={shown.every(s => s.points.length < 40)} />);
+  }
+  const chosen = _chartRanges[id] || "all";
+  const pick = (
+    <Toggle size="sm" value={chosen} onChange={(range) => { _chartRanges[id] = range; draw(range); }}>
+      {Core.RANGES.map(r => <ToggleBtn value={r} label={app.T("range_" + r)} />)}
+    </Toggle>
+  );
+  draw(chosen);
+  return <stack gap="sm"><div class="range-pick">{pick}</div>{slot}</stack>;
 };
 
 /**
