@@ -1,15 +1,18 @@
 // scripts/core/wallet/rules.js
 //
 // The saves of the views check everything first and throw RuleError before changing
-// anything. Here are that error and the checks of typed numbers they share.
+// anything. Here are that error and the checks of typed numbers and dates they share.
 
 const Rules = (() => {
-  /** A save refused by a rule: `key` and `vars` are the message, and the data stays as it was. */
+  /**
+   * A refusal: `key` and `vars` are the message. A save that throws it has left the
+   * data as it was.
+   */
   class RuleError extends Error {
     constructor(key, vars = {}) { super(key); this.key = key; this.vars = vars; }
   }
 
-  /** A number typed into a form, held between limits; `field` is the label's key. */
+  /** A number typed into a form, held between limits; `key` is the label's key. */
   function number(data, v, key, min = -Infinity, max = Infinity) {
     const field = Texts.tr(data, key);
     if(!Base.isNumeric(v)) throw new RuleError("err_value_number", { field });
@@ -28,5 +31,12 @@ const Rules = (() => {
     return Number(v);
   };
 
-  return { RuleError, number, percent };
+  /** A date typed into a form: empty (null), or one `Dates.parse` reads; `key` is the label's key. */
+  function date(data, v, key) {
+    if(Base.isBlank(v)) return null;
+    try { return Dates.parse(v); }
+    catch { throw new RuleError("err_value_choice", { field: Texts.tr(data, key) }); }
+  }
+
+  return { RuleError, number, percent, date };
 })();

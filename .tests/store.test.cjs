@@ -243,6 +243,36 @@ function places(value, at = []) {
     ok("which leaves nothing that stops the next change", change(w, "one").length === 0);
   }
 
+  // ---------------------------------------------------------- a change that throws
+  {
+    const w = world();
+    await w.Store.openLocal();
+    const before = w.WalletFile.serialize(w.Store.get());
+    // what throws in each step: the check, the snapshot, the writing of the text
+    const cases = [
+      ["the check", (d) => Object.defineProperty(d, "strategy_notes", { get() { throw null; }, enumerable: true })],
+      ["the snapshot", (d) => { d.history.constructor = 7; }],
+      ["the writing of the text", (d) => { d.house.extra = 1n; }],
+    ];
+    for(const [step, break_] of cases) {
+      break_(w.Store.get());
+      let found, threw = "";
+      try { found = w.Store.changed(); } catch(e) { threw = String(e); }
+      ok(`what ${step} throws refuses the change, with its message`, !threw && found.length === 1 && !!found[0],
+        threw || JSON.stringify(found));
+      ok(`after ${step} threw the wallet is as it was, nothing to save`, w.WalletFile.serialize(w.Store.get()) === before
+        && w.Store.state().status === "saved" && !w.timers.size);
+    }
+    ok("and the next good change is accepted", change(w, "one").length === 0);
+    const off = w.Store.onChange(() => { throw new Error("a listener broke"); });
+    const log = console.error;
+    console.error = () => {}; // what the store says about the listener
+    let threw = "";
+    try { change(w, "two"); await w.tick(); } catch(e) { threw = e.message; }
+    finally { console.error = log; off(); }
+    ok("a listener that throws takes neither the change nor its save down", !threw && notes(w.file.text) === "two", threw);
+  }
+
   // ---------------------------------------------------------- one change of every place
   {
     const w = world();
@@ -263,8 +293,8 @@ function places(value, at = []) {
       return v && typeof v === "object" && !Object.keys(v).length; });
     ok("every list and map has an element to change", !empty.length, empty.map(p => p.join(".")).join(", "));
 
-    const values = [["a number", () => 7], ["text", () => "x"], ["null", () => null], ["{}", () => ({})], ["[]", () => []],
-      ["removed", null]];
+    const values = [["a number", () => 7], ["NaN", () => NaN], ["Infinity", () => Infinity], ["text", () => "x"],
+      ["null", () => null], ["{}", () => ({})], ["[]", () => []], ["removed", null]];
     const broken = [], kept = [];
     let accepted = 0, refused = 0;
     for(const place of at) {

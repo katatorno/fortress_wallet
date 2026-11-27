@@ -94,7 +94,13 @@ function targetEditor(app, bucket) {
   const save = (
     <Button variant="primary" icon="save" onClick={() => {
       const targets = Object.fromEntries(grid.rows.map(r => [r.id, r.target]));
-      if(Buckets.saveTargets(data, bucket, targets)) app.commit(T("flash_targets_saved", { bucket }));
+      try { Buckets.saveTargets(data, bucket, targets); }
+      catch(e) {
+        if(!(e instanceof Rules.RuleError)) throw e;
+        Alert.err(T(e.key, e.vars));
+        return;
+      }
+      app.commit(T("flash_targets_saved", { bucket }));
     }}>{T("btn_save_targets")}</Button>
   );
   const total = liveNote(grid, (rows) => {
@@ -159,7 +165,8 @@ function bucketEditor(app, category) {
   const total = liveNote(grid, (list) => {
     const kept = list.filter(r => !r.delete);
     const value = kept.reduce((a, r) => a + Number(r.share || 0), 0);
-    saveTable.disabled = !!kept.length && Math.abs(value - 100) > 0.001;
+    // the rule the save holds the shares to
+    saveTable.disabled = !!Buckets.badShares(kept.map(r => ({ category, target_pct_in_category: r.share }))).length;
     const sum = totalText(data, value);
     return saveTable.disabled ? T("sum_wrong", { sum }) : T("sum_ok", { sum });
   });

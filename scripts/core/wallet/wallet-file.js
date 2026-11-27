@@ -169,7 +169,8 @@ const WalletFile = (() => {
       object: (w, v) => _isObj(v) || bad(w, "object"),
       list: (w, v) => Array.isArray(v) || bad(w, "list"),
       text: (w, v) => typeof v === "string" || bad(w, "text"),
-      label: (w, v) => typeof v === "string" || typeof v === "number" || bad(w, "text"),
+      // NaN and Infinity are no labels: a file would hold them as null
+      label: (w, v) => typeof v === "string" || Number.isFinite(v) || bad(w, "text"),
       name: (w, v) => (typeof v === "string" && v.trim() !== "" && !Base.isReserved(v)) || bad(w, "name"),
       number: (w, v) => Base.isNumeric(v) || bad(w, "number"),
       positive: (w, v) => (Base.isNumeric(v) && Number(v) >= 0) || bad(w, "positive"),

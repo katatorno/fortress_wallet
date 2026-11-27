@@ -7,8 +7,9 @@
 // download the updated file.
 //
 // Every change passes through `changed`, which holds it to the check an opened
-// file gets (`WalletFile.check`). One after which the wallet would not open is undone:
-// the wallet goes back to how it was last accepted, on opening or by `changed`.
+// file gets (`WalletFile.check`). One after which the wallet would not open, or which
+// cannot be checked or written, is undone: the wallet goes back to how it was last
+// accepted, on opening or by `changed`.
 //
 // Each change raises a counter, and the file holds the counter of its last save:
 // whatever changed while a save was running is still unsaved. Saves run one after
@@ -42,7 +43,13 @@ const Store = (() => {
   const get = () => data;
   const state = () => ({ data, source, status, error, canSaveInPlace: canSaveInPlace(), unsaved: unsaved() });
   function onChange(fn) { subs.add(fn); return () => subs.delete(fn); }
-  const emit = () => { for(const fn of subs) fn(state()); };
+  /** Tells the listeners; one that fails takes neither the change nor the save down with it. */
+  function emit() {
+    for(const fn of subs) {
+      try { fn(state()); }
+      catch(e) { console.error(e); }
+    }
+  }
 
   function _setStatus(next, err = null) {
     status = next;
@@ -117,16 +124,24 @@ const Store = (() => {
 
   /**
    * The one way in for a change: call after every change of the data. A refused
-   * change is undone and nothing is saved; `get()` then gives a new object.
-   * @returns {string[]} why it was refused (see `WalletFile.check`); empty: accepted
+   * change is undone and nothing is saved; `get()` then gives a new object. It does
+   * not throw: whatever the check, the snapshot or the writing of the text throws
+   * refuses the change.
+   * @returns {string[]} why it was refused (see `WalletFile.check`, or the message of
+   *   what was thrown); empty: accepted
    */
   function changed() {
-    const found = _against();
+    let found, text;
+    try {
+      found = _against();
+      if(!found.length) text = WalletFile.serialize(data);
+    }
+    catch(e) { found = [e?.message ?? String(e)]; }
     if(found.length) {
-      data = JSON.parse(accepted);
+      if(accepted) data = JSON.parse(accepted); // nothing to go back to before a wallet is open
       return found;
     }
-    accepted = WalletFile.serialize(data);
+    accepted = text;
     rev += 1;
     if(status !== "conflict") status = "dirty";
     emit();

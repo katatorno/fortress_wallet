@@ -17,7 +17,7 @@ const MortgageView = (app) => {
   let report = null;
   try { report = Mortgage.report(m); }
   catch(e) {
-    if(e instanceof Mortgage.MortgageError) out.push(<Note level="err">{T(e.key)}</Note>);
+    if(e instanceof Rules.RuleError) out.push(<Note level="err">{T(e.key, e.vars)}</Note>);
     else throw e;
   }
   const info = report?.info;

@@ -74,7 +74,12 @@ const TransactionsView = (app) => {
         {formRow(T("field_note"), cNote)}
         <row><Button variant="primary" icon="save" onClick={() => {
           if(!amount.value || !Number.isFinite(Number(amount.value))) { Alert.wrn(T("warn_amount_zero")); return; }
-          Cash.add(data, account.value, amount.value, cNote.value, cDate.value);
+          try { Cash.add(data, account.value, amount.value, cNote.value, cDate.value); }
+          catch(e) {
+            if(!(e instanceof Rules.RuleError)) throw e;
+            Alert.wrn(T(e.key, e.vars));
+            return;
+          }
           app.commit(T("flash_cash_op", { amount: money(amount.value, 2) }));
         }}>{T("btn_save")}</Button></row>
       </stack>

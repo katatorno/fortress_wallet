@@ -157,6 +157,15 @@ ok("the example carries no price service key", JSON.parse(text).settings.price_a
     const message = refusal(change);
     ok(`${name} is refused, naming where`, !!message && message.includes(where), message || "opened");
   }
+  // JSON.stringify writes a number beyond any as null, so it is put into the text
+  for(const key of ["id", "asset_id"]) {
+    const raw = JSON.parse(text);
+    raw.transactions = [{ id: "t", asset_id: "webg", type: "buy", quantity: 1, price: 1, date: "2026-01-01", [key]: "huge" }];
+    let message = "";
+    try { WalletFile.parse(JSON.stringify(raw).replace('"huge"', "1e999")); } catch(e) { message = e.message; }
+    ok(`a transaction's ${key} beyond any number is refused, naming where`, message.includes(`transactions[0].${key}`),
+      message || "opened");
+  }
   const kept = JSON.parse(text);
   const original = JSON.stringify(kept);
   refusal((r) => { r.assets[0].price = "abc"; });

@@ -5,14 +5,20 @@
 
 const Transactions = (() => {
   const TYPES = ["buy", "sell", "adjust"];
+  const SIGN = { buy: 1, sell: -1, adjust: 1 };
+
+  /**
+   * What a transaction does to the quantity held: a purchase adds to it, a sale takes
+   * from it, an adjustment adds its quantity, which may be below 0.
+   */
+  const change = (t) => (SIGN[t.type] || 0) * Number(t.quantity || 0);
 
   /** Quantity = opening quantity + transactions, so deleting a transaction undoes it. */
   function quantities(data) {
     const q = {};
     for(const a of data.assets) q[a.id] = Number(a.opening_quantity || 0);
-    const sign = { buy: 1, sell: -1, adjust: 1 };
     for(const t of data.transactions) {
-      if(t.asset_id in q) q[t.asset_id] += (sign[t.type] || 0) * Number(t.quantity || 0);
+      if(t.asset_id in q) q[t.asset_id] += change(t);
     }
     return q;
   }
@@ -20,17 +26,18 @@ const Transactions = (() => {
   /** Units of an instrument held at the end of a day (all of them without a day). */
   function heldOn(data, assetId, date = null) {
     const a = data.assets.find(x => x.id === assetId);
-    const sign = { buy: 1, sell: -1, adjust: 1 };
     return data.transactions.filter(t => t.asset_id === assetId && (!date || t.date <= date))
-      .reduce((q, t) => q + (sign[t.type] || 0) * Number(t.quantity || 0), Number(a?.opening_quantity || 0));
+      .reduce((q, t) => q + change(t), Number(a?.opening_quantity || 0));
   }
 
+  /** A transaction as it comes: only the instrument and the date are checked. */
   function add(data, assetId, type, quantity, price, fee = 0, on = null, note = "", updatePrice = true) {
-    const date = Dates.parse(on) || Dates.today();
+    const a = data.assets.find(x => x.id === assetId);
+    if(!a) throw new Rules.RuleError("warn_add_instrument_first");
+    const date = Rules.date(data, on, "field_date") || Dates.today();
     data.transactions.push({ id: Base.newId(), date, asset_id: assetId, type,
       quantity: Number(quantity), price: Number(price), fee: Number(fee), note });
     if(updatePrice && price && (type === "buy" || type === "sell")) {
-      const a = data.assets.find(x => x.id === assetId);
       const last = Dates.parse(a.price_updated);
       if(!last || date >= last) { a.price = Number(price); a.price_updated = date; }
     }
@@ -50,7 +57,7 @@ const Transactions = (() => {
     if(type !== "adjust" && q < 0) throw new Rules.RuleError("warn_quantity_positive");
     const p = Rules.number(data, price ?? 0, "field_unit_price", 0);
     const f = Rules.number(data, fee ?? 0, "field_fee_eur", 0);
-    const day = Dates.parse(date) || Dates.today();
+    const day = Rules.date(data, date, "field_date") || Dates.today();
     if(type === "sell") {
       const held = Math.min(heldOn(data, assetId, day), heldOn(data, assetId));
       if(q > held + 1e-9) throw new Rules.RuleError("warn_sell_more", { name: a.name, held: Texts.num(data, held, 4) });
@@ -58,5 +65,5 @@ const Transactions = (() => {
     add(data, assetId, type, q, p, f, day, note, updatePrice);
   }
 
-  return { TYPES, quantities, heldOn, add, record };
+  return { TYPES, change, quantities, heldOn, add, record };
 })();

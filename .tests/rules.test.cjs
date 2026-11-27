@@ -10,7 +10,7 @@ const { readFileSync } = require("node:fs");
 const path = require("node:path");
 const { APP, loadCore } = require("../tools/wallet.cjs");
 
-const { Advice, Buckets, Cash, Instruments, Mortgage, Rules, Settings, Transactions, WalletFile } = loadCore();
+const { Advice, Buckets, Cash, Dates, Instruments, Mortgage, Rules, Settings, Transactions, WalletFile } = loadCore();
 const example = () => WalletFile.parse(readFileSync(path.join(APP, "data", "wallet.example.json"), "utf8"));
 
 let pass = 0, fail = 0;
@@ -103,6 +103,11 @@ function refusal(fn, start = example) {
   ok("a currency without a rate is refused", refusal(d => Cash.save(d, rows(d, { [id]: { currency: "XYZ" } }))) === "err_value_choice");
   ok("a balance that is no number is refused, the rows before it unsaved too",
     refusal(d => Cash.save(d, rows(d, { [d.cash[0].id]: { amount: 1 }, [d.cash.at(-1).id]: { amount: "x" } }))) === "err_value_number");
+  ok("a date that is none refuses the table before any row is saved",
+    refusal(d => Cash.save(d, rows(d, { [id]: { amount: 1, name: "Renamed" } }), "fix", "soon")) === "err_value_choice");
+  ok("a movement with a date that is none leaves the balance",
+    refusal(d => Cash.add(d, id, 5, "", "soon")) === "err_value_choice");
+  ok("a movement on an account that is none is refused", refusal(d => Cash.add(d, "nope", 5)) === "err_value_choice");
 }
 
 // ---------------------------------------------------------------- mortgage
@@ -142,6 +147,24 @@ function refusal(fn, start = example) {
   ok("or a sale that a later sale would overdraw", refusal(d => {
     tx(d, { type: "sell", quantity: held, date: "2026-11-25" });
   }, () => { const e = example(); tx(e, { type: "sell", quantity: 1, date: "2026-11-26" }); return e; }) === "warn_sell_more");
+  ok("a date that is none is refused", refusal(d => tx(d, { date: "soon" })) === "err_value_choice");
+  ok("a transaction without a date is today's", (() => {
+    const e = example();
+    tx(e, { date: null });
+    return e.transactions.at(-1).date === Dates.today();
+  })());
+  ok("added as it comes, one of an unknown instrument is refused",
+    refusal(d => Transactions.add(d, "nope", "buy", 1, 1)) === "warn_add_instrument_first");
+  ok("and so is one with a date that is none",
+    refusal(d => Transactions.add(d, "webg", "buy", 1, 1, 0, "soon")) === "err_value_choice");
+}
+
+// ---------------------------------------------------------------- what a transaction does to the quantity
+{
+  const change = (type, quantity) => Transactions.change({ type, quantity });
+  ok("a purchase adds", change("buy", 2) === 2 && change("buy", "2.5") === 2.5);
+  ok("a sale takes away", change("sell", 2) === -2);
+  ok("an adjustment adds its quantity, which may be below 0", change("adjust", 3) === 3 && change("adjust", -3) === -3);
 }
 
 // ---------------------------------------------------------------- category from the bucket

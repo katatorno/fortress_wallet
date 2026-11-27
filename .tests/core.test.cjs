@@ -12,7 +12,7 @@ const vm = require("node:vm");
 const { APP, CORE_FILES, moduleName, loadCore } = require("../tools/wallet.cjs");
 
 const loaded = loadCore();
-const { Advice, Cash, Dates, Mortgage, Plan, Texts, Transactions, Valuation, WalletFile, I18N } = loaded;
+const { Advice, Cash, Dates, Mortgage, Plan, Rules, Texts, Transactions, Valuation, WalletFile, I18N } = loaded;
 const example = () => WalletFile.parse(readFileSync(path.join(APP, "data", "wallet.example.json"), "utf8"));
 
 let pass = 0, fail = 0;
@@ -24,13 +24,13 @@ const near = (a, b, tol = 0.01) => Math.abs(a - b) <= tol;
 
 // ---------------------------------------------------------------- the modules
 {
-  // the files of scripts/core the wallet logic is made of, and where each may reach
+  // the files of scripts/core the wallet logic is made of, and where each reaches
   const REACHES = {
     "base.js": [],
     "dates.js": ["Base"],
     "chart-math.js": ["Base", "Dates"],
     "wallet/texts.js": ["I18N"],
-    "wallet/rules.js": ["Base", "Texts"],
+    "wallet/rules.js": ["Base", "Dates", "Texts"],
     "wallet/rates.js": ["Texts"],
     "wallet/cash.js": ["Base", "Dates", "Rules", "Texts"],
     "wallet/transactions.js": ["Base", "Dates", "Rules", "Texts"],
@@ -40,7 +40,7 @@ const near = (a, b, tol = 0.01) => Math.abs(a - b) <= tol;
     "wallet/valuation.js": ["Dates", "Rates", "Cash", "Transactions", "Mortgage"],
     "wallet/plan.js": ["Base", "Dates", "Texts", "Valuation", "Cash"],
     "wallet/settings.js": ["Texts", "Rules", "Buckets"],
-    "wallet/wallet-history.js": ["Base", "Dates", "Rates", "Valuation"],
+    "wallet/wallet-history.js": ["Base", "Dates", "Rates", "Transactions", "Valuation"],
     "wallet/advice.js": ["Base", "Dates", "Texts", "Mortgage", "Valuation"],
     // I18N: the language of a wallet that names none
     "wallet/wallet-file.js": ["Base", "Texts", "Cash", "Mortgage", "Transactions", "Valuation", "I18N"],
@@ -92,6 +92,13 @@ const near = (a, b, tol = 0.01) => Math.abs(a - b) <= tol;
     }
   }
   check("modules reach only where the list lets them, without a cycle, the plain ones never into wallet/", astray);
+
+  // the other way round: the list says what is, so it holds nothing a source does not take
+  const unused = files.flatMap(f => {
+    const found = reached(f);
+    return (REACHES[f] || []).filter(n => !found.includes(n)).map(n => `${f}: lists ${n}, reaches it nowhere`);
+  });
+  check("every module the list names for a file is one its source reaches", unused);
 
   // the views run in no test: this is what catches a name no module gives
   const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap(e =>
@@ -168,9 +175,10 @@ const near = (a, b, tol = 0.01) => Math.abs(a - b) <= tol;
   const st2 = Mortgage.state(m2);
   ok("the lower payment spreads the balance over the payments left",
     near(st2.payment, Mortgage.annuity(st2.balance, 3.70, 444 - st2.paid_count), 0.005));
-  let threw = false;
-  try { Mortgage.run({ ...m, bank_payment: 1, events: [] }); } catch(e) { threw = e.key === "err_payment_too_low"; }
+  let threw = false, thrown = null;
+  try { Mortgage.run({ ...m, bank_payment: 1, events: [] }); } catch(e) { thrown = e; threw = e.key === "err_payment_too_low"; }
   ok("a payment below the interest is reported", threw);
+  ok("as a refusal like any other, a RuleError", thrown instanceof Rules.RuleError);
 }
 
 // ---------------------------------------------------------------- recommendations

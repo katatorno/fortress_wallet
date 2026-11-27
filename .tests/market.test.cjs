@@ -9,13 +9,13 @@ const { readFileSync } = require("node:fs");
 const path = require("node:path");
 const { APP, loadCore } = require("../tools/wallet.cjs");
 
-const { Advice, Base, Buckets, Instruments, Plan, Rates, Texts, Valuation, WalletFile } = loadCore();
+const { Advice, Base, Buckets, Instruments, Plan, Rates, Rules, Texts, Valuation, WalletFile } = loadCore();
 const example = () => WalletFile.parse(readFileSync(path.join(APP, "data", "wallet.example.json"), "utf8"));
 
 let pass = 0, fail = 0;
-function ok(name, cond) {
+function ok(name, cond, detail = "") {
   if(cond) pass++; else fail++;
-  console.log(`  ${cond ? "ok  " : "FAIL"} ${name}`);
+  console.log(`  ${cond ? "ok  " : "FAIL"} ${name}${cond || !detail ? "" : "\n       " + detail}`);
 }
 const near = (a, b, tol = 0.01) => Math.abs(a - b) <= tol;
 
@@ -45,9 +45,13 @@ const total = (lines) => lines.reduce((s, l) => s + l.eur, 0);
   function save(given) {
     const d = example();
     const before = JSON.stringify(d);
-    const saved = Buckets.saveTargets(d, "sandbox", targets(d, "sandbox", given));
-    if(!saved && JSON.stringify(d) !== before) throw new Error("a refused save changed the data");
-    return saved;
+    try { Buckets.saveTargets(d, "sandbox", targets(d, "sandbox", given)); }
+    catch(e) {
+      if(!(e instanceof Rules.RuleError) || e.key !== "targets_wrong") throw e;
+      if(JSON.stringify(d) !== before) throw new Error("a refused save changed the data");
+      return false;
+    }
+    return true;
   }
   ok("exactly 100% is saved", save({ nke: 90, gpc: 10 }));
   ok("one instrument at 100% is saved", save({ nke: 100 }));
@@ -86,10 +90,10 @@ const total = (lines) => lines.reduce((s, l) => s + l.eur, 0);
   }
   ok("shares of 100% are saved", refused(pair(90, 10)) === null);
   ok("one bucket may take it all", refused(pair(100, 0)) === null);
-  ok("shares above 100% are refused", refused(pair(90, 20)) === "err_bucket_sum");
-  ok("shares below 100% are refused", refused(pair(80, 10)) === "err_bucket_sum");
-  ok("shares all at 0% are refused", refused(pair(0, 0)) === "err_bucket_sum");
-  ok("a negative share is refused", refused(pair(110, -10)) === "err_bucket_sum");
+  ok("shares above 100% are refused", refused(pair(90, 20)) === "err_share_sum");
+  ok("shares below 100% are refused", refused(pair(80, 10)) === "err_share_sum");
+  ok("shares all at 0% are refused", refused(pair(0, 0)) === "err_share_sum");
+  ok("a negative share is refused", refused(pair(110, -10)) === "err_value_range");
   ok("a name is used once, also across categories",
     refused([row("fortress", "metals", 90), row("sandbox", "sandbox", 10)]) === "err_bucket_duplicate");
   ok("a bucket needs a name", refused([row("fortress", "", 90), row("sandbox", "sandbox", 10)]) === "err_bucket_name");
@@ -104,6 +108,49 @@ const total = (lines) => lines.reduce((s, l) => s + l.eur, 0);
   d.buckets.bold.target_pct_in_category = 90;
   ok("the settings check finds shares that do not add up",
     Buckets.badShares(d.buckets).map(c => c.name).join() === "equities");
+}
+
+// ---------------------------------------------------------------- one save of the buckets, from both views
+{
+  const row = (old, name, share) => ({ old, name, share });
+  /** The rows the settings table gives for the buckets named. */
+  const table = (d, names) => names.map(b => ({ old: b, name: b, category: d.buckets[b].category,
+    share: d.buckets[b].target_pct_in_category ?? null, limit: d.buckets[b].max_pct_in_category ?? null }));
+  const names = (d) => Object.keys(d.buckets).join();
+
+  let d = example();
+  d.buckets.sandbox.max_pct_in_category = 10;
+  Buckets.save(d, "equities", [row("fortress", "fortress", 80), row("sandbox", "bold", 20)]);
+  ok("a bucket keeps its limit through the market editor, under a new name too",
+    d.buckets.bold.max_pct_in_category === 10 && !("max_pct_in_category" in d.buckets.fortress));
+
+  /** The example with a second bucket of metals between the two of equities. */
+  const mixed = () => {
+    const e = example();
+    const { fortress, sandbox, metals, bonds } = e.buckets;
+    e.buckets = { fortress, coins: { category: "metals", target_pct_in_category: 0 }, sandbox,
+      metals: { ...metals, target_pct_in_category: 100 }, bonds };
+    return e;
+  };
+  d = mixed();
+  Buckets.save(d, "metals", [row("coins", "silver coins", 40), row("metals", "metals", 60), row(null, "bars", 0)]);
+  ok("saving one category leaves the order of the others, the new bucket last",
+    names(d) === "fortress,silver coins,sandbox,metals,bonds,bars", names(d));
+  d = mixed();
+  Buckets.apply(d, Buckets.plan(d, table(d, ["bonds", "sandbox", "fortress"])));
+  ok("so do rows of the settings table given alone, in any order", names(d) === "fortress,coins,sandbox,metals,bonds", names(d));
+
+  d = example();
+  d.categories.cash = { target_pct: 0, buy: false };
+  Buckets.save(d, "cash", [row(null, "reserve", 0)]);
+  ok("the first bucket of a category may start with a share of 0", d.buckets.reserve?.category === "cash"
+    && d.buckets.reserve.target_pct_in_category === 0 && !Buckets.badShares(d.buckets).length);
+
+  d = example();
+  d.buckets.metals.target_pct_in_category = 50;
+  d.buckets.coins = { category: "metals", target_pct_in_category: 10 };
+  Buckets.save(d, "equities", [row("fortress", "fortress", 60), row("sandbox", "sandbox", 40)]);
+  ok("shares wrong in another category do not stop a save of this one", d.buckets.sandbox.target_pct_in_category === 40);
 }
 
 // ---------------------------------------------------------------- the instrument table

@@ -467,11 +467,6 @@ en = "There is already a bucket named {bucket}."
 pl = "Koszyk o nazwie {bucket} już istnieje."
 pt = "Já existe um grupo chamado {bucket}."
 
-[err_bucket_sum]
-en = "The shares must add up to 100% – now they give {sum}%."
-pl = "Udziały muszą dawać razem 100% – teraz dają {sum}%."
-pt = "Os pesos têm de somar 100% – agora somam {sum}%."
-
 [market_history_title]
 en = "Portfolio: put in vs worth"
 pl = "Portfel: wpłacone vs wartość"

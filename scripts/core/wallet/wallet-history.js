@@ -121,7 +121,7 @@ const WalletHistory = (() => {
     return dates.map(date => {
       for(; next < moves.length && moves[next].date <= date; next++) {
         const t = moves[next], a = byId[t.asset_id], h = held[t.asset_id];
-        const q = (t.type === "sell" ? -1 : 1) * Number(t.quantity || 0);
+        const q = Transactions.change(t);
         if(q < 0) h.cost -= h.cost * (h.quantity > 0 ? Math.min(-q / h.quantity, 1) : 1);
         else if(t.type === "buy") h.cost += q * Number(t.price || 0) / rate(a.currency, t.date) + Number(t.fee || 0);
         h.quantity += q;

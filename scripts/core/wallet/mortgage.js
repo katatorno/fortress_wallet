@@ -7,10 +7,6 @@
 const Mortgage = (() => {
   const MODES = ["reduce_term", "reduce_payment"];
 
-  class MortgageError extends Error {
-    constructor(key) { super(key); this.key = key; }
-  }
-
   function annuity(balance, annualRatePct, months) {
     if(months <= 0) return balance;
     const i = annualRatePct / 1200;
@@ -49,7 +45,8 @@ const Mortgage = (() => {
    * Books the recorded events (payments and prepayments), then projects to the end.
    * extraEvents: hypothetical prepayments ({date, amount, mode, fee_pct}) for simulations.
    * Row kinds: payment, prepayment, payment_plan, prepayment_plan.
-   * @returns {{rows: object[], info: object}}
+   * @returns {{rows: object[], info: object}} throws Rules.RuleError for a payment
+   *   which does not cover the interest, so the loan is never paid off
    */
   function run(m, extraEvents = [], project = true) {
     const rate = Number(m.rate_pct || 0);
@@ -117,7 +114,7 @@ const Mortgage = (() => {
       if(bal <= 0.005) break;
       const interest = Base.round2(bal * i);
       let principal = pay - interest;
-      if(principal <= 0) throw new MortgageError("err_payment_too_low");
+      if(principal <= 0) throw new Rules.RuleError("err_payment_too_low");
       if(n >= term || principal > bal) principal = bal;
       bal = Base.round2(bal - principal);
       projInterest += interest;
@@ -183,16 +180,11 @@ const Mortgage = (() => {
    * @param {{amount, rate_pct, term_months, first_payment_date, bank_payment, prepayment_fee_pct, default_mode}} loan
    */
   function save(data, house, loan) {
-    const date = (v, key) => {
-      if(Base.isBlank(v)) return null;
-      try { return Dates.parse(v); }
-      catch { throw new Rules.RuleError("err_value_choice", { field: Texts.tr(data, key) }); }
-    };
     const h = {
       purchase_price: Rules.number(data, house.purchase_price ?? 0, "field_purchase_price", 0),
       value: Rules.number(data, house.value ?? 0, "field_house_value", 0),
       deposit_paid: Rules.number(data, house.deposit_paid ?? 0, "field_deposit", 0),
-      deed_date: date(house.deed_date, "field_deed_date"),
+      deed_date: Rules.date(data, house.deed_date, "field_deed_date"),
     };
     if(!MODES.includes(loan.default_mode)) throw new Rules.RuleError("err_value_choice", { field: Texts.tr(data, "field_default_mode") });
     const bank = Base.isBlank(loan.bank_payment) ? 0 : Rules.number(data, loan.bank_payment, "field_bank_payment", 0);
@@ -200,7 +192,7 @@ const Mortgage = (() => {
       amount: Rules.number(data, loan.amount ?? 0, "field_loan_amount", 0),
       rate_pct: Rules.number(data, loan.rate_pct ?? 0, "field_rate", 0, 100),
       term_months: Math.round(Rules.number(data, loan.term_months, "field_term", 1, 1200)),
-      first_payment_date: date(loan.first_payment_date, "field_first_payment"),
+      first_payment_date: Rules.date(data, loan.first_payment_date, "field_first_payment"),
       bank_payment: bank || null,
       prepayment_fee_pct: Rules.number(data, loan.prepayment_fee_pct ?? 0, "field_prepayment_fee", 0, 100),
       default_mode: loan.default_mode,
@@ -210,7 +202,7 @@ const Mortgage = (() => {
   }
 
   return {
-    MODES, MortgageError, annuity, impliedRate, firstPaymentDate, initialPayment, run, state,
-    report, yearlyPrepayments, prepaymentBreakEvenMonths, nextPaymentEvent, save,
+    MODES, annuity, impliedRate, firstPaymentDate, initialPayment, run, state, report,
+    yearlyPrepayments, prepaymentBreakEvenMonths, nextPaymentEvent, save,
   };
 })();

@@ -126,7 +126,7 @@ fortress_wallet/
 │   ├── core/                 # plain JS – the part that never depends on the UI
 │   │   ├── wallet/           # the wallet logic, a module a file:
 │   │   │   ├── texts.js      #   texts in the wallet's language
-│   │   │   ├── rules.js      #   the refusal of a save, checks of typed numbers
+│   │   │   ├── rules.js      #   the refusal of a save, checks of typed numbers and dates
 │   │   │   ├── rates.js      #   exchange rates, amounts in EUR
 │   │   │   ├── cash.js       #   cash accounts, their movements and table
 │   │   │   ├── transactions.js #  buy, sell, adjust; quantities
@@ -172,7 +172,9 @@ Each of those files is one **module**:
 - No local aliases of another module's functions: a call shows where it goes, as in `Dates.parse(x)`.
 - `base.js`, `dates.js` and `chart-math.js` know nothing of the wallet and reach no module of `wallet/`.
 
-A new module of the wallet goes into `wallet/`; one that knows nothing of the wallet goes beside it and into `CORE_FILES` in `tools/wallet.cjs`. Either way list it in `.tests/core.test.cjs` with the modules it may reach: the suite holds the files to these rules, and every `Module.name` written in the app and the tools to a name the module gives.
+A new module of the wallet goes into `wallet/`; one that knows nothing of the wallet goes beside it and into `CORE_FILES` in `tools/wallet.cjs`. Either way list it in `.tests/core.test.cjs` with the modules it reaches: the suite holds the files to these rules, the list and the sources to each other, and every `Module.name` written in the app and the tools to a name the module gives.
+
+A save refused by a rule throws `Rules.RuleError(key, vars)`, which the view shows as a message, and leaves the wallet as it was.
 
 ## Translations
 
@@ -196,7 +198,7 @@ Plain JSON that you can read, diff and back up. Keep your own file outside the p
 
 A file whose values the app cannot use (text where a number belongs, a negative price, an exchange rate of 0, an id such as `__proto__`) is refused, with the places to correct named; nothing in it is repaired without you.
 
-A change made in the app passes the same check of its values: one after which the wallet would not open is undone, with the places to correct named, and nothing of it is saved.
+A change made in the app passes the same check of its values: one after which the wallet would not open, or which cannot be checked or written, is undone, with the reasons named, and nothing of it is saved.
 
 The main keys:
 
@@ -206,7 +208,7 @@ The main keys:
 | `settings.price_api_key` | your own [Alpha Vantage](https://www.alphavantage.co/support/#api-key) key. It is private: keep it in your file only, never in the example |
 | `settings` | language, exchange rates (`fx`: units per 1 EUR), emergency fund target, income, % for prepayment, thresholds |
 | `categories` | `equities`, `metals`, `bonds`: target % and `buy` (false = frozen: never bought, never sold) |
-| `buckets` | groups inside a category, each with its share (`target_pct_in_category`) and an optional `max_pct_in_category` limit. Shares in a category and instrument targets in a bucket must add up to 100%, or be all 0 (you pick the instrument yourself); the calculator splits money by both |
+| `buckets` | groups inside a category, each with its share (`target_pct_in_category`) and an optional `max_pct_in_category` limit. Shares in a category must add up to 100% (a category with one bucket may have none). Instrument targets in a bucket must add up to 100%, or be all 0 (you pick the instrument yourself). The calculator splits money by both |
 | `assets` | instruments: currency, opening quantity, price, target within bucket, sell alert |
 | `transactions` | buy / sell / adjust; quantity = opening quantity + transactions |
 | `cash`, `cash_log` | cash accounts with a role (`emergency`, `prepay`, `home`, `other`) and their movements |
@@ -258,12 +260,12 @@ tonka test fortress_wallet          # or one suite: node .tests/<name>.test.cjs
 
 | Suite | What it holds |
 |---|---|
-| `core` | the module rules (each file loads alone, reaches only where listed, every `Module.name` exists), valuation, the contribution calculator, the mortgage, recommendations, the file |
-| `market` | the market view's rules: percentages in a bucket are 100% or all 0%, bucket shares are 100%, moves and deletions keep that, the "what to buy" calculator, no sell alerts for equities |
-| `rules` | the saves of the settings, cash, mortgage and transactions views: everything checked first, a refusal changes nothing |
+| `core` | the module rules (each file loads alone, reaches exactly what is listed, every `Module.name` exists), valuation, the contribution calculator, the mortgage, recommendations, the file |
+| `market` | the market view's rules: percentages in a bucket are 100% or all 0%, bucket shares are 100%, moves and deletions keep that, one save of the buckets for both views, the "what to buy" calculator, no sell alerts for equities |
+| `rules` | the saves of the settings, cash, mortgage and transactions views: everything checked first, a refusal changes nothing; what a transaction does to a quantity |
 | `format` | the file's version and keys, migrations, files refused for values the app cannot use |
 | `history` | stored prices, the history built from them, the XTB import |
-| `store` | saving: the autosave, changes during a save, a file changed elsewhere, downloads; a change the wallet would not open with is refused and undone |
+| `store` | saving: the autosave, changes during a save, a file changed elsewhere, downloads; a change the wallet would not open with, or one that throws, is refused and undone |
 | `online` | the exchange rates: what is sent and what of the answer is taken |
 | `links` | which links in the notes keep their address |
 | `remember` | what the app keeps in the browser |

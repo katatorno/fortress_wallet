@@ -64,76 +64,36 @@ const Buckets = (() => {
 
   /**
    * Saves the targets of one bucket, only when they add up to 100 or are all 0.
+   * Throws Rules.RuleError and leaves the data as it was.
    * @param {Object<string, number>} targets  instrument id → percentage, every instrument of the bucket
-   * @returns {boolean} saved; false leaves the data as it was
    */
   function saveTargets(data, bucket, targets) {
     const next = data.assets.map(a => a.bucket === bucket && a.id in targets
       ? { ...a, target_in_bucket: Number(targets[a.id] || 0) } : a);
-    if(badTargets(data.buckets, next, [bucket]).length) return false;
+    const [bad] = badTargets(data.buckets, next, [bucket]);
+    if(bad) throw new Rules.RuleError("targets_wrong", { sum: percentText(data, bad.sum) });
     for(const a of data.assets) if(a.bucket === bucket && a.id in targets) a.target_in_bucket = Number(targets[a.id] || 0);
-    return true;
   }
 
   /** "fortress 95%, sandbox 5%" for the messages and the running totals. */
   const sumList = (data, items) => items.map(i => `${i.name} ${percentText(data, i.sum)}`).join(", ");
 
   /**
-   * Replaces one category's buckets with the edited rows. A changed name takes its
-   * instruments along. Throws Rules.RuleError and leaves the data as it was.
-   * @param {Array<{old:string|null, name:string, share:number, delete?:boolean}>} rows
-   *   `old` is the current name, null for a new bucket; the shares must add up to 100
-   */
-  function save(data, category, rows) {
-    const keep = [], gone = [];
-    for(const r of rows) {
-      const name = String(r.name || "").trim();
-      if(r.delete) { if(r.old) gone.push(r.old); }
-      else if(name && Base.isReserved(name)) throw new Rules.RuleError("err_name_reserved", { name });
-      else if(name) keep.push({ ...r, name });
-      else if(r.old) throw new Rules.RuleError("err_bucket_name");
-    }
-    const others = Object.keys(data.buckets).filter(b => data.buckets[b].category !== category);
-    const names = keep.map(r => r.name);
-    const twice = names.find((n, i) => names.indexOf(n) !== i || others.includes(n));
-    if(twice) throw new Rules.RuleError("err_bucket_duplicate", { bucket: twice });
-    const used = gone.filter(b => data.assets.some(a => a.bucket === b));
-    if(used.length) throw new Rules.RuleError("err_bucket_in_use", { buckets: used.sort().join(", ") });
-    const sum = keep.reduce((a, r) => a + Number(r.share || 0), 0);
-    if(keep.length && (Math.abs(sum - 100) > 0.001 || keep.some(r => Number(r.share || 0) < 0))) {
-      throw new Rules.RuleError("err_bucket_sum", { sum: Texts.num(data, sum, sum % 1 ? 1 : 0) });
-    }
-
-    const config = (r) => ({ ...(r.old ? data.buckets[r.old] : {}), category,
-      target_pct_in_category: Number(r.share || 0) });
-    const next = [];
-    for(const [b, cfg] of Object.entries(data.buckets)) {
-      if(cfg.category !== category) { next.push([b, cfg]); continue; }
-      const r = keep.find(x => x.old === b);
-      if(r) next.push([r.name, config(r)]);
-    }
-    for(const r of keep) if(!r.old) next.push([r.name, config(r)]);
-    const renamed = new Map(keep.filter(r => r.old).map(r => [r.old, r.name]));
-    for(const a of data.assets) if(renamed.has(a.bucket)) a.bucket = renamed.get(a.bucket);
-    data.buckets = Object.fromEntries(next);
-  }
-
-  /**
-   * Checks the buckets as the settings table edits them, every category at once.
-   * A bucket may be renamed (its instruments follow), added, or removed when empty;
-   * one holding instruments keeps its category, since they belong to it.
+   * Checks the buckets as a table edits them: the settings view those of every
+   * category, `save` those of one. A bucket may be renamed (its instruments follow),
+   * added, or removed when empty; one holding instruments keeps its category, since
+   * they belong to it. The shares of each category the rows touch must be in order
+   * (see `badShares`). Buckets keep their order, new ones come last.
    * @param {Array<{old:string|null, name:string, category:string, share:any, limit:any, delete?:boolean}>} rows
-   *   buckets not among the rows stay as they are
+   *   `old` is the current name, null for a new bucket; buckets not among the rows stay as they are
    * @returns {{buckets:object, renamed:Map<string,string>}} what saving would make; throws Rules.RuleError
    */
   function plan(data, rows) {
     const label = (b, key) => `${b} · ${Texts.tr(data, key)}`;
     const listed = new Set(rows.filter(r => r.old).map(r => r.old));
-    const all = [...rows, ...Object.entries(data.buckets).filter(([b]) => !listed.has(b)).map(([b, cfg]) => ({
-      old: b, name: b, category: cfg.category, share: cfg.target_pct_in_category, limit: cfg.max_pct_in_category,
-    }))];
+    const others = Object.entries(data.buckets).filter(([b]) => !listed.has(b));
     const keep = [], gone = [];
-    for(const r of all) {
+    for(const r of rows) {
       const name = String(r.name ?? "").trim();
       if(r.delete) { if(r.old) gone.push(r.old); continue; }
       if(!name) { if(r.old) throw new Rules.RuleError("err_bucket_name"); continue; } // an empty new row is no bucket
@@ -142,7 +102,7 @@ const Buckets = (() => {
       keep.push({ ...r, name, share: Rules.percent(r.share, label(name, "col_target_in_category")),
         limit: Rules.percent(r.limit, label(name, "col_limit_in_category")) });
     }
-    const names = keep.map(r => r.name);
+    const names = [...keep.map(r => r.name), ...others.map(([b]) => b)];
     const twice = names.find((n, i) => names.indexOf(n) !== i);
     if(twice) throw new Rules.RuleError("err_bucket_duplicate", { bucket: twice });
     const holds = (b) => data.assets.some(a => a.bucket === b);
@@ -151,15 +111,22 @@ const Buckets = (() => {
     const moved = keep.filter(r => r.old && data.buckets[r.old] && r.category !== data.buckets[r.old].category && holds(r.old));
     if(moved.length) throw new Rules.RuleError("err_bucket_category_used", { buckets: moved.map(r => r.old).sort().join(", ") });
 
-    const buckets = Object.fromEntries(keep.map(r => {
+    const edited = keep.map(r => {
       const cfg = { ...(r.old ? data.buckets[r.old] : {}), category: r.category };
       delete cfg.target_pct_in_category;
       delete cfg.max_pct_in_category;
       if(r.share !== null) cfg.target_pct_in_category = r.share;
       if(r.limit !== null) cfg.max_pct_in_category = r.limit;
-      return [r.name, cfg];
-    }));
-    const bad = badShares(buckets);
+      return { old: r.old, name: r.name, cfg };
+    });
+    // a bucket keeps its place, under a new name too; new ones go to the end, as they came
+    const order = Object.keys(data.buckets);
+    const place = ({ old }) => order.includes(old) ? order.indexOf(old) : order.length;
+    const all = [...edited, ...others.map(([b, cfg]) => ({ old: b, name: b, cfg }))].sort((a, b) => place(a) - place(b));
+    const buckets = Object.fromEntries(all.map(b => [b.name, b.cfg]));
+
+    const touched = new Set([...keep.map(r => r.category), ...[...listed].map(b => data.buckets[b]?.category)]);
+    const bad = badShares(buckets).filter(x => touched.has(x.name));
     if(bad.length) {
       throw new Rules.RuleError("err_share_sum", { categories: sumList(data, bad.map(x => ({ name: Texts.categoryLabel(data, x.name), sum: x.sum }))) });
     }
@@ -169,6 +136,17 @@ const Buckets = (() => {
   function apply(data, plan) {
     for(const a of data.assets) if(plan.renamed.has(a.bucket)) a.bucket = plan.renamed.get(a.bucket);
     data.buckets = plan.buckets;
+  }
+
+  /**
+   * Saves one category's buckets as the market view edits them, names and shares, by
+   * the rules of `plan`. A bucket keeps the limit it has, which that editor does not
+   * show. Throws Rules.RuleError and leaves the data as it was.
+   * @param {Array<{old:string|null, name:string, share:any, delete?:boolean}>} rows
+   */
+  function save(data, category, rows) {
+    const limit = (old) => old ? data.buckets[old]?.max_pct_in_category : null;
+    apply(data, plan(data, rows.map(r => ({ ...r, category, limit: limit(r.old) }))));
   }
 
   return {
