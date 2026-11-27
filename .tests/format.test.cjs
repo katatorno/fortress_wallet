@@ -116,5 +116,51 @@ ok("the example carries no price service key", JSON.parse(text).settings.price_a
   }
 }
 
+// ---------------------------------------------------------------- values the app cannot use
+{
+  /** The refusal's text for the example with one change made, or null when it opens. */
+  function refusal(change) {
+    const raw = JSON.parse(text);
+    change(raw);
+    try { Core.parse(JSON.stringify(raw)); return null; }
+    catch(e) { return e.message; }
+  }
+  const cases = [
+    ["a price that is no number", (r) => { r.assets[0].price = "abc"; }, "assets[0].price"],
+    ["a negative price", (r) => { r.assets[0].price = -5; }, "assets[0].price"],
+    ["a quantity beyond any number", (r) => { r.assets[1].opening_quantity = "1e999"; }, "assets[1].opening_quantity"],
+    ["an exchange rate of 0", (r) => { r.settings.fx.USD = 0; }, "settings.fx.USD"],
+    ["an exchange rate that is text", (r) => { r.settings.fx.USD = "x"; }, "settings.fx.USD"],
+    ["instruments that are no list", (r) => { r.assets = {}; }, "assets"],
+    ["an instrument that is no object", (r) => { r.assets[0] = 7; }, "assets[0]"],
+    ["a name that is an object", (r) => { r.assets[0].name = { nodeType: 1 }; }, "assets[0].name"],
+    ["notes that are no text", (r) => { r.strategy_notes = 42; }, "strategy_notes"],
+    ["an id used twice", (r) => { r.assets[1].id = r.assets[0].id; }, "assets[1].id"],
+    ["an instrument named __proto__", (r) => { r.assets[0].id = "__proto__"; }, "assets[0].id"],
+    ["a bucket named constructor", (r) => { r.buckets.constructor = { category: "equities" }; }, "buckets.constructor"],
+    ["prices kept under __proto__", (r) => { r.prices = JSON.parse('{"__proto__": {}}'); }, "prices.__proto__"],
+    ["a transaction without a date", (r) => { r.transactions = [{ id: "t", asset_id: "webg", type: "buy", quantity: 1, price: 1, date: "yesterday" }]; }, "transactions[0].date"],
+    ["an unknown transaction type", (r) => { r.transactions = [{ id: "t", asset_id: "webg", type: "gift", quantity: 1, date: "2026-01-01" }]; }, "transactions[0].type"],
+    ["a stored price that is no pair", (r) => { r.prices = { webg: { "2026-01-02": 13 } }; }, "prices.webg.2026-01-02"],
+    ["a mortgage event of no kind", (r) => { r.mortgage.events = [{ date: "2027-01-01", type: "gift", amount: 1 }]; }, "mortgage.events[0].type"],
+  ];
+  for(const [name, change, where] of cases) {
+    const message = refusal(change);
+    ok(`${name} is refused, naming where`, !!message && message.includes(where), message || "opened");
+  }
+  const kept = JSON.parse(text);
+  const original = JSON.stringify(kept);
+  refusal((r) => { r.assets[0].price = "abc"; });
+  ok("a refusal changes nothing it was given", JSON.stringify(kept) === original);
+  ok("numbers written as text still open", refusal((r) => { r.assets[0].price = "13.5"; r.settings.fx.USD = "1.1"; }) === null);
+  ok("a day of history without a value still opens", refusal((r) => {
+    r.history = [{ date: "2026-01-01", investments: null, cash: 1, house_equity: 0, mortgage: 0, net_worth: null }];
+  }) === null);
+  ok("the refusal is in the wallet's language", /Popraw/.test(refusal((r) => { r.settings.language = "pl"; r.assets[0].price = "x"; })));
+  let threw = false;
+  try { Core.addPrice(example(), "__proto__", "2026-01-02", null, 1); } catch { threw = true; }
+  ok("no price is kept under a reserved name", threw && !("2026-01-02" in {}));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -2118,3 +2118,67 @@ pt = "Isto descreve a página servida pelo próprio servidor depois de `tonka bu
 en = "Not asked for, as they are no three-letter currency codes: {names}"
 pl = "Nie wysłano, bo to nie są trzyliterowe kody walut: {names}"
 pt = "Não pedidos, porque não são códigos de moeda de três letras: {names}"
+
+# -----------------------------------------------------------------------------
+#  A wallet file with values the app cannot use
+# -----------------------------------------------------------------------------
+
+[err_file_invalid]
+en = "This wallet file holds values the app cannot use, so it was not opened and nothing in it was changed. Correct these places in the file: {problems}"
+pl = "Ten plik portfela zawiera wartości, których aplikacja nie może użyć, więc go nie otwarto i niczego w nim nie zmieniono. Popraw w pliku te miejsca: {problems}"
+pt = "Este ficheiro de carteira tem valores que a aplicação não pode usar, por isso não foi aberto e nada nele foi alterado. Corrija no ficheiro estes pontos: {problems}"
+
+[val_object]
+en = "a group of named values { } expected"
+pl = "oczekiwano grupy nazwanych wartości { }"
+pt = "esperado um grupo de valores com nome { }"
+
+[val_list]
+en = "a list [ ] expected"
+pl = "oczekiwano listy [ ]"
+pt = "esperada uma lista [ ]"
+
+[val_text]
+en = "text expected"
+pl = "oczekiwano tekstu"
+pt = "esperado texto"
+
+[val_name]
+en = "a name expected (not empty, and not __proto__, constructor or prototype)"
+pl = "oczekiwano nazwy (niepustej, innej niż __proto__, constructor, prototype)"
+pt = "esperado um nome (não vazio, nem __proto__, constructor ou prototype)"
+
+[val_unique]
+en = "the same id is used twice"
+pl = "ten sam identyfikator użyty dwa razy"
+pt = "o mesmo identificador é usado duas vezes"
+
+[val_number]
+en = "a number expected"
+pl = "oczekiwano liczby"
+pt = "esperado um número"
+
+[val_positive]
+en = "a number of 0 or more expected"
+pl = "oczekiwano liczby 0 lub większej"
+pt = "esperado um número igual ou superior a 0"
+
+[val_rate]
+en = "a rate above 0 expected"
+pl = "oczekiwano kursu większego od 0"
+pt = "esperada uma taxa acima de 0"
+
+[val_date]
+en = "a date YYYY-MM-DD expected"
+pl = "oczekiwano daty RRRR-MM-DD"
+pt = "esperada uma data AAAA-MM-DD"
+
+[val_choice]
+en = "not one of the values the app knows"
+pl = "to nie jest żadna ze znanych aplikacji wartości"
+pt = "não é um dos valores que a aplicação conhece"
+
+[val_price_day]
+en = "[opening or null, close] expected"
+pl = "oczekiwano [otwarcie lub null, zamknięcie]"
+pt = "esperado [abertura ou null, fecho]"

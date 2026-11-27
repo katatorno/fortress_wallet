@@ -105,9 +105,11 @@ const I18N = (() => {
   const STYLE = { en: [",", "."], pl: [" ", ","], pt: [" ", ","] };
   const _style = (lang) => STYLE[lang] || STYLE[DEFAULT];
 
+  /** A number as written in the language; nothing given is 0, a value that is no number "–". */
   function number(lang, x, dec = 0) {
     const [th, dp] = _style(lang);
-    const v = Number(x) || 0;
+    const v = x === null || x === undefined || x === "" ? 0 : Number(x);
+    if(!Number.isFinite(v)) return "–";
     const fixed = Math.abs(v).toFixed(dec);
     let [int, frac] = fixed.split(".");
     int = int.replace(/\B(?=(\d{3})+(?!\d))/g, th);
@@ -116,7 +118,8 @@ const I18N = (() => {
   }
 
   function money(lang, x, dec = 0) {
-    const v = Number(x) || 0;
+    const v = x === null || x === undefined || x === "" ? 0 : Number(x);
+    if(!Number.isFinite(v)) return "–";
     const n = number(lang, Math.abs(v), dec);
     const sign = v < 0 && Number(Math.abs(v).toFixed(dec)) !== 0 ? "-" : "";
     return lang === "en" ? `${sign}€${n}` : `${sign}${n} €`;

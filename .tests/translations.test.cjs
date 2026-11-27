@@ -51,6 +51,8 @@ for(const p of ["cat_equities", "cat_metals", "cat_bonds", "role_emergency", "ro
   "mode_reduce_term", "mode_reduce_payment", "tx_buy", "tx_sell", "tx_adjust",
   "status_saved", "status_dirty", "status_saving", "status_conflict", "status_error",
   "plan_kind_cash", "plan_kind_buy", "plan_kind_skip", "plan_kind_unassigned",
+  "val_object", "val_list", "val_text", "val_name", "val_unique", "val_number", "val_positive", "val_rate", "val_date",
+  "val_choice", "val_price_day",
   "file_local_help_write", "file_local_help_download",
   "range_all", "range_year", "range_quarter", "range_month", "range_week",
   "event_payment", "event_prepayment", "source_local", "rec_prepay_wins", "rec_prepay_loses",
@@ -63,6 +65,9 @@ if(unused.length) console.log("  (info) keys not found in code:", unused.join(",
 ok("number formats", I18N.money("en", 12345.6) === "€12,346" && I18N.money("pl", 12345.6) === "12 346 €"
   && I18N.money("pt", -1500.5, 2) === "-1 500,50 €");
 ok("unknown language falls back to English", I18N.t("xx", "tab_dashboard") === strings.tab_dashboard.en);
+ok("nothing given counts as 0, a value that is no number shows as –", I18N.number("en", undefined) === "0"
+  && I18N.money("pl", null).replace(/\s/g, " ") === "0 €" && I18N.money("en", NaN) === "–" && I18N.number("pl", "abc", 2) === "–"
+  && I18N.money("en", Infinity) === "–");
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

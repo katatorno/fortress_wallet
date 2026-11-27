@@ -47,16 +47,17 @@ const DashboardView = (app) => {
     </Panel>
   );
 
+  // a day whose value could not be worked out (null) is left out of the lines
+  const line = (key) => data.history.filter(h => h[key] != null).map(h => [h.date, h[key]]);
   const hist = data.history;
   const history = (
     <Panel title={T("chart_history")} icon="show_chart">
       {hist.length >= 2
         ? <RangeChart app={app} id="worth" series={[
-          { name: T("net_worth"), cls: "c1", points: hist.map(h => [h.date, h.net_worth]) },
-          { name: T("investments"), cls: "c2", points: hist.map(h => [h.date, h.investments]) },
-          { name: T("cash"), cls: "c3", points: hist.map(h => [h.date, h.cash]) },
-          ...(hist.some(h => h.cat_metals) ? [{ name: Core.categoryLabel(data, "metals"), cls: "c4",
-            points: hist.filter(h => h.cat_metals != null).map(h => [h.date, h.cat_metals]) }] : []),
+          { name: T("net_worth"), cls: "c1", points: line("net_worth") },
+          { name: T("investments"), cls: "c2", points: line("investments") },
+          { name: T("cash"), cls: "c3", points: line("cash") },
+          ...(hist.some(h => h.cat_metals) ? [{ name: Core.categoryLabel(data, "metals"), cls: "c4", points: line("cat_metals") }] : []),
         ]} />
         : <Empty icon="show_chart" description={T("history_empty")} />}
     </Panel>
