@@ -52,12 +52,17 @@ Object.assign(Core, (() => {
     },
   };
 
-  function migrate(data) {
+  /** The version a wallet is of, without one 1; throws for one the app does not know. */
+  function _version(data) {
     const from = Number(data.version ?? 1);
     if(!Number.isInteger(from) || from < 1 || from > FORMAT) {
       throw new Error(tr(data, "err_file_version", { version: String(data.version), supported: FORMAT }));
     }
-    for(let v = from; v < FORMAT; v++) MIGRATIONS[v](data);
+    return from;
+  }
+
+  function migrate(data) {
+    for(let v = _version(data); v < FORMAT; v++) MIGRATIONS[v](data);
     data.version = FORMAT;
   }
 
@@ -189,7 +194,9 @@ Object.assign(Core, (() => {
     const part = (name, kind, items) => {
       const v = data[name];
       if(v === undefined || !c[kind](name, v) || !items) return;
-      for(const [k, item] of Object.entries(v)) c.object(kind === "list" ? `${name}[${k}]` : `${name}.${k}`, item);
+      // a list is walked with its holes, which a file would hold as null
+      if(kind === "list") for(const [i, item] of v.entries()) c.object(`${name}[${i}]`, item);
+      else for(const [k, item] of Object.entries(v)) c.object(`${name}.${k}`, item);
     };
     part("settings", "object");
     part("categories", "object", true);
@@ -205,7 +212,7 @@ Object.assign(Core, (() => {
     part("fx_history", "object", true);
     if(_isObj(data.settings) && data.settings.fx !== undefined) c.object("settings.fx", data.settings.fx);
     if(_isObj(data.mortgage) && data.mortgage.events !== undefined && c.list("mortgage.events", data.mortgage.events)) {
-      data.mortgage.events.forEach((e, i) => c.object(`mortgage.events[${i}]`, e));
+      for(const [i, e] of data.mortgage.events.entries()) c.object(`mortgage.events[${i}]`, e);
     }
     return out;
   }
@@ -322,12 +329,18 @@ Object.assign(Core, (() => {
   }
 
   /**
-   * Why a wallet, as it stands, would not open: the places of `problems`, else what
-   * `summary` cannot work out. `parse` holds a file to this, `Store.changed` a change.
+   * Why a wallet, as it stands, would not open: its shape and version, which
+   * `normalize` holds a file to, then the places of `problems`, else what `summary`
+   * cannot work out. Changes nothing. `Store.changed` holds a change to this.
    * @returns {string[]} empty for a wallet that is fine
    */
   function check(data) {
-    try { return _inspect(data); }
+    try {
+      const shape = _shapeProblems(data);
+      if(shape.length) return shape; // the values of a misshapen wallet are not looked into
+      _version(data);
+      return _inspect(data);
+    }
     catch(e) { return [e.message]; }
   }
 

@@ -11,13 +11,15 @@ let _appView = "dashboard"; // the open view, kept over a rebuild
 /**
  * Builds the whole app again (after opening another wallet, changing language or a
  * refused change). Only the app is replaced: the messages and tooltips, which the
- * kit adds to the page once and goes on using, stay on it.
+ * kit adds to the page once and goes on using, stay on it. The first build takes
+ * the page over; an app no longer on the page leaves the rest of it as it is.
  */
 function mountApp() {
   _appUnsub?.();
   const root = <App />;
-  if(_appRoot) _appRoot.replaceWith(root);
-  else document.body.replaceChildren(root);
+  if(!_appRoot) document.body.replaceChildren(root); // over the start-up spinner
+  else if(_appRoot.isConnected) _appRoot.replaceWith(root);
+  else document.body.prepend(root);
   _appRoot = root;
 }
 

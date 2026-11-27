@@ -2,9 +2,10 @@
 //
 // Saving the open wallet (scripts/core/store.js): the autosave, a change made
 // while a save runs, saves one after another, a refused permission, a file changed
-// on the disk by something else, downloads, the example, and changes refused as
-// the wallet would not open with them. The disk, the browser's permission and the
-// timers are stood in for.
+// on the disk by something else, downloads, the example, changes refused as the
+// wallet would not open with them, and one change of every place in a wallet: what
+// is accepted opens again. The disk, the browser's permission and the timers are
+// stood in for.
 // Run: tonka test fortress_wallet   (or: node .tests/store.test.cjs)
 
 const { readFileSync } = require("node:fs");
@@ -81,6 +82,16 @@ function addInstrument(w, fields) {
 }
 /** The message of opening a file with this text, "" when it opens. */
 const refusal = (w, text) => { try { w.Core.parse(text); return ""; } catch(e) { return e.message; } };
+
+// the wallet's maps, by their paths: the rest of its objects are records
+const MAPS = /^(categories|buckets|settings\.fx|prices(\.[^.]+)?|fx_history(\.[^.]+)?)$/;
+/** The places in a wallet, as paths: every key of a record, the first element of a list or map. */
+function places(value, at = []) {
+  if(!value || typeof value !== "object") return [];
+  const keys = Object.keys(value);
+  const taken = Array.isArray(value) || MAPS.test(at.join(".")) ? keys.slice(0, 1) : keys;
+  return taken.flatMap(k => [[...at, k], ...places(value[k], [...at, k])]);
+}
 
 (async () => {
   // ---------------------------------------------------------- the autosave
@@ -230,6 +241,58 @@ const refusal = (w, text) => { try { w.Core.parse(text); return ""; } catch(e) {
     ok("so is one whose numbers add up to no number", huge.some(p => /^history\[\d+\]\.net_worth:/.test(p))
       && w.Core.serialize(w.Store.get()) === before, JSON.stringify(huge));
     ok("which leaves nothing that stops the next change", change(w, "one").length === 0);
+  }
+
+  // ---------------------------------------------------------- one change of every place
+  {
+    const w = world();
+    await w.Store.openLocal();
+    // an element in every list and map the example leaves empty
+    const live = w.Store.get();
+    const [asset] = live.assets, [account] = live.cash;
+    w.Core.addTransaction(live, asset.id, "buy", 1, 10);
+    w.Core.addCash(live, account.id, 10);
+    live.mortgage.events.push(w.Core.nextPaymentEvent(live.mortgage));
+    w.Core.addPrice(live, asset.id, "2026-01-02", null, 10);
+    live.fx_history["2026-01-02"] = { USD: 1.1 };
+    w.Store.changed();
+    await w.tick();
+    const start = w.file.text;
+    const at = places(JSON.parse(start));
+    const empty = at.filter(p => { const v = p.reduce((o, k) => o[k], JSON.parse(start));
+      return v && typeof v === "object" && !Object.keys(v).length; });
+    ok("every list and map has an element to change", !empty.length, empty.map(p => p.join(".")).join(", "));
+
+    const values = [["a number", () => 7], ["text", () => "x"], ["null", () => null], ["{}", () => ({})], ["[]", () => []],
+      ["removed", null]];
+    const broken = [], kept = [];
+    let accepted = 0, refused = 0;
+    for(const place of at) {
+      for(const [name, value] of values) {
+        w.file.text = start;
+        await w.Store.reloadFromDisk();
+        const parent = place.slice(0, -1).reduce((o, k) => o[k], w.Store.get());
+        if(value) parent[place.at(-1)] = value();
+        else delete parent[place.at(-1)]; // in a list this leaves a hole
+        const writes = w.writes.length;
+        const found = w.Store.changed();
+        await w.tick();
+        const what = `${place.join(".")} = ${name}`;
+        if(found.length) {
+          refused += 1;
+          if(w.writes.length !== writes || w.Core.serialize(w.Store.get()) !== start) kept.push(what);
+        }
+        else {
+          accepted += 1;
+          const why = w.writes.length === writes + 1 ? refusal(w, w.file.text) : "nothing written";
+          if(why) broken.push(`${what}: ${why}`);
+        }
+      }
+    }
+    ok("several hundred changes, some accepted and some refused", accepted + refused >= 300 && accepted > 0 && refused > 0,
+      `${accepted} accepted, ${refused} refused`);
+    ok("what an accepted change saves opens again", !broken.length, `${broken.length}: ${broken.slice(0, 8).join("\n       ")}`);
+    ok("a refused change leaves the wallet as it was", !kept.length, `${kept.length}: ${kept.slice(0, 8).join(", ")}`);
   }
 
   // ---------------------------------------------------------- the check itself
