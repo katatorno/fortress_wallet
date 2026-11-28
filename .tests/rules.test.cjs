@@ -5,17 +5,18 @@
 // and prepayments booked and deleted), of the instruments (added, their table saved),
 // transactions removed, a cash movement, a plan and exchange rates recorded: everything
 // is checked first, a refusal names its reason and changes nothing, and what is accepted
-// leaves a wallet which opens; the loan's schedule counts every event booked in full.
-// Also: the numbers the loan's view shows, and that an instrument takes the category of
-// its bucket.
+// leaves a wallet which opens; the loan's schedule counts every event booked in full, a
+// cash balance moves by what its log says, and a date is one the calendar has. Also: the
+// numbers the loan's view shows, how an account's amount is written, and that an
+// instrument takes the category of its bucket.
 // Run: tonka test fortress_wallet   (or: node .tests/rules.test.cjs)
 
 const { readFileSync } = require("node:fs");
 const path = require("node:path");
 const { APP, loadCore } = require("../tools/wallet.cjs");
 
-const { Advice, Base, Buckets, Cash, Dates, Instruments, Mortgage, Plan, Rates, Rules, Settings, Transactions, WalletFile }
-  = loadCore();
+const { Advice, Base, Buckets, Cash, Dates, I18N, Instruments, Mortgage, Plan, Rates, Rules, Settings, Texts, Transactions,
+  WalletFile, run } = loadCore();
 const example = () => WalletFile.parse(readFileSync(path.join(APP, "data", "wallet.example.json"), "utf8"));
 
 let pass = 0, fail = 0;
@@ -111,10 +112,12 @@ function refusal(fn, start = example) {
   ok("a balance that is no number is refused, the rows before it unsaved too",
     refusal(d => Cash.save(d, rows(d, { [d.cash[0].id]: { amount: 1 }, [d.cash.at(-1).id]: { amount: "x" } }))) === "err_value_number");
   ok("a date that is none refuses the table before any row is saved",
-    refusal(d => Cash.save(d, rows(d, { [id]: { amount: 1, name: "Renamed" } }), "fix", "soon")) === "err_value_choice");
+    refusal(d => Cash.save(d, rows(d, { [id]: { amount: 1, name: "Renamed" } }), "fix", "soon")) === "err_date");
   ok("a movement with a date that is none leaves the balance",
-    refusal(d => Cash.add(d, id, 5, "", "soon")) === "err_value_choice");
+    refusal(d => Cash.add(d, id, 5, "", "soon")) === "err_date");
   ok("a movement on an account that is none is refused", refusal(d => Cash.add(d, "nope", 5)) === "err_value_choice");
+  ok("a table's balance too large to be counted in cents is refused",
+    refusal(d => Cash.save(d, rows(d, { home: { amount: 1e308 } }))) === "err_value_number");
 }
 
 // ---------------------------------------------------------------- mortgage
@@ -129,7 +132,7 @@ function refusal(fn, start = example) {
   ok("a negative rate is refused", refusal(d => Mortgage.save(d, house, { ...loan, rate_pct: -1 })) === "err_value_range");
   ok("no payments at all is refused", refusal(d => Mortgage.save(d, house, { ...loan, term_months: 0 })) === "err_value_range");
   ok("a negative price is refused", refusal(d => Mortgage.save(d, { ...house, value: -5 }, loan)) === "err_value_min");
-  ok("a date that is none is refused", refusal(d => Mortgage.save(d, { ...house, deed_date: "soon" }, loan)) === "err_value_choice");
+  ok("a date that is none is refused", refusal(d => Mortgage.save(d, { ...house, deed_date: "soon" }, loan)) === "err_date");
   ok("an unknown mode is refused", refusal(d => Mortgage.save(d, house, { ...loan, default_mode: "fast" })) === "err_value_choice");
 }
 
@@ -180,7 +183,7 @@ function refusal(fn, start = example) {
     ok(`a negative ${part} on a statement is refused`, booked({ [part]: -1 }) === "err_value_min");
     ok(`so is one of the ${part} that is no number`, booked({ [part]: "x" }) === "err_value_number");
   }
-  ok("a statement with a date that is none is refused", booked({ date: "soon" }) === "err_value_choice");
+  ok("a statement with a date that is none is refused", booked({ date: "soon" }) === "err_date");
 
   // -------------------------------------------------------------- a prepayment
   const prepay = (d, change) => Mortgage.bookPrepayment(d,
@@ -189,7 +192,7 @@ function refusal(fn, start = example) {
   for(const [what, amount] of [["of 0", 0], ["below 0", -5], ["left empty", null], ["that is no number", "x"]]) {
     ok(`a prepayment ${what} is refused`, why({ amount }) === "warn_prepayment_amount");
   }
-  ok("a prepayment with a date that is none is refused", why({ date: "soon" }) === "err_value_choice");
+  ok("a prepayment with a date that is none is refused", why({ date: "soon" }) === "err_date");
   ok("a fee below 0 is refused", why({ feePct: -1 }) === "err_value_range");
   ok("a fee above 100 is refused", why({ feePct: 101 }) === "err_value_range");
   ok("a mode that is none is refused", why({ mode: "fast" }) === "err_value_choice");
@@ -377,6 +380,25 @@ function refusal(fn, start = example) {
       `${shown(change, start)} ${JSON.stringify(reason)}`);
   }
   ok("a preview does not look at the pot", shown({}, () => owing(1000, 0)) === null);
+
+  // -------------------------------------------------------------- the parameters
+  const params = (change) => (d) => Mortgage.save(d, { ...d.house }, { ...d.mortgage, ...change });
+  ok("parameters under which a recorded prepayment would be cut are refused",
+    refusal(params({ amount: 500 }), early) === "err_params_cut_event");
+  const cutBy = said(() => params({ amount: 500 })(early()));
+  ok("and the refusal names the day of that event", cutBy?.date === "10.01.2027", JSON.stringify(cutBy));
+  ok("a loan which just holds it is saved", refusal(params({ amount: 800 }), early) === null);
+  /** 1002 paid, its capital left to the rate: at 3.5% 999.08 of the 1000, at 0% more than there is. */
+  const derived = () => {
+    const d = owing();
+    events(d).push({ id: "p", date: "2027-03-01", type: "payment", amount: 1002 });
+    return d;
+  };
+  ok("so is a rate which would give a payment more capital than is left",
+    refusal(params({ rate_pct: 0 }), derived) === "err_params_cut_event" && refusal(params({ rate_pct: 3.5 }), derived) === null);
+  ok("a file which already cuts an event takes no parameters which leave it so",
+    refusal(params({ term_months: 24 }), cut) === "err_params_cut_event");
+  ok("it takes those which hold every event", refusal(params({ amount: 1300 }), cut) === null);
 }
 
 // ---------------------------------------------------------------- what the loan's view shows
@@ -437,7 +459,7 @@ function refusal(fn, start = example) {
   ok("or a sale that a later sale would overdraw", refusal(d => {
     tx(d, { type: "sell", quantity: held, date: "2026-11-25" });
   }, () => { const e = example(); tx(e, { type: "sell", quantity: 1, date: "2026-11-26" }); return e; }) === "warn_sell_more");
-  ok("a date that is none is refused", refusal(d => tx(d, { date: "soon" })) === "err_value_choice");
+  ok("a date that is none is refused", refusal(d => tx(d, { date: "soon" })) === "err_date");
   ok("a transaction without a date is today's", (() => {
     const e = example();
     tx(e, { date: null });
@@ -446,7 +468,7 @@ function refusal(fn, start = example) {
   ok("added as it comes, one of an unknown instrument is refused",
     refusal(d => Transactions.add(d, "nope", "buy", 1, 1)) === "warn_add_instrument_first");
   ok("and so is one with a date that is none",
-    refusal(d => Transactions.add(d, "webg", "buy", 1, 1, 0, "soon")) === "err_value_choice");
+    refusal(d => Transactions.add(d, "webg", "buy", 1, 1, 0, "soon")) === "err_date");
 }
 
 // ---------------------------------------------------------------- what a transaction does to the quantity
@@ -500,7 +522,7 @@ function refusal(fn, start = example) {
   ok("a price that is no number is refused", why({ price: "x" }) === "err_value_number");
   ok("so is an opening quantity that is none", why({ opening_quantity: "x" }) === "err_value_number");
   ok("a new instrument with a date that is none is refused",
-    refusal(d => Instruments.add(d, fields, "soon")) === "err_value_choice");
+    refusal(d => Instruments.add(d, fields, "soon")) === "err_date");
   ok("the wallet's currencies are the euro and those with a rate", Rates.currencies(example()).join() === "EUR,USD,PLN");
   ok("a category's buckets come in their order", Buckets.of(example(), "equities").join() === "fortress,sandbox"
     && !Buckets.of(example(), "nope").length);
@@ -527,7 +549,7 @@ function refusal(fn, start = example) {
   ok("a negative sell alert is refused", why({ gold: { alert_price: -1 } }) === "err_value_min");
   ok("so is a sell alert that is no number", why({ gold: { alert_price: "x" } }) === "err_value_number");
   ok("a table saved with a date that is none is refused",
-    refusal(d => Instruments.save(d, rows(d), "soon")) === "err_value_choice");
+    refusal(d => Instruments.save(d, rows(d), "soon")) === "err_date");
   let field = null;
   try { Instruments.save(example(), rows(example(), { gold: { price: -1 } })); } catch(e) { field = e.vars.field; }
   ok("a refused number names its row and column", field === `${asset(example(), "gold").name} · Price`, field);
@@ -624,13 +646,71 @@ function refusal(fn, start = example) {
     ok("one of half a cent is a cent", d.cash_log.at(-1).amount === -0.01 && opens(d), d.cash_log.at(-1).amount);
   }
   ok("a cash movement on an account that is none is refused", why({ accountId: "nope" }) === "err_value_choice");
-  ok("so is one with a date that is none", why({ date: "soon" }) === "err_value_choice");
+
+  /** Whether a change moves every balance by just what it logs on that account. */
+  const follows = (d, change) => {
+    const before = new Map(d.cash.map(c => [c.id, Number(c.amount)])), logged = d.cash_log.length;
+    change(d);
+    return d.cash.every(c => {
+      const sum = d.cash_log.slice(logged).filter(l => l.account_id === c.id).reduce((s, l) => s + l.amount, 0);
+      return Math.abs(Number(c.amount) - before.get(c.id) - sum) < 1e-9;
+    });
+  };
+  {
+    const d = example();
+    const one = follows(d, x => Cash.record(x, { accountId: "home", amount: -100.505 }));
+    ok("a movement is rounded to cents once, the balance moved by what the log says", one
+      && d.cash_log.at(-1).amount === -100.51 && Cash.account(d, "home").amount === 29.49,
+    `${d.cash_log.at(-1).amount} ${Cash.account(d, "home").amount}`);
+  }
+  {
+    const d = example();
+    Cash.account(d, "home").amount = 130.005;
+    const one = follows(d, x => Cash.record(x, { accountId: "home", amount: -100.505 }));
+    ok("so is a balance a file gives in parts of a cent", one && Cash.account(d, "home").amount === 29.495,
+      Cash.account(d, "home").amount);
+  }
+  {
+    const d = example();
+    const cash = () => JSON.stringify([d.cash, d.cash_log]);
+    const before = cash();
+    const moved = Cash.add(d, "home", 0.004);
+    Cash.save(d, d.cash.map(c => ({ ...c, amount: c.amount + 0.002 })));
+    Mortgage.bookPrepayment(d, { amount: 0.004, mode: "reduce_term", fromPot: true });
+    ok("a movement which in cents is nothing changes no balance and logs nothing", moved === 0 && cash() === before
+      && opens(d), cash());
+  }
+  {
+    let n = 11, taken = 0, all = true;
+    const rnd = () => (n = n * 48271 % 2147483647) / 2147483647;
+    const d = example();
+    Object.assign(Cash.account(d, "prepay"), { currency: "PLN", amount: 100000 });
+    Cash.account(d, "emergency").currency = "USD";
+    for(let i = 0; i < 400; i++) {
+      const x = Math.round(rnd() * 200000 - 90000) / 1000, id = ["emergency", "prepay", "home"][Math.floor(rnd() * 3)];
+      all &&= follows(d, y => {
+        try {
+          if(i % 4 === 0) Cash.record(y, { accountId: id, amount: x });
+          else if(i % 4 === 1) Cash.save(y, y.cash.map(c => ({ ...c, amount: Number(c.amount) + (c.id === id ? x : 0) })));
+          else if(i % 4 === 2) Plan.apply(y, { lines: [{ kind: "cash", account_id: id, eur: Math.abs(x) }] });
+          else Mortgage.bookPrepayment(y, { amount: Math.abs(x) + 1, date: "2027-01-10", feePct: 1, mode: "reduce_term", fromPot: true });
+          taken++;
+        }
+        catch(e) { if(!(e instanceof Rules.RuleError)) throw e; }
+      });
+    }
+    ok("through 400 movements of every kind each balance moves by what the log says", all && taken > 300 && opens(d), taken);
+    ok("an account's amount is written with its currency", Texts.amount(d, -1234.5, "PLN") === "-1,234.50 PLN"
+      && Texts.amount(d, -1234.5, "EUR") === Texts.money(d, -1234.5, 2) && Texts.amount(d, 5) === "€5.00"
+      && Texts.amount(d, NaN, "PLN") === "–", Texts.amount(d, -1234.5, "PLN"));
+  }
+  ok("so is one with a date that is none", why({ date: "soon" }) === "err_date");
 }
 
 // ---------------------------------------------------------------- recording a plan
 {
   ok("a plan recorded with a date that is none is refused",
-    refusal(d => Plan.apply(d, Plan.contribution(d, 5000), "soon")) === "err_value_choice");
+    refusal(d => Plan.apply(d, Plan.contribution(d, 5000), "soon")) === "err_date");
   const d = example();
   Plan.apply(d, Plan.contribution(d, 5000), "2026-11-20");
   ok("a plan is recorded on its date", d.transactions.length > 0 && d.cash_log.length > 0
@@ -660,6 +740,24 @@ function refusal(fn, start = example) {
     lines(...[1, 2].map(() => ({ kind: "cash", account_id: "home", eur: 1e306 }))) === "err_value_number");
   ok("a cash line without an account is passed over, as before",
     lines({ kind: "cash", account_id: null, eur: 5 }, buy) === null);
+
+  /** The example with the home account kept in zloty. */
+  const zloty = () => {
+    const d = example();
+    Cash.account(d, "home").currency = "PLN";
+    return d;
+  };
+  {
+    const z = zloty();
+    const held = Cash.account(z, "home").amount;
+    Plan.apply(z, { lines: [{ kind: "cash", account_id: "home", eur: 821.43 }] }, "2026-11-20");
+    ok("a plan's euros go into a zloty account in zloty, the log telling what the balance gained",
+      z.cash_log.at(-1).amount === 3680.01 && Cash.account(z, "home").amount === Base.round2(held + 3680.01) && opens(z),
+      JSON.stringify(z.cash_log.at(-1)));
+  }
+  const large = (d) => Plan.apply(d, { lines: [{ kind: "cash", account_id: "home", eur: 1e306 }] });
+  ok("the balances of a plan are counted in each account's currency",
+    refusal(large, zloty) === "err_value_number" && refusal(large) === null);
 }
 
 // ---------------------------------------------------------------- exchange rates
@@ -682,6 +780,40 @@ function refusal(fn, start = example) {
   const near = (a, b) => Math.abs(a - b) < 1e-9;
   ok("an amount goes from EUR into a currency and back", near(Rates.fromEur(example(), 100, "PLN"), 448)
     && near(Rates.toEur(example(), 448, "PLN"), 100) && Rates.fromEur(example(), 5, "EUR") === 5);
+}
+
+// ---------------------------------------------------------------- dates of the calendar
+{
+  ok("a date is one the calendar has, a time after it allowed",
+    ["2026-01-02", "2028-02-29", "2026-12-31", "2026-01-02T10:00", "0099-12-31"].every(v => Dates.isDate(v))
+    && ["2026-13-45", "2026-02-30", "2027-02-29", "2026-00-10", "2026-11-00", "2026-04-31", "26-01-02", "soon", ""]
+      .every(v => !Dates.isDate(v)));
+  ok("reading one takes the day and drops the time", Dates.parse("2026-01-02T10:00") === "2026-01-02"
+    && run("Dates.parse(new Date(2026, 0, 2))") === "2026-01-02" && Dates.parse("") === null);
+  ok("what is no day is not read, a broken Date neither", ['"2026-02-30"', 'new Date("soon")'].every(v => {
+    try { run(`Dates.parse(${v})`); return false; } catch { return true; }
+  }));
+  const loan = (d) => ({ amount: 270000, term_months: 420, default_mode: "reduce_term", ...d.mortgage });
+  const forms = {
+    "a cash movement": (d, date) => Cash.record(d, { accountId: "home", amount: 5, date }),
+    "the cash table": (d, date) => Cash.save(d, d.cash.map(c => ({ ...c })), "", date),
+    "a transaction": (d, date) => Transactions.record(d, { assetId: "webg", type: "buy", quantity: 1, date }),
+    "a new instrument": (d, date) => Instruments.add(d, { name: "New", bucket: "metals", currency: "EUR" }, date),
+    "the instrument table": (d, date) => Instruments.save(d, d.assets.map(a => ({ ...a })), date),
+    "the date of the deed": (d, date) => Mortgage.save(d, { ...d.house, deed_date: date }, loan(d)),
+    "the date of the first payment": (d, date) => Mortgage.save(d, d.house, { ...loan(d), first_payment_date: date }),
+    "a payment of the statement": (d, date) => Mortgage.bookStatement(d, { date, amount: 5 }),
+    "a prepayment": (d, date) => Mortgage.bookPrepayment(d, { amount: 5, date, mode: "reduce_term" }),
+    "the preview of a prepayment": (d, date) => Mortgage.prepaymentEffect(d, { amount: 5, date, mode: "reduce_term" }),
+    "a plan": (d, date) => Plan.apply(d, Plan.contribution(d, 100), date),
+  };
+  for(const [what, fn] of Object.entries(forms)) {
+    ok(`${what}: a date the calendar does not have is refused`,
+      ["2026-13-45", "2026-02-30"].every(date => refusal(d => fn(d, date)) === "err_date"));
+  }
+  const text = (lang, key) => I18N.t(lang, key, { field: "X" });
+  ok("the refusal of a date has a text of its own in every language", ["en", "pl", "pt"].every(l =>
+    text(l, "err_date").startsWith("X: ") && text(l, "err_date") !== text(l, "err_value_choice")));
 }
 
 // ---------------------------------------------------------------- category from the bucket

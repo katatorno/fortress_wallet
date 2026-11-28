@@ -73,13 +73,15 @@ const TransactionsView = (app) => {
         {formRow(T("field_date"), cDate)}
         {formRow(T("field_note"), cNote)}
         <row><Button variant="primary" icon="save" onClick={() => {
-          try { Cash.record(data, { accountId: account.value, amount: amount.value, date: cDate.value, note: cNote.value }); }
+          let booked;
+          try { booked = Cash.record(data, { accountId: account.value, amount: amount.value, date: cDate.value, note: cNote.value }); }
           catch(e) {
             if(!(e instanceof Rules.RuleError)) throw e;
             Alert.wrn(T(e.key, e.vars));
             return;
           }
-          app.commit(T("flash_cash_op", { amount: money(amount.value, 2) }));
+          const currency = data.cash.find(c => c.id === account.value).currency;
+          app.commit(T("flash_cash_op", { amount: Texts.amount(data, booked, currency) }));
         }}>{T("btn_save")}</Button></row>
       </stack>
     </Panel>
@@ -122,11 +124,16 @@ const TransactionsView = (app) => {
   }
   else history = <Empty icon="receipt_long" description={T("tx_empty")} />;
 
-  const names = Object.fromEntries(data.cash.map(c => [c.id, c.name]));
+  const accounts = Object.fromEntries(data.cash.map(c => [c.id, c]));
+  /** A movement as the log shows it, in its account's currency (euros once the account is gone). */
+  const movement = (c) => {
+    const of = accounts[c.account_id];
+    return [Dates.dayMonthYear(c.date), of?.name || c.account_id, Texts.amount(data, c.amount, of?.currency), c.note || ""];
+  };
   const cashLog = data.cash_log.length ? (
     <Panel title={T("cash_log_title")} icon="history">
       <Table columns={[T("field_date"), T("col_account"), T("col_amount"), T("field_note")]}
-        rows={[...data.cash_log].reverse().map(c => [Dates.dayMonthYear(c.date), names[c.account_id] || c.account_id, money(c.amount, 2), c.note || ""])} />
+        rows={[...data.cash_log].reverse().map(movement)} />
     </Panel>
   ) : null;
 

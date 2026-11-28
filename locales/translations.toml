@@ -1308,6 +1308,11 @@ en = "A {fee}% fee pays for itself after about {months} months of interest saved
 pl = "Prowizja {fee}% zwraca się po ok. {months} mies. zaoszczędzonych odsetek. Skrócenie okresu oszczędza więcej odsetek; obniżenie raty daje więcej luzu co miesiąc."
 pt = "Uma comissão de {fee}% paga-se ao fim de cerca de {months} meses de juros poupados. Reduzir o prazo poupa mais juros; reduzir a prestação dá mais folga todos os meses."
 
+[err_params_cut_event]
+en = "With these parameters the event of {date} could not be counted in full: less would be left to repay than it records."
+pl = "Przy tych parametrach zdarzenia z {date} nie dałoby się policzyć w całości: do spłaty zostałoby mniej, niż ono zapisuje."
+pt = "Com estes parâmetros, o movimento de {date} não poderia ser contado por inteiro: ficaria em dívida menos do que ele regista."
+
 [err_payment_too_low]
 en = "The payment does not cover the interest – check the interest rate and payment."
 pl = "Rata nie pokrywa odsetek – sprawdź oprocentowanie i ratę."
@@ -2241,6 +2246,11 @@ pt = "{field}: indique um número."
 en = "{field}: choose one of the values offered."
 pl = "{field}: wybierz jedną z podanych wartości."
 pt = "{field}: escolha um dos valores propostos."
+
+[err_date]
+en = "{field}: enter a date the calendar has."
+pl = "{field}: wpisz datę, która jest w kalendarzu."
+pt = "{field}: indique uma data que exista no calendário."
 
 [warn_sell_more]
 en = "{name}: only {held} held on that day or later, so no more can be sold."

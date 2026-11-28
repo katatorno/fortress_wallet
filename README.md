@@ -125,23 +125,23 @@ fortress_wallet/
 ├── scripts/
 │   ├── core/                 # plain JS – the part that never depends on the UI
 │   │   ├── wallet/           # the wallet logic, a module a file:
-│   │   │   ├── texts.js      #   texts in the wallet's language
-│   │   │   ├── rules.js      #   the refusal of a save, checks of typed numbers and dates
+│   │   │   ├── texts.js      #   texts, numbers and amounts in the wallet's language
+│   │   │   ├── rules.js      #   the refusal of a change, checks of typed numbers and dates
 │   │   │   ├── rates.js      #   exchange rates and their save, the currencies, EUR and back
-│   │   │   ├── cash.js       #   cash accounts, their movements and table
+│   │   │   ├── cash.js       #   cash accounts, their movements in cents and their table
 │   │   │   ├── transactions.js #  buy, sell, adjust, remove; quantities
 │   │   │   ├── buckets.js    #   a category's buckets, their percentages and saves
 │   │   │   ├── instruments.js #   adding one, their table's save, sold out ones
-│   │   │   ├── mortgage.js   #   the schedule, what prepaying is worth, changes of the loan, new entries checked
+│   │   │   ├── mortgage.js   #   the schedule, what prepaying is worth, changes of the loan checked against it
 │   │   │   ├── valuation.js  #   positions, worth in EUR, net worth
 │   │   │   ├── plan.js       #   contribution calculator, recording its plan, every line checked
 │   │   │   ├── settings.js   #   the settings view's save
 │   │   │   ├── wallet-history.js # snapshots, stored prices, the history
-│   │   │   ├── advice.js     #   recommendations
+│   │   │   ├── advice.js     #   recommendations, a rule a subject
 │   │   │   └── wallet-file.js #   format version, migrations, a new instrument, checks, JSON
 │   │   ├── base.js           # small helpers: rounding, blanks, numbers, ids
-│   │   ├── dates.js          # ISO dates
-│   │   ├── chart-math.js     # ranges and axes of the history charts
+│   │   ├── dates.js          # ISO dates of the calendar
+│   │   ├── chart-math.js     # ranges of the history charts, axes of the charts
 │   │   ├── i18n.js           # translations + number formats
 │   │   ├── store.js          # the open wallet: source, checked changes, saving, a file changed elsewhere
 │   │   ├── files.js          # local files (File System Access API / download)
@@ -171,8 +171,9 @@ Each of those files is one **module**:
 - A module names another one, `I18N` included, only inside a function. Every file therefore loads on its own, and the order of loading does not matter.
 - No local aliases of another module's functions: a call shows where it goes, as in `Dates.parse(x)`.
 - `base.js`, `dates.js` and `chart-math.js` know nothing of the wallet and reach no module of `wallet/`.
+- A module gives only what something outside its file reads: the app, the tools or the tests. This one holds for every file of `scripts/core`.
 
-A new module of the wallet goes into `wallet/`; one that knows nothing of the wallet goes beside it and into `CORE_FILES` in `tools/wallet.cjs`. Either way list it in `.tests/core.test.cjs` with the modules it reaches: the suite holds the files to these rules, the list and the sources to each other, and every `Module.name` written in the app and the tools to a name the module gives.
+A new module of the wallet goes into `wallet/`; one that knows nothing of the wallet goes beside it and into `CORE_FILES` in `tools/wallet.cjs`. Either way list it in `.tests/core.test.cjs` with the modules it reaches: the suite holds the files to these rules, the list and the sources to each other, every `Module.name` written in the app and the tools to a name the module gives, and every name a module gives to a reader.
 
 A view changes the wallet through a function of the logic: it collects the fields, calls and shows the result. The function checks everything first; refusing, it throws `Rules.RuleError(key, vars)`, which the view shows as a message, and leaves the wallet as it was. Only the language, the theme and the strategy notes are assigned by their views.
 
@@ -196,7 +197,7 @@ pt = "Amortização antecipada de {amount} registada."
 
 Plain JSON that you can read, diff and back up. Keep your own file outside the project folder (see [Security](#security)).
 
-A file whose values the app cannot use (text where a number belongs, a negative price, an exchange rate of 0, an id such as `__proto__`) is refused, with the places to correct named; nothing in it is repaired without you.
+A file whose values the app cannot use (text where a number belongs, a negative price, an exchange rate of 0, a date the calendar does not have, an id such as `__proto__`) is refused, with the places to correct named; nothing in it is repaired without you. A date is written `YYYY-MM-DD`; a time after it is allowed.
 
 Instruments, transactions, cash accounts and their movements, and events of the mortgage are told apart by their `id`. A transaction, account, movement or event with none, or an empty one, gets it when the file is opened, as an instrument without the key does.
 
@@ -213,7 +214,7 @@ The main keys:
 | `buckets` | groups inside a category, each with its share (`target_pct_in_category`) and an optional `max_pct_in_category` limit. Shares in a category must add up to 100% (a category with one bucket may have none). Instrument targets in a bucket must add up to 100%, or be all 0 (you pick the instrument yourself). The calculator splits money by both |
 | `assets` | instruments: currency, opening quantity, price, target within bucket, sell alert |
 | `transactions` | buy / sell / adjust; quantity = opening quantity + transactions |
-| `cash`, `cash_log` | cash accounts with a role (`emergency`, `prepay`, `home`, `other`) and their movements |
+| `cash`, `cash_log` | cash accounts with a role (`emergency`, `prepay`, `home`, `other`) and their movements, each amount in its account's currency |
 | `house`, `mortgage` | the home (price, value, deposit, deed date) and the loan (amount, rate, payments, fee, events) |
 | `history` | net-worth snapshots: one for each day the wallet was changed, and one for each day with a stored price once `tools/fetch-prices.cjs` rebuilds them |
 | `prices`, `fx_history` | stored prices (instrument → date → [opening or null, close], in its currency) and exchange rates by date |
@@ -247,11 +248,13 @@ Best close the wallet in the app before running them. If it stays open, the app 
 ## How it calculates
 
 - **Base currency: EUR.** Every position is converted with `settings.fx`; a rate is a number above 0.
+- **Cash** stays in its account's currency. What the calculator puts on an account, or a prepayment takes from the pot, is converted from EUR at the wallet's rate. Every movement is rounded to cents once, and the balance moves by just what the log says; a movement which rounds to nothing is not booked.
 - **The contribution calculator** uses *water-filling*: it tops up the most underweight positions first until they reach a common level, then splits the rest by target. It never sells. Frozen categories are only diluted by new money.
-- **Mortgage:** annuity, interest = balance × rate / 12. A prepayment either *shortens the term* (same payment, ends earlier) or *lowers the payment* (recalculated over the remaining term). It costs its amount plus the fee on it, taken from a prepayment pot in another currency at the wallet's rate. A new payment or prepayment is refused when the schedule could not then count every event in full: a prepayment larger than the balance on its day (after the events recorded up to that day), a capital part larger than what is left, a payment on a loan paid off, or an entry dated back so that a later one would no longer fit. So is a prepayment from the pot when the pot, in EUR, does not cover the cost. A file whose events already do not fit opens and is counted as it was.
+- **Mortgage:** annuity, interest = balance × rate / 12. A prepayment either *shortens the term* (same payment, ends earlier) or *lowers the payment* (recalculated over the remaining term). It costs its amount plus the fee on it, taken from a prepayment pot in another currency at the wallet's rate. A new payment or prepayment is refused when the schedule could not then count every event in full: a prepayment larger than the balance on its day (after the events recorded up to that day), a capital part larger than what is left, a payment on a loan paid off, or an entry dated back so that a later one would no longer fit. So is a prepayment from the pot when the pot, in EUR, does not cover the cost, and a save of the parameters under which a recorded event would no longer fit. A file whose events already do not fit opens and is counted as it was.
 - **Net prepayment gain** = interest saved compared with no prepayments, minus fees.
 - **Net worth** = investments + cash + (before the deed: deposit | after the deed: home value − mortgage balance).
 - **Quantities** = opening quantity + transactions. A sale of more than is held that day or later is refused, and so is deleting transactions after which an instrument would be held below 0 (and lower than before) at the end of some day.
+- **Recommendations** come from nine rules: the emergency fund, categories against their targets, bucket limits, drift inside the bought buckets, sell thresholds, stale prices, the mortgage, instruments in a bucket of another category and bond maturities. Warnings come first.
 
 In the app, prices of stocks, ETFs and metals are entered by hand; `tools/fetch-prices.cjs` fills them in from your computer (see above). Exchange rates come from the ECB via the free [Frankfurter API](https://frankfurter.dev).
 
@@ -263,11 +266,11 @@ tonka test fortress_wallet          # or one suite: node .tests/<name>.test.cjs
 
 | Suite | What it holds |
 |---|---|
-| `core` | the module rules (each file loads alone, reaches exactly what is listed, every `Module.name` exists), valuation, the contribution calculator, the mortgage, recommendations, the file |
+| `core` | the module rules (each file loads alone, reaches exactly what is listed, every `Module.name` exists, every public name has a reader), valuation, the contribution calculator, the mortgage, recommendations (their texts and order against `advice.golden.json`), the file |
 | `market` | the market view's rules: percentages in a bucket are 100% or all 0%, bucket shares are 100%, moves and deletions keep that, one save of the buckets for both views, the "what to buy" calculator, no sell alerts for equities |
-| `rules` | the saves of the settings, cash, mortgage and transactions views, the changes of the loan and of the instruments, transactions removed, a cash movement, a plan and exchange rates recorded: everything checked first, a refusal changes nothing, what is accepted leaves a wallet which opens; the loan's schedule counts every event booked in full, and the pot pays its cost in its currency; what a transaction does to a quantity; the loan's yearly totals, payment on a day and prepayment preview |
-| `format` | the file's version and keys, a new instrument's keys, ids given on opening, migrations, files refused for values the app cannot use |
-| `history` | stored prices, the history built from them, the XTB import |
+| `rules` | the saves of the settings, cash, mortgage and transactions views, the changes of the loan and of the instruments, transactions removed, a cash movement, a plan and exchange rates recorded: everything checked first, a refusal changes nothing, what is accepted leaves a wallet which opens; the loan's schedule counts every event booked in full, whatever the parameters saved, and the pot pays its cost in its currency; every cash balance moves by what its log says; dates the calendar does not have; what a transaction does to a quantity; the loan's yearly totals, payment on a day and prepayment preview |
+| `format` | the file's version and keys, a new instrument's keys, ids given on opening, migrations, files refused for values the app cannot use, dates the calendar does not have among them |
+| `history` | stored prices, the history built from them, the ranges and axes of the charts, the XTB import |
 | `store` | saving: the autosave, changes during a save, a file changed elsewhere, downloads; a change the wallet would not open with, or one that throws, is refused and undone |
 | `online` | the exchange rates: what is sent, what of the answer is taken, and that a wallet replaced meanwhile gets nothing |
 | `links` | which links in the notes keep their address |

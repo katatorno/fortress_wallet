@@ -1,0 +1,140 @@
+{
+  "example en": [
+    ["info","Emergency fund: €800 / €1,000 (80%)","€200 to go. Until it's full, send all spare money here (the calculator does this automatically)."],
+    ["info","Equities: 67.3% (7.7 pp below target)","The contribution calculator will send new money where it's missing."],
+    ["info","Precious metals: 25.7% vs target 15% (frozen)","You're not buying more – new contributions lower its share on their own. It reaches the target at a portfolio of about €5,994 (without selling)."],
+    ["info","Bonds: 7.0% (3.0 pp below target)","The contribution calculator will send new money where it's missing."],
+    ["info","Mortgage payment is 37% of net income","Payment €1,115.88 with net income of €3,000/month."],
+    ["info","Prepaying = a guaranteed 3.50% a year (the fee pays back after 3.4 months)","Prepaying beats safe bonds/deposits (assumed 2.5%). Only prepay with money beyond a full emergency fund."]
+  ],
+  "example pl": [
+    ["info","Poduszka: 800 € / 1 000 € (80%)","Brakuje 200 €. Do czasu jej uzupełnienia wszystkie wolne środki kieruj tutaj (kalkulator robi to automatycznie)."],
+    ["info","Akcje: 67,3% (7,7 pp poniżej celu)","Kalkulator wpłaty skieruje nowe pieniądze tam, gdzie brakuje."],
+    ["info","Kruszce: 25,7% przy celu 15% (zamrożone)","Nie dokupujesz – nowe wpłaty same obniżają udział. Udział spadnie do celu przy portfelu ok. 5 994 € (bez sprzedaży)."],
+    ["info","Obligacje: 7,0% (3,0 pp poniżej celu)","Kalkulator wpłaty skieruje nowe pieniądze tam, gdzie brakuje."],
+    ["info","Rata to 37% dochodu netto","Rata 1 115,88 € przy dochodzie 3 000 € netto/mies."],
+    ["info","Nadpłata = pewne 3,50% rocznie (prowizja zwraca się po 3,4 mies.)","Nadpłata wygrywa z bezpiecznymi obligacjami/lokatą (założone 2,5%). Nadpłacaj tylko z pieniędzy ponad pełną poduszkę."]
+  ],
+  "example pt": [
+    ["info","Fundo de emergência: 800 € / 1 000 € (80%)","Faltam 200 €. Até estar completo, envie para aqui todo o dinheiro disponível (a calculadora faz isso automaticamente)."],
+    ["info","Ações: 67,3% (7,7 pp abaixo do objetivo)","A calculadora de reforço envia o dinheiro novo para onde falta."],
+    ["info","Metais preciosos: 25,7% vs objetivo 15% (congelado)","Não está a comprar mais – os novos reforços reduzem o peso por si só. Atinge o objetivo com uma carteira de cerca de 5 994 € (sem vender)."],
+    ["info","Obrigações: 7,0% (3,0 pp abaixo do objetivo)","A calculadora de reforço envia o dinheiro novo para onde falta."],
+    ["info","A prestação representa 37% do rendimento líquido","Prestação de 1 115,88 € com rendimento líquido de 3 000 €/mês."],
+    ["info","Amortizar = 3,50% garantidos por ano (a comissão recupera-se em 3,4 meses)","Amortizar compensa mais do que obrigações/depósitos seguros (pressuposto 2,5%). Só amortize com dinheiro além de um fundo de emergência completo."]
+  ],
+  "hinted en": [
+    ["warn","“sandbox” is 3.3% of its category (limit 3%)","Don't add here until the share drops below the limit."],
+    ["warn","Gold: price 3,789.00 USD ≥ your threshold 10.00","The threshold you set has been reached. Consider selling part and moving the money to your core ETFs or a prepayment."],
+    ["warn","Prepayment pot: €5,000","You've passed the threshold – you can order a prepayment at the bank and record it in Mortgage & home."],
+    ["warn","Genuine Parts is in a bucket of another category","The instrument is marked Bonds, its bucket sandbox belongs to Equities. An instrument takes the category of its bucket: move it to a bucket of Bonds, or save the instrument table to make it Equities."],
+    ["warn","EDO0134 matures 05.2027","Decide in advance: reinvest in EUR (ETF) or prepay the mortgage."],
+    ["info","Emergency fund: €800 / €1,000 (80%)","€200 to go. Until it's full, send all spare money here (the calculator does this automatically)."],
+    ["info","Equities: 83.2% (8.2 pp above target)","The contribution calculator will send new money where it's missing."],
+    ["info","Precious metals: 12.1% (2.9 pp below target)","The contribution calculator will send new money where it's missing."],
+    ["info","Bonds: 4.8% (5.2 pp below target)","The contribution calculator will send new money where it's missing."],
+    ["info","Prime All Country World: 24.7% of “fortress” (target 70%)","Upcoming contributions will rebalance it – no selling needed."],
+    ["info","MSCI Emerging Ex China: 68.6% of “fortress” (target 10%)","Upcoming contributions will rebalance it – no selling needed."],
+    ["info","MSCI World Small Cap: 3.1% of “fortress” (target 10%)","Upcoming contributions will rebalance it – no selling needed."],
+    ["info","Developed Europe: 1.8% of “fortress” (target 5%)","Upcoming contributions will rebalance it – no selling needed."],
+    ["info","MSCI China A: 1.7% of “fortress” (target 5%)","Upcoming contributions will rebalance it – no selling needed."],
+    ["info","Prices to update (1)","Prime All Country World"],
+    ["info","Mortgage payment is 37% of net income","Payment €1,115.88 with net income of €3,000/month."],
+    ["info","Prepaying = a guaranteed 3.50% a year (the fee pays back after 3.4 months)","Prepaying beats safe bonds/deposits (assumed 2.5%). Only prepay with money beyond a full emergency fund."],
+    ["ok","“fortress”: 98.5% of its category (limit 100%)","Within the limit."]
+  ],
+  "hinted pl": [
+    ["warn","„sandbox” to 3,3% kategorii (limit 3%)","Nie dokładaj tu, dopóki udział nie spadnie poniżej limitu."],
+    ["warn","Gold: cena 3 789,00 USD ≥ Twój próg 10,00","Osiągnięty próg, który sam ustawiłeś. Rozważ sprzedaż części i przeniesienie środków do głównych ETF-ów albo na nadpłatę."],
+    ["warn","Skarbonka na nadpłatę: 5 000 €","Przekroczyłeś próg – możesz zlecić nadpłatę w banku i zaksięgować ją w zakładce Kredyt i dom."],
+    ["warn","Genuine Parts jest w koszyku innej kategorii","Instrument ma kategorię Obligacje, a jego koszyk sandbox należy do kategorii Akcje. Instrument przyjmuje kategorię koszyka: przenieś go do koszyka kategorii Obligacje albo zapisz tabelę instrumentów, żeby stał się Akcje."],
+    ["warn","EDO0134 zapada 05.2027","Zdecyduj wcześniej: reinwestycja w EUR (ETF) czy nadpłata kredytu."],
+    ["info","Poduszka: 800 € / 1 000 € (80%)","Brakuje 200 €. Do czasu jej uzupełnienia wszystkie wolne środki kieruj tutaj (kalkulator robi to automatycznie)."],
+    ["info","Akcje: 83,2% (8,2 pp powyżej celu)","Kalkulator wpłaty skieruje nowe pieniądze tam, gdzie brakuje."],
+    ["info","Kruszce: 12,1% (2,9 pp poniżej celu)","Kalkulator wpłaty skieruje nowe pieniądze tam, gdzie brakuje."],
+    ["info","Obligacje: 4,8% (5,2 pp poniżej celu)","Kalkulator wpłaty skieruje nowe pieniądze tam, gdzie brakuje."],
+    ["info","Prime All Country World: 24,7% koszyka „fortress” (cel 70%)","Kolejne wpłaty to wyrównają – bez sprzedaży."],
+    ["info","MSCI Emerging Ex China: 68,6% koszyka „fortress” (cel 10%)","Kolejne wpłaty to wyrównają – bez sprzedaży."],
+    ["info","MSCI World Small Cap: 3,1% koszyka „fortress” (cel 10%)","Kolejne wpłaty to wyrównają – bez sprzedaży."],
+    ["info","Developed Europe: 1,8% koszyka „fortress” (cel 5%)","Kolejne wpłaty to wyrównają – bez sprzedaży."],
+    ["info","MSCI China A: 1,7% koszyka „fortress” (cel 5%)","Kolejne wpłaty to wyrównają – bez sprzedaży."],
+    ["info","Ceny do aktualizacji (1)","Prime All Country World"],
+    ["info","Rata to 37% dochodu netto","Rata 1 115,88 € przy dochodzie 3 000 € netto/mies."],
+    ["info","Nadpłata = pewne 3,50% rocznie (prowizja zwraca się po 3,4 mies.)","Nadpłata wygrywa z bezpiecznymi obligacjami/lokatą (założone 2,5%). Nadpłacaj tylko z pieniędzy ponad pełną poduszkę."],
+    ["ok","„fortress”: 98,5% kategorii (limit 100%)","W normie."]
+  ],
+  "hinted pt": [
+    ["warn","“sandbox” representa 3,3% da categoria (limite 3%)","Não reforce aqui até o peso descer abaixo do limite."],
+    ["warn","Gold: preço 3 789,00 USD ≥ o seu limite 10,00","Atingiu o limite que definiu. Considere vender uma parte e passar o dinheiro para os ETF principais ou para uma amortização."],
+    ["warn","Reserva para amortização: 5 000 €","Ultrapassou o limite – pode pedir a amortização ao banco e registá-la em Crédito e casa."],
+    ["warn","Genuine Parts está num grupo de outra categoria","O instrumento está marcado como Obrigações, o seu grupo sandbox pertence a Ações. Um instrumento toma a categoria do seu grupo: mova-o para um grupo de Obrigações, ou guarde a tabela de instrumentos para o tornar Ações."],
+    ["warn","EDO0134 vence em 05.2027","Decida com antecedência: reinvestir em EUR (ETF) ou amortizar o crédito."],
+    ["info","Fundo de emergência: 800 € / 1 000 € (80%)","Faltam 200 €. Até estar completo, envie para aqui todo o dinheiro disponível (a calculadora faz isso automaticamente)."],
+    ["info","Ações: 83,2% (8,2 pp acima do objetivo)","A calculadora de reforço envia o dinheiro novo para onde falta."],
+    ["info","Metais preciosos: 12,1% (2,9 pp abaixo do objetivo)","A calculadora de reforço envia o dinheiro novo para onde falta."],
+    ["info","Obrigações: 4,8% (5,2 pp abaixo do objetivo)","A calculadora de reforço envia o dinheiro novo para onde falta."],
+    ["info","Prime All Country World: 24,7% de “fortress” (objetivo 70%)","Os próximos reforços vão reequilibrar – sem vender."],
+    ["info","MSCI Emerging Ex China: 68,6% de “fortress” (objetivo 10%)","Os próximos reforços vão reequilibrar – sem vender."],
+    ["info","MSCI World Small Cap: 3,1% de “fortress” (objetivo 10%)","Os próximos reforços vão reequilibrar – sem vender."],
+    ["info","Developed Europe: 1,8% de “fortress” (objetivo 5%)","Os próximos reforços vão reequilibrar – sem vender."],
+    ["info","MSCI China A: 1,7% de “fortress” (objetivo 5%)","Os próximos reforços vão reequilibrar – sem vender."],
+    ["info","Preços a atualizar (1)","Prime All Country World"],
+    ["info","A prestação representa 37% do rendimento líquido","Prestação de 1 115,88 € com rendimento líquido de 3 000 €/mês."],
+    ["info","Amortizar = 3,50% garantidos por ano (a comissão recupera-se em 3,4 meses)","Amortizar compensa mais do que obrigações/depósitos seguros (pressuposto 2,5%). Só amortize com dinheiro além de um fundo de emergência completo."],
+    ["ok","“fortress”: 98,5% da categoria (limite 100%)","Dentro do limite."]
+  ],
+  "calm en": [
+    ["info","Equities: 67.3% (7.7 pp below target)","The contribution calculator will send new money where it's missing."],
+    ["info","Precious metals: 25.7% vs target 15% (frozen)","You're not buying more – new contributions lower its share on their own. It reaches the target at a portfolio of about €5,994 (without selling)."],
+    ["info","Bonds: 7.0% (3.0 pp below target)","The contribution calculator will send new money where it's missing."],
+    ["info","Prepaying = a guaranteed 3.50% a year (the fee pays back after 3.4 months)","The safe alternative yields more than prepaying (assumed 9.0%). Only prepay with money beyond a full emergency fund."],
+    ["ok","Emergency fund is full","€50,000 ≈ 27.8 months of expenses. New money can go to investments and prepayments."],
+    ["ok","Mortgage payment is 33% of net income","Payment €1,115.88 with net income of €3,381/month."]
+  ],
+  "calm pl": [
+    ["info","Akcje: 67,3% (7,7 pp poniżej celu)","Kalkulator wpłaty skieruje nowe pieniądze tam, gdzie brakuje."],
+    ["info","Kruszce: 25,7% przy celu 15% (zamrożone)","Nie dokupujesz – nowe wpłaty same obniżają udział. Udział spadnie do celu przy portfelu ok. 5 994 € (bez sprzedaży)."],
+    ["info","Obligacje: 7,0% (3,0 pp poniżej celu)","Kalkulator wpłaty skieruje nowe pieniądze tam, gdzie brakuje."],
+    ["info","Nadpłata = pewne 3,50% rocznie (prowizja zwraca się po 3,4 mies.)","Bezpieczna alternatywa daje więcej niż nadpłata (założone 9,0%). Nadpłacaj tylko z pieniędzy ponad pełną poduszkę."],
+    ["ok","Poduszka pełna","50 000 € ≈ 27,8 mies. wydatków. Nowe pieniądze mogą iść w inwestycje i nadpłaty."],
+    ["ok","Rata to 33% dochodu netto","Rata 1 115,88 € przy dochodzie 3 381 € netto/mies."]
+  ],
+  "calm pt": [
+    ["info","Ações: 67,3% (7,7 pp abaixo do objetivo)","A calculadora de reforço envia o dinheiro novo para onde falta."],
+    ["info","Metais preciosos: 25,7% vs objetivo 15% (congelado)","Não está a comprar mais – os novos reforços reduzem o peso por si só. Atinge o objetivo com uma carteira de cerca de 5 994 € (sem vender)."],
+    ["info","Obrigações: 7,0% (3,0 pp abaixo do objetivo)","A calculadora de reforço envia o dinheiro novo para onde falta."],
+    ["info","Amortizar = 3,50% garantidos por ano (a comissão recupera-se em 3,4 meses)","A alternativa segura rende mais do que amortizar (pressuposto 9,0%). Só amortize com dinheiro além de um fundo de emergência completo."],
+    ["ok","Fundo de emergência completo","50 000 € ≈ 27,8 meses de despesas. O dinheiro novo pode ir para investimentos e amortizações."],
+    ["ok","A prestação representa 33% do rendimento líquido","Prestação de 1 115,88 € com rendimento líquido de 3 381 €/mês."]
+  ],
+  "strained en": [
+    ["warn","Emergency fund: €0 / €1,000 (0%)","€1,000 to go. Until it's full, send all spare money here (the calculator does this automatically)."],
+    ["warn","Mortgage payment is 45% of net income","Payment €1,115.88 with net income of €2,480/month."],
+    ["warn","EDO0127 matures 01.2027","Decide in advance: reinvest in EUR (ETF) or prepay the mortgage."],
+    ["info","Equities: 82.4% (5.8 pp below target)","The contribution calculator will send new money where it's missing."],
+    ["info","Precious metals: 13.8% vs target 0% (frozen)","You're not buying more – new contributions lower its share on their own."],
+    ["info","Bonds: 3.8% (8.0 pp below target)","The contribution calculator will send new money where it's missing."],
+    ["info","Prices to update (14)","Prime All Country World, MSCI Emerging Ex China, MSCI World Small Cap, Developed Europe, MSCI China A, Genuine Parts, Nike, Aging Population, GALP, Silver, Gold, EDO0127…"],
+    ["info","Prepaying = a guaranteed 3.50% a year (the fee pays back after 3.4 months)","Prepaying beats safe bonds/deposits (assumed 2.5%). Only prepay with money beyond a full emergency fund."]
+  ],
+  "strained pl": [
+    ["warn","Poduszka: 0 € / 1 000 € (0%)","Brakuje 1 000 €. Do czasu jej uzupełnienia wszystkie wolne środki kieruj tutaj (kalkulator robi to automatycznie)."],
+    ["warn","Rata to 45% dochodu netto","Rata 1 115,88 € przy dochodzie 2 480 € netto/mies."],
+    ["warn","EDO0127 zapada 01.2027","Zdecyduj wcześniej: reinwestycja w EUR (ETF) czy nadpłata kredytu."],
+    ["info","Akcje: 82,4% (5,8 pp poniżej celu)","Kalkulator wpłaty skieruje nowe pieniądze tam, gdzie brakuje."],
+    ["info","Kruszce: 13,8% przy celu 0% (zamrożone)","Nie dokupujesz – nowe wpłaty same obniżają udział."],
+    ["info","Obligacje: 3,8% (8,0 pp poniżej celu)","Kalkulator wpłaty skieruje nowe pieniądze tam, gdzie brakuje."],
+    ["info","Ceny do aktualizacji (14)","Prime All Country World, MSCI Emerging Ex China, MSCI World Small Cap, Developed Europe, MSCI China A, Genuine Parts, Nike, Aging Population, GALP, Silver, Gold, EDO0127…"],
+    ["info","Nadpłata = pewne 3,50% rocznie (prowizja zwraca się po 3,4 mies.)","Nadpłata wygrywa z bezpiecznymi obligacjami/lokatą (założone 2,5%). Nadpłacaj tylko z pieniędzy ponad pełną poduszkę."]
+  ],
+  "strained pt": [
+    ["warn","Fundo de emergência: 0 € / 1 000 € (0%)","Faltam 1 000 €. Até estar completo, envie para aqui todo o dinheiro disponível (a calculadora faz isso automaticamente)."],
+    ["warn","A prestação representa 45% do rendimento líquido","Prestação de 1 115,88 € com rendimento líquido de 2 480 €/mês."],
+    ["warn","EDO0127 vence em 01.2027","Decida com antecedência: reinvestir em EUR (ETF) ou amortizar o crédito."],
+    ["info","Ações: 82,4% (5,8 pp abaixo do objetivo)","A calculadora de reforço envia o dinheiro novo para onde falta."],
+    ["info","Metais preciosos: 13,8% vs objetivo 0% (congelado)","Não está a comprar mais – os novos reforços reduzem o peso por si só."],
+    ["info","Obrigações: 3,8% (8,0 pp abaixo do objetivo)","A calculadora de reforço envia o dinheiro novo para onde falta."],
+    ["info","Preços a atualizar (14)","Prime All Country World, MSCI Emerging Ex China, MSCI World Small Cap, Developed Europe, MSCI China A, Genuine Parts, Nike, Aging Population, GALP, Silver, Gold, EDO0127…"],
+    ["info","Amortizar = 3,50% garantidos por ano (a comissão recupera-se em 3,4 meses)","Amortizar compensa mais do que obrigações/depósitos seguros (pressuposto 2,5%). Só amortize com dinheiro além de um fundo de emergência completo."]
+  ]
+}

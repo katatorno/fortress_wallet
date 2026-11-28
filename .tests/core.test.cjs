@@ -38,12 +38,12 @@ const near = (a, b, tol = 0.01) => Math.abs(a - b) <= tol;
     "wallet/mortgage.js": ["Base", "Cash", "Dates", "Rates", "Rules", "Texts"],
     "wallet/instruments.js": ["Dates", "Buckets", "Transactions", "Rates", "Rules", "Texts", "WalletFile"],
     "wallet/valuation.js": ["Dates", "Rates", "Cash", "Transactions", "Mortgage"],
-    "wallet/plan.js": ["Base", "Dates", "Rules", "Texts", "Valuation", "Cash"],
+    "wallet/plan.js": ["Base", "Dates", "Rates", "Rules", "Texts", "Valuation", "Cash"],
     "wallet/settings.js": ["Texts", "Rules", "Buckets"],
     "wallet/wallet-history.js": ["Base", "Dates", "Rates", "Transactions", "Valuation"],
     "wallet/advice.js": ["Base", "Dates", "Texts", "Mortgage", "Valuation"],
     // I18N: the language of a wallet that names none
-    "wallet/wallet-file.js": ["Base", "Texts", "Cash", "Mortgage", "Rates", "Transactions", "Valuation", "I18N"],
+    "wallet/wallet-file.js": ["Base", "Dates", "Texts", "Cash", "Mortgage", "Rates", "Transactions", "Valuation", "I18N"],
   };
   const files = CORE_FILES.filter(f => f !== "i18n.js");
   const names = CORE_FILES.map(moduleName);
@@ -112,6 +112,24 @@ const near = (a, b, tol = 0.01) => Math.abs(a - b) <= tol;
   const seen = (end) => references.some(r => r.file.endsWith(end));
   if(!seen(".jsx") || !seen(".cjs")) unknown.push("no reference found in the views or in the tools: the search misses them");
   check("every Module.name the app and the tools write is one the module gives", unknown);
+
+  // and what a module gives, someone else reads: a name only its own file reads is not public
+  const readers = [...written, ...walk(path.join(APP, ".tests")).filter(f => f.endsWith(".cjs"))]
+    .map(f => [f, code(readFileSync(f, "utf8")).replace(/"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'/g, '""')]);
+  /** Whether a source reads a name of a module: as `Module.name`, or taken out of the module in braces. */
+  const reads = (source, module, key) => new RegExp(`(?<![\\w$])${module}\\??\\.${key}(?![\\w$])`).test(source)
+    || [...source.matchAll(new RegExp(`\\{([^{}]*)\\}\\s*=\\s*${module}\\b`, "g"))]
+      .some(m => m[1].split(",").some(part => part.split(":")[0].trim() === key));
+  const modules = walk(path.join(APP, "scripts", "core")).filter(f => f.endsWith(".js"));
+  const unread = modules.flatMap(f => {
+    const source = readFileSync(f, "utf8"), name = source.match(/^const (\w+) = /m)[1];
+    const alone = vm.createContext({});
+    vm.runInContext(source, alone, { filename: f });
+    return vm.runInContext(`Object.keys(${name})`, alone)
+      .filter(key => !readers.some(([file, s]) => file !== f && reads(s, name, key)))
+      .map(key => `${path.relative(APP, f)}: ${name}.${key}`);
+  });
+  check("every public name of a module is one something outside its file reads", unread);
 }
 
 // ---------------------------------------------------------------- valuation
@@ -224,6 +242,50 @@ const near = (a, b, tol = 0.01) => Math.abs(a - b) <= tol;
   const bond = wallet([{ id: "x", name: "EDO0127", category: "bonds", bucket: "o", opening_quantity: 1, price: 100 }], both);
   ok("a bond due within a year is announced", has(titles(bond), "rec_bond_t", { name: "EDO0127", date: "01.2027" }));
   ok("not earlier than a year before", !has(titles(bond, "2025-06-01"), "rec_bond_t", { name: "EDO0127" }));
+}
+
+{
+  // the hints, their texts and their order as the app showed them before the rules were split
+  const golden = JSON.parse(readFileSync(path.join(APP, ".tests", "advice.golden.json"), "utf8"));
+  /** The example where every rule has something to say. */
+  const hinted = (d) => {
+    d.house.deed_date = "2026-03-15";
+    d.cash.find(c => c.id === "prepay").amount = 5000;
+    d.buckets.sandbox.max_pct_in_category = 3;
+    d.buckets.fortress.max_pct_in_category = 100;
+    const of = (id) => d.assets.find(a => a.id === id);
+    of("gold").alert_price = 10;
+    of("edo0134").maturity = "2027-05-01";
+    of("gpc").category = "bonds";
+    of("webg").price_updated = "2026-01-02";
+    of("emxc").opening_quantity = 100;
+    return d;
+  };
+  /** Little to say: a full emergency fund, a payment of a third of the income, safe yields above the loan's rate. */
+  const calm = (d) => {
+    d.cash.find(c => c.id === "emergency").amount = 50000;
+    Object.assign(d.settings, { net_income: 3381, alt_safe_yield_pct: 9, stale_days: 4000 });
+    return d;
+  };
+  /** Much wrong: no emergency fund, a payment of half the income, a frozen category without a target, old prices. */
+  const strained = (d) => {
+    d.cash.find(c => c.id === "emergency").amount = 0;
+    d.settings.net_income = 2480;
+    d.categories.metals.target_pct = 0;
+    d.assets.push(...["a", "b"].map(id => ({ ...d.assets[0], id, name: `Copy ${id}` })));
+    for(const a of d.assets) a.price_updated = null;
+    d.assets.find(a => a.id === "edo0134").name = "EDO0127";
+    return d;
+  };
+  for(const [name, make] of [["example", (d) => d], ["hinted", hinted], ["calm", calm], ["strained", strained]]) {
+    for(const language of ["en", "pl", "pt"]) {
+      const d = make(example());
+      d.settings.language = language;
+      const hints = Advice.recommendations(d, "2026-11-27").map(h => [h.level, h.title, h.text]);
+      ok(`the hints of the ${name} wallet in ${language}: the same texts, warnings first`,
+        JSON.stringify(hints) === JSON.stringify(golden[`${name} ${language}`]));
+    }
+  }
 }
 
 // ---------------------------------------------------------------- file

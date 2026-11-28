@@ -1,12 +1,11 @@
 // scripts/Recommendations.jsx
 //
-// Automatic hints (warnings first) and your own strategy notes in Markdown. The
-// notes come from the file, so their links and pictures go through `Links`.
+// Automatic hints, as `Advice` orders them, and your own strategy notes in Markdown.
+// The notes come from the file, so their links and pictures go through `Links`.
 
 const RecommendationsView = (app) => {
   const { data, T } = app;
-  const order = { warn: 0, info: 1, ok: 2 };
-  const recs = Advice.recommendations(data).sort((a, b) => order[a.level] - order[b.level]);
+  const recs = Advice.recommendations(data);
   const notes = <Textarea value={data.strategy_notes || ""} auto minRows={8} maxRows={30} />;
   const preview = Links.defuse(<Markdown text={data.strategy_notes || ""} image={(src) => Links.isSafe(src) ? src : ""} />);
   return (

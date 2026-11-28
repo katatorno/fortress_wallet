@@ -64,7 +64,5 @@ const Valuation = (() => {
     return Object.fromEntries(Object.entries(values).map(([k, v]) => [k, total ? v / total * 100 : 0]));
   }
 
-  return {
-    positions, categoryValues, bucketValues, cashByRole, houseState, summary, allocationPct,
-  };
+  return { positions, categoryValues, bucketValues, cashByRole, summary, allocationPct };
 })();

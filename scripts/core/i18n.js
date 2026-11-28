@@ -81,7 +81,6 @@ const I18N = (() => {
   /** Uses already parsed strings (tests, or an embedded copy). */
   const use = (parsed) => { strings = parsed; };
 
-  const all = () => strings;
   const languages = () => strings[META] || { [DEFAULT]: "English" };
 
   /**
@@ -127,5 +126,5 @@ const I18N = (() => {
 
   const percent = (lang, x, dec = 1) => number(lang, x, dec) + "%";
 
-  return { DEFAULT, META, parseToml, load, use, all, languages, t, placeholders, number, money, percent };
+  return { DEFAULT, META, parseToml, load, use, languages, t, placeholders, number, money, percent };
 })();

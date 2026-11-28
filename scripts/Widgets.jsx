@@ -1,7 +1,7 @@
 // scripts/Widgets.jsx
 //
-// Small building blocks shared by the views: a headline number, an editable
-// table, a collapsible section and a coloured note.
+// Small building blocks shared by the views: a headline number, an editable table,
+// a collapsible section, a coloured note and a slider.
 
 /** Category id → chart colour class (fixed order: blue, orange, aqua). */
 const CAT_CLS = { equities: "c1", metals: "c2", bonds: "c3" };

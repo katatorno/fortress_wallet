@@ -1,6 +1,6 @@
 // scripts/core/wallet/rules.js
 //
-// The saves of the views check everything first and throw RuleError before changing
+// A change of the wallet checks everything first and throws RuleError before changing
 // anything. Here are that error and the checks of typed numbers and dates they share.
 
 const Rules = (() => {
@@ -35,7 +35,7 @@ const Rules = (() => {
   function date(data, v, key) {
     if(Base.isBlank(v)) return null;
     try { return Dates.parse(v); }
-    catch { throw new RuleError("err_value_choice", { field: Texts.tr(data, key) }); }
+    catch { throw new RuleError("err_date", { field: Texts.tr(data, key) }); }
   }
 
   return { RuleError, number, percent, date };

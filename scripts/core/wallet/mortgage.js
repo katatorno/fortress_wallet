@@ -3,7 +3,8 @@
 // The mortgage: annuity, the schedule with the payments and prepayments booked, its
 // projection to the end, what prepaying is worth, and every change of the loan:
 // booking and deleting payments and prepayments, and the save of the home and the
-// loan's parameters.
+// loan's parameters. No booking and no save leaves an event the schedule cannot count
+// in full.
 
 const Mortgage = (() => {
   const MODES = ["reduce_term", "reduce_payment"];
@@ -243,24 +244,38 @@ const Mortgage = (() => {
     run({ ...m, events: m.events.filter(e => Dates.parse(e.date) <= day) }, [], false).info.balance;
 
   /**
+   * The first recorded event the schedule of a loan would not count in full, a prepayment
+   * or the capital of a payment cut to what is left at its turn; null when there is none.
+   * `meet(e, left)` is told what is left to repay at each event's turn.
+   */
+  function _firstCut(m, meet = null) {
+    let cut = null;
+    // to the cent: what differs by less than that is not cut
+    run(m, [], false, (e, left, given) => {
+      meet?.(e, left);
+      if(!cut && Base.round2(given) > Base.round2(left)) cut = e;
+    });
+    return cut;
+  }
+
+  /** The day of a recorded event, as a message names it. */
+  const _dayOf = (e) => Dates.dayMonthYear(Dates.parse(e.date));
+
+  /**
    * The check every new payment and prepayment passes: with it among them, the schedule
-   * counts each recorded event in full, no prepayment and no capital of a payment cut to
-   * what is left, and a new payment finds something left to repay. Throws Rules.RuleError.
+   * counts each recorded event in full (see `_firstCut`), and a new payment finds
+   * something left to repay. Throws Rules.RuleError.
    */
   function _checkCounted(data, event) {
     const m = data.mortgage;
-    let left = 0, cut = null;
-    // to the cent: what differs by less than that is not cut
-    run({ ...m, events: [...m.events, event] }, [], false, (e, balance, given) => {
-      if(e === event) left = balance;
-      if(!cut && Base.round2(given) > Base.round2(balance)) cut = e;
-    });
+    let left = 0;
+    const cut = _firstCut({ ...m, events: [...m.events, event] }, (e, balance) => { if(e === event) left = balance; });
     if(event.type === "payment" && left <= 0) throw new Rules.RuleError("warn_mortgage_paid_off");
     if(cut === event) {
       const key = event.type === "payment" ? "warn_capital_over_balance" : "warn_prepayment_over_balance";
       throw new Rules.RuleError(key, { balance: Texts.money(data, left, 2) });
     }
-    if(cut) throw new Rules.RuleError("warn_event_cut", { date: Dates.dayMonthYear(Dates.parse(cut.date)) });
+    if(cut) throw new Rules.RuleError("warn_event_cut", { date: _dayOf(cut) });
   }
 
   /** A prepayment of the form, checked but for the pot: the event to book. */
@@ -334,8 +349,7 @@ const Mortgage = (() => {
         { pot: Texts.money(data, pot?.eur || 0, 2), cost: Texts.money(data, cost, 2) });
     }
     if(pot) {
-      // in cents before it is booked, so that the balance moves by what the log says
-      const taken = Base.round2(Rates.fromEur(data, cost, pot.currency));
+      const taken = Rates.fromEur(data, cost, pot.currency);
       if(!Cash.countable(Cash.account(data, "prepay").amount || 0, -taken)) {
         throw new Rules.RuleError("err_value_number", { field: Texts.tr(data, "col_amount") });
       }
@@ -351,7 +365,8 @@ const Mortgage = (() => {
   }
 
   /**
-   * The home and mortgage parameters.
+   * The home and mortgage parameters. Refused, like a booking, when the schedule they give
+   * would not count every recorded event in full.
    * @param {{purchase_price, value, deposit_paid, deed_date}} house
    * @param {{amount, rate_pct, term_months, first_payment_date, bank_payment, prepayment_fee_pct, default_mode}} loan
    */
@@ -373,6 +388,8 @@ const Mortgage = (() => {
       prepayment_fee_pct: Rules.number(data, loan.prepayment_fee_pct ?? 0, "field_prepayment_fee", 0, 100),
       default_mode: loan.default_mode,
     };
+    const cut = _firstCut({ ...data.mortgage, ...m });
+    if(cut) throw new Rules.RuleError("err_params_cut_event", { date: _dayOf(cut) });
     Object.assign(data.house, h);
     Object.assign(data.mortgage, m);
   }

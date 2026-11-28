@@ -1,7 +1,7 @@
 // .tests/history.test.cjs
 //
-// Stored prices, the net-worth history built from them, and the import of a
-// broker's export (made-up records, never a real account).
+// Stored prices, the net-worth history built from them, the ranges and axes of the
+// charts, and the import of a broker's export (made-up records, never a real account).
 // Run: tonka test fortress_wallet   (or: node .tests/history.test.cjs)
 
 const { ChartMath, Instruments, Transactions, WalletFile, WalletHistory } = require("../tools/wallet.cjs");
@@ -105,6 +105,10 @@ const wallet = () => WalletFile.normalize({
     && axis.ticks.every((t, i) => !i || near(t - axis.ticks[i - 1], axis.step)));
   const flat = ChartMath.axisRange(500, 500);
   ok("a flat line still gets an axis", flat.hi > flat.lo);
+  const top = ChartMath.niceMax;
+  ok("an axis from zero ends at a round limit", [[1, 1], [7, 8], [13, 15], [101, 120], [1000, 1000], [2400, 2500],
+    [8.5, 10], [270000, 300000]].every(([v, limit]) => near(top(v), limit, 1e-9)) && near(top(0.03), 0.03, 1e-9));
+  ok("an axis with nothing above zero ends at 1", [0, -5, NaN, undefined].every(v => top(v) === 1));
 }
 
 // ---------------------------------------------------------------- the import

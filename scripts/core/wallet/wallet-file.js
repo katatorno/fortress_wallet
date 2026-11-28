@@ -190,7 +190,7 @@ const WalletFile = (() => {
       number: (w, v) => Base.isNumeric(v) || bad(w, "number"),
       positive: (w, v) => (Base.isNumeric(v) && Number(v) >= 0) || bad(w, "positive"),
       rate: (w, v) => Rates.isRate(v) || bad(w, "rate"),
-      date: (w, v) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v.slice(0, 10))) || bad(w, "date"),
+      date: (w, v) => (typeof v === "string" && Dates.isDate(v)) || bad(w, "date"),
       choice: (list) => (w, v) => list.includes(v) || bad(w, "choice"),
       maybe: (kind) => (w, v) => Base.isBlank(v) || kind(w, v),
       /** A map's keys: none reserved. */
@@ -373,5 +373,5 @@ const WalletFile = (() => {
     return data;
   }
 
-  return { FORMAT, instrument, normalize, problems, check, problemList, serialize, parse };
+  return { FORMAT, instrument, normalize, check, problemList, serialize, parse };
 })();

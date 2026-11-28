@@ -140,21 +140,30 @@ const Plan = (() => {
   /** The quantity a purchase of a plan records. */
   const _quantity = (line) => Math.round(line.units * 1e6) / 1e6;
 
+  /** The account of a cash line, and what the line puts on it: its euros in the account's currency. */
+  function _booking(data, line) {
+    const account = data.cash.find(c => c.id === line.account_id);
+    return account && { account, amount: Rates.fromEur(data, line.eur, account.currency || "EUR") };
+  }
+
   /**
    * Every line of a plan, as `apply` would record it: the account of a cash line and the
    * instrument of a purchase are there, and every amount and quantity is a finite
-   * number, the balances the cash lines lead to too. Throws Rules.RuleError.
+   * number, the balances the cash lines lead to, each in its currency, too. Throws
+   * Rules.RuleError.
    */
   function _checkLines(data, lines) {
     const refuse = (key, field) => { throw new Rules.RuleError(key, { field: Texts.tr(data, field) }); };
-    const balances = new Map(data.cash.map(c => [c.id, Number(c.amount || 0)]));
+    const balances = new Map();
     for(const ln of lines) {
       if(!Number.isFinite(Number(ln.eur))) refuse("err_value_number", "calc_amount");
       if(ln.kind === "cash" && ln.account_id) {
-        if(!balances.has(ln.account_id)) refuse("err_value_choice", "col_account");
-        const balance = balances.get(ln.account_id);
-        if(!Cash.countable(balance, ln.eur)) refuse("err_value_number", "calc_amount");
-        balances.set(ln.account_id, Base.round2(balance + Number(ln.eur)));
+        const booking = _booking(data, ln);
+        if(!booking) refuse("err_value_choice", "col_account");
+        const { account, amount } = booking;
+        const balance = balances.get(account) ?? Number(account.amount || 0);
+        if(!Cash.countable(balance, amount)) refuse("err_value_number", "calc_amount");
+        balances.set(account, balance + Base.round2(amount));
       }
       else if(ln.kind === "buy") {
         if(!data.assets.some(a => a.id === ln.asset_id)) refuse("err_value_choice", "field_instrument");
@@ -165,9 +174,9 @@ const Plan = (() => {
   }
 
   /**
-   * Records a plan: its cash into the accounts, its purchases as transactions. The date
-   * and every line are checked first (see `_checkLines`); throws Rules.RuleError and
-   * leaves the data as it was.
+   * Records a plan: its cash into the accounts, converted into each one's currency, its
+   * purchases as transactions. The date and every line are checked first (see
+   * `_checkLines`); throws Rules.RuleError and leaves the data as it was.
    * @param {string} [on]  an empty date is today
    */
   function apply(data, plan, on = null) {
@@ -175,7 +184,7 @@ const Plan = (() => {
     _checkLines(data, plan.lines);
     const note = Texts.tr(data, "note_from_calculator");
     for(const ln of plan.lines) {
-      if(ln.kind === "cash" && ln.account_id) Cash.add(data, ln.account_id, ln.eur, note, date);
+      if(ln.kind === "cash" && ln.account_id) Cash.add(data, ln.account_id, _booking(data, ln).amount, note, date);
       else if(ln.kind === "buy") {
         data.transactions.push({ id: Base.newId(), date, asset_id: ln.asset_id, type: "buy",
           quantity: _quantity(ln), price: ln.price, fee: 0, note });

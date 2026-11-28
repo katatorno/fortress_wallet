@@ -42,14 +42,6 @@ function responsiveChart(draw) {
   return box;
 }
 
-/** Nice upper bound for an axis. */
-function _niceMax(v) {
-  if(!(v > 0)) return 1;
-  const p = Math.pow(10, Math.floor(Math.log10(v)));
-  for(const m of [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) if(m * p >= v) return m * p;
-  return 10 * p;
-}
-
 /** 123456 → "123k €" for axis labels. */
 function _compactMoney(lang, v) {
   const a = Math.abs(v);
@@ -146,7 +138,7 @@ const GroupedBars = (props) => responsiveChart((W) => _GroupedBars(props, W));
 const _GroupedBars = ({ cats, series, targets, targetName, lang, suffix = "%" }, W) => {
   const h = 240, left = 44, bottom = 28, top = 10, right = 8;
   const all = series.flatMap(s => s.values).concat(targets || []);
-  const max = _niceMax(Math.max(...all, 1));
+  const max = ChartMath.niceMax(Math.max(...all, 1));
   const y = (v) => top + (1 - v / max) * (h - top - bottom);
   const groupW = (W - left - right) / cats.length;
   const barW = Math.min(46, (groupW - 24) / series.length);
@@ -191,7 +183,7 @@ const StackedBars = (props) => responsiveChart((W) => _StackedBars(props, W));
 const _StackedBars = ({ xs, series, lang }, W) => {
   const h = 240, left = 52, bottom = 26, top = 10, right = 8;
   const totals = xs.map((_, i) => series.reduce((a, s) => a + (s.values[i] || 0), 0));
-  const max = _niceMax(Math.max(...totals, 1));
+  const max = ChartMath.niceMax(Math.max(...totals, 1));
   const y = (v) => top + (1 - v / max) * (h - top - bottom);
   const step = (W - left - right) / Math.max(1, xs.length);
   const barW = Math.max(2, step - 2);
@@ -241,7 +233,7 @@ const _LineChart = ({ series, lang, marker, height = 260, markers, zoom }, W) =>
   const xs = pts.map(p => _ts(p[0]));
   const x0 = Math.min(...xs), x1 = Math.max(...xs, x0 + 86400000);
   const values = pts.map(p => p[1]);
-  const full = _niceMax(Math.max(...values, 1));
+  const full = ChartMath.niceMax(Math.max(...values, 1));
   const axis = zoom ? ChartMath.axisRange(Math.min(...values), Math.max(...values))
     : { lo: 0, hi: full, ticks: [0, 0.25, 0.5, 0.75, 1].map(f => f * full) };
   // short money ("19k") only where the steps are whole thousands

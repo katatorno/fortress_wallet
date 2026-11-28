@@ -1,7 +1,8 @@
 // scripts/core/dates.js
 //
 // Dates are ISO strings "YYYY-MM-DD" everywhere (they sort and compare as text): today,
-// reading a value as a date, months and days between, and how a date is shown.
+// what counts as a date, reading a value as one, months and days between, and how a
+// date is shown.
 
 const Dates = (() => {
   const pad = (n) => String(n).padStart(2, "0");
@@ -12,11 +13,21 @@ const Dates = (() => {
     return iso(now.getFullYear(), now.getMonth() + 1, now.getDate());
   }
 
+  /** Whether a text begins with a date of the calendar, "YYYY-MM-DD"; a time may follow. */
+  function isDate(text) {
+    const parts = String(text).slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if(!parts) return false;
+    const [y, m, d] = parts.slice(1).map(Number);
+    // a day the calendar does not have rolls over into another one
+    const day = new Date(0);
+    day.setUTCFullYear(y, m - 1, d);
+    return day.getUTCFullYear() === y && day.getUTCMonth() === m - 1 && day.getUTCDate() === d;
+  }
+
   function parse(v) {
     if(Base.isBlank(v)) return null;
-    if(v instanceof Date) return iso(v.getFullYear(), v.getMonth() + 1, v.getDate());
-    const s = String(v).slice(0, 10);
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(s)) throw new Error(`Invalid date: ${v}`);
+    const s = v instanceof Date ? iso(v.getFullYear(), v.getMonth() + 1, v.getDate()) : String(v).slice(0, 10);
+    if(!isDate(s)) throw new Error(`Invalid date: ${v}`);
     return s;
   }
 
@@ -39,5 +50,5 @@ const Dates = (() => {
   const monthYear = (date) => date ? `${date.slice(5, 7)}.${date.slice(0, 4)}` : "–";
   const dayMonthYear = (date) => date ? `${date.slice(8, 10)}.${date.slice(5, 7)}.${date.slice(0, 4)}` : "–";
 
-  return { iso, today, parse, addMonths, daysBetween, monthYear, dayMonthYear };
+  return { iso, today, isDate, parse, addMonths, daysBetween, monthYear, dayMonthYear };
 })();

@@ -1,8 +1,9 @@
 // .tests/format.test.cjs
 //
-// The data file's format: its version, the migration of older files, and a record
-// of every key the current version knows. A new or removed key fails here until
-// WalletFile.FORMAT is raised, a migration added and SHAPE updated.
+// The data file's format: its version, the migration of older files, the ids given on
+// opening, the values a file is refused for, and a record of every key the current
+// version knows. A new or removed key fails here until WalletFile.FORMAT is raised, a
+// migration added and SHAPE updated.
 // Run: tonka test fortress_wallet   (or: node .tests/format.test.cjs)
 
 const { readFileSync } = require("node:fs");
@@ -199,6 +200,17 @@ ok("the example carries no price service key", JSON.parse(text).settings.price_a
     ["an unknown transaction type", (r) => { r.transactions = [{ id: "t", asset_id: "webg", type: "gift", quantity: 1, date: "2026-01-01" }]; }, "transactions[0].type"],
     ["a stored price that is no pair", (r) => { r.prices = { webg: { "2026-01-02": 13 } }; }, "prices.webg.2026-01-02"],
     ["a mortgage event of no kind", (r) => { r.mortgage.events = [{ date: "2027-01-01", type: "gift", amount: 1 }]; }, "mortgage.events[0].type"],
+    // dates of the pattern, but not of the calendar
+    ["a transaction on 30 February", (r) => { r.transactions = [{ id: "t", asset_id: "webg", type: "buy", quantity: 1, date: "2026-02-30" }]; }, "transactions[0].date"],
+    ["a cash movement in a 13th month", (r) => { r.cash_log = [{ date: "2026-13-45", account_id: "home", amount: 1 }]; }, "cash_log[0].date"],
+    ["a deed signed on 31 April", (r) => { r.house.deed_date = "2026-04-31"; }, "house.deed_date"],
+    ["a first payment on day 0", (r) => { r.mortgage.first_payment_date = "2027-03-00"; }, "mortgage.first_payment_date"],
+    ["a mortgage event on 29 February of a common year", (r) => { r.mortgage.events = [{ date: "2027-02-29", type: "payment", amount: 1 }]; }, "mortgage.events[0].date"],
+    ["a price dated in month 0", (r) => { r.assets[0].price_updated = "2026-00-10"; }, "assets[0].price_updated"],
+    ["a maturity on 32 January", (r) => { r.assets[0].maturity = "2030-01-32"; }, "assets[0].maturity"],
+    ["a day of history that is none", (r) => { r.history = [{ date: "2026-06-31" }]; }, "history[0].date"],
+    ["a stored price on 30 February", (r) => { r.prices = { webg: { "2026-02-30": [null, 1] } }; }, "prices.webg.2026-02-30"],
+    ["rates of a day that is none", (r) => { r.fx_history = { "2026-13-01": { USD: 1 } }; }, "fx_history.2026-13-01"],
   ];
   for(const [name, change, where] of cases) {
     const message = refusal(change);
@@ -218,6 +230,10 @@ ok("the example carries no price service key", JSON.parse(text).settings.price_a
   refusal((r) => { r.assets[0].price = "abc"; });
   ok("a refusal changes nothing it was given", JSON.stringify(kept) === original);
   ok("numbers written as text still open", refusal((r) => { r.assets[0].price = "13.5"; r.settings.fx.USD = "1.1"; }) === null);
+  ok("a date with a time still opens, and so does 29 February of a leap year", refusal((r) => {
+    r.transactions = [{ id: "t", asset_id: "webg", type: "buy", quantity: 1, date: "2026-01-02T10:00" }];
+    r.house.deed_date = "2028-02-29";
+  }) === null);
   ok("a day of history without a value still opens", refusal((r) => {
     r.history = [{ date: "2026-01-01", investments: null, cash: 1, house_equity: 0, mortgage: 0, net_worth: null }];
   }) === null);
